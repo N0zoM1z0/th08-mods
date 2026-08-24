@@ -10,6 +10,7 @@ authored game sources without making an exact-code claim.
 | Platform | Status | Notes |
 | --- | --- | --- |
 | Linux i386 | **Done** | Source build, one-command setup/run, and CI artifact are available |
+| WebAssembly | **In progress** | Authored compile, local-data, address-arena, and WebGL 2 feasibility probes pass |
 | Windows x86 | **In progress** | Current native build/launcher is not yet a reliable distributable product |
 | macOS | **In progress** | Platform backend and packaging are pending |
 
@@ -139,6 +140,9 @@ the reusable lessons from the bring-up.
    gaps without changing replay-visible simulation behavior.
 2. Finish a redistributable Windows x86 backend/package and validate startup
    on a clean native Windows host.
-3. Add and validate the macOS backend after the portable boundary is stable.
-4. Consider wider architectures only after removing pointer-width and fixed-
+3. Link the WebAssembly target, reach the title from user-selected local DATs,
+   and retain the no-retail-data distribution boundary documented in
+   [Web port architecture](WEB_ARCHITECTURE.md).
+4. Add and validate the macOS backend after the portable boundary is stable.
+5. Consider wider architectures only after removing pointer-width and fixed-
    address assumptions from the shared runtime.

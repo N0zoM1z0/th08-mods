@@ -1,6 +1,6 @@
 # 東方永夜抄 ～ Imperishable Night
 
-<h3 align="center">🌙「永夜已明」Authored reconstruction complete — Linux playable ✓ · Windows/macOS in progress · Web edition is the next spell card 💫</h3>
+<h3 align="center">🌙「永夜已明」Authored reconstruction complete — Linux playable ✓ · Web port feasibility proven, full game in progress 💫</h3>
 
 <p align="center">
   <img
@@ -18,11 +18,20 @@
 | Platform | Guide | Status |
 | --- | --- | --- |
 | Linux | **[Download, install, and play](docs/PLAY_LINUX.md)** | **Playable** |
+| Web | [Architecture and reproducible probes](docs/WEB_ARCHITECTURE.md) | In progress |
 | Windows | [Native Windows guide](docs/PLAY_WINDOWS.md) | In progress |
 | macOS | [Native macOS guide](docs/PLAY_MACOS.md) | In progress |
 
-The Web edition is planned as a future playable target after the native
-desktop ports. It is not available yet.
+The Web edition now has reproducible Emscripten probes for compiling all shared
+authored sources, mounting both user-selected local DAT files without upload or
+whole-file heap copies, preserving a low target-address arena, and presenting
+a frame with the current renderer through WebGL 2. It is not a playable game
+yet; the next milestone is a full link and title-screen startup.
+
+The Web build will never ship `th08.dat`, `thbgm.dat`, the original executable,
+or extracted retail assets. Users must select the two DAT files from their own
+legally obtained installation. See the [Web architecture and provenance
+boundary](docs/WEB_ARCHITECTURE.md) for the design and observed evidence.
 
 This project reconstructs the source code of the original Japanese
 `東方永夜抄 ～ Imperishable Night` version 1.00d executable. All 1,107 authored
@@ -187,6 +196,7 @@ python3 scripts/analysis/report-reconstruction-status.py --summary
 - [Build and exact matching](docs/BUILD_MATCHING.md)
 - [Playable reconstruction ports](docs/PORTING.md)
 - [Native Linux playable reconstruction](docs/LINUX_PORTING.md)
+- [Web port architecture and feasibility evidence](docs/WEB_ARCHITECTURE.md)
 - [Tool selection and command recipes](docs/TOOLS.md)
 - [Reusable knowledge map and contribution policy](docs/KNOWLEDGE_BASE.md)
 - [Current handoff and next milestones](docs/RE_HANDOFF.md)

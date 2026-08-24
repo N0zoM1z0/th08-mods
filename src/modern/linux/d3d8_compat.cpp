@@ -87,6 +87,27 @@ struct FramebufferApi
 FramebufferApi g_framebufferApi;
 FogCoordfFunction g_fogCoordf;
 
+void SelectDrawBuffer(GLenum buffer)
+{
+#ifdef TH08_MODERN_WEB
+    // WebGL selects the draw target through the currently bound framebuffer
+    // and does not expose desktop glDrawBuffer.
+    (void)buffer;
+#else
+    glDrawBuffer(buffer);
+#endif
+}
+
+void SelectReadBuffer(GLenum buffer)
+{
+#ifdef TH08_MODERN_WEB
+    // WebGL likewise reads from the currently bound framebuffer.
+    (void)buffer;
+#else
+    glReadBuffer(buffer);
+#endif
+}
+
 UINT BytesPerPixel(D3DFORMAT format)
 {
     switch (format)
@@ -470,7 +491,7 @@ class LinuxDevice : public IDirect3DDevice8
         int drawableWidth, drawableHeight;
         SDL_GL_GetDrawableSize(window, &drawableWidth, &drawableHeight);
         g_framebufferApi.bindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDrawBuffer(GL_BACK);
+        SelectDrawBuffer(GL_BACK);
         glViewport(0, 0, drawableWidth, drawableHeight);
 
         glPushAttrib(GL_ALL_ATTRIB_BITS);
@@ -499,8 +520,8 @@ class LinuxDevice : public IDirect3DDevice8
         SDL_GL_SwapWindow(window);
 
         g_framebufferApi.bindFramebuffer(GL_FRAMEBUFFER, renderFramebuffer);
-        glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
+        SelectDrawBuffer(GL_COLOR_ATTACHMENT0);
+        SelectReadBuffer(GL_COLOR_ATTACHMENT0);
         glViewport(0, 0, backbuffer->width, backbuffer->height);
         return S_OK;
     }
@@ -722,8 +743,8 @@ class LinuxDevice : public IDirect3DDevice8
                                               GL_TEXTURE_2D, renderColorTexture, 0);
         g_framebufferApi.framebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
                                                  GL_RENDERBUFFER, renderDepthBuffer);
-        glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
+        SelectDrawBuffer(GL_COLOR_ATTACHMENT0);
+        SelectReadBuffer(GL_COLOR_ATTACHMENT0);
         GLenum status = g_framebufferApi.checkFramebufferStatus(GL_FRAMEBUFFER);
         if (status != GL_FRAMEBUFFER_COMPLETE)
         {

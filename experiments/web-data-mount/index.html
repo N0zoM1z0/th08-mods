@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TH08 Web 本地数据挂载探针</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+      body { max-width: 720px; margin: 4rem auto; padding: 0 1.5rem; background: #11131a; color: #f4f1ff; }
+      main { padding: 2rem; border: 1px solid #41465b; border-radius: 1rem; background: #1a1d28; }
+      label { display: block; margin: 1rem 0; }
+      input { display: block; margin-top: .4rem; width: 100%; }
+      button { padding: .7rem 1rem; border: 0; border-radius: .5rem; background: #9b7cff; color: #100b21; font-weight: 700; }
+      button:disabled { opacity: .5; }
+      pre { min-height: 7rem; padding: 1rem; overflow-wrap: anywhere; white-space: pre-wrap; background: #0c0e14; border-radius: .5rem; }
+      .policy { color: #c9c5d8; line-height: 1.55; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>TH08 Web 本地数据挂载探针</h1>
+      <p class="policy">请选择你合法持有的 <code>th08.dat</code> 与 <code>thbgm.dat</code>。文件只作为浏览器本地 <code>File</code> 对象交给 Web Worker；页面不会上传、打包或保存这两个 retail 文件。</p>
+      <label>游戏数据 <input id="game-data" type="file" accept=".dat"></label>
+      <label>音乐数据 <input id="bgm-data" type="file" accept=".dat"></label>
+      <button id="inspect" disabled>本地挂载并读取</button>
+      <pre id="result" aria-live="polite">等待选择两个 DAT 文件。</pre>
+    </main>
+    <script>
+      const gameInput = document.querySelector("#game-data");
+      const bgmInput = document.querySelector("#bgm-data");
+      const button = document.querySelector("#inspect");
+      const result = document.querySelector("#result");
+
+      function selectedFiles() {
+        return [gameInput.files[0], bgmInput.files[0]];
+      }
+
+      function validateSelection() {
+        const [game, bgm] = selectedFiles();
+        const valid = game?.name.toLowerCase() === "th08.dat" && bgm?.name.toLowerCase() === "thbgm.dat";
+        button.disabled = !valid;
+        result.textContent = valid
+          ? `已选择 ${game.name} (${game.size} bytes) 与 ${bgm.name} (${bgm.size} bytes)。\n尚未读取。`
+          : "请选择文件名分别为 th08.dat 与 thbgm.dat 的两个本地文件。";
+      }
+
+      gameInput.addEventListener("change", validateSelection);
+      bgmInput.addEventListener("change", validateSelection);
+      button.addEventListener("click", () => {
+        button.disabled = true;
+        result.textContent = "正在 Web Worker 中挂载 WORKERFS…\n";
+        const worker = new Worker("worker.js");
+        worker.onmessage = (event) => {
+          if (event.data.type === "log") result.textContent += `${event.data.line}\n`;
+          if (event.data.type === "done") {
+            result.textContent += event.data.status === 0 ? "本地随机读取成功；未发生网络上传。" : "读取失败。";
+            worker.terminate();
+            button.disabled = false;
+          }
+          if (event.data.type === "error") {
+            result.textContent += `错误：${event.data.message}`;
+            worker.terminate();
+            button.disabled = false;
+          }
+        };
+        worker.onerror = (error) => {
+          result.textContent += `Worker 错误：${error.message}`;
+          worker.terminate();
+          button.disabled = false;
+        };
+        worker.postMessage({ type: "inspect", files: selectedFiles() });
+      });
+    </script>
+  </body>
+</html>

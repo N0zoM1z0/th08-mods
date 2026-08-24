@@ -4,6 +4,41 @@ This file records only the current durable state. Historical investigations
 belong in focused notes such as `RUNECL_FUNCTION_EXACT_NOTES.md`; live counts
 come from the ledgers, not this prose.
 
+## Active Web-port fork
+
+`N0zoM1z0/th08-web` is a history-preserving derived repository with
+`N0zoM1z0/th08` configured as `upstream`. It is the exploratory WebAssembly
+lane and does not alter the exact VC7 evidence product or its authored/library
+ledgers.
+
+Web-port state on 2026-08-24:
+
+- the digest-pinned Emscripten 6.0.8 compiler builds all 44 shared
+  production-authored game/PBG translation units as wasm32 objects;
+- a browser Worker mounts user-selected `th08.dat` (46,838,025 bytes) and
+  `thbgm.dat` (449,961,024 bytes) read-only through WORKERFS. C++ range reads
+  reach both file ends while the Wasm heap remains 16,908,288 bytes, and the
+  local server receives no request containing either DAT;
+- a target-address probe places normal Wasm globals above 32 MiB and safely
+  reads/writes a representative low target-owned address. A generated Web
+  binding layer is still required because wasm-ld cannot reproduce the ELF
+  absolute-symbol aliases from `th08-layout.ld`;
+- the Linux D3D8 compatibility backend, with Web-only draw/read-buffer handling
+  and isolated probe stubs, creates a WebGL 2 device and presents a 640x480
+  frame. Emscripten legacy GL is only a bring-up path; explicit WebGL 2 shaders
+  remain production work;
+- the recommended MVP keeps the authored blocking/threaded shape using
+  pthreads, `PROXY_TO_PTHREAD`, WORKERFS, and a cross-origin-isolated static
+  host. The browser shell stays thin and contains no gameplay implementation;
+- retail provenance is a hard boundary: no DAT, original executable, or
+  extracted retail asset may be tracked or deployed. The runtime accepts the
+  two local `File` objects only, and `scripts/check-web-provenance.py` enforces
+  the minimum tracked-file denylist in CI;
+- `docs/WEB_ARCHITECTURE.md` records the decision, reuse ledger, evidence,
+  prototype debt, and milestone gates. The next bounded task is the full-link
+  gate: generate target-global bindings, link platform adapters, and enter the
+  title startup from locally mounted data.
+
 ## Active playable-port branch
 
 `port/modern-windows-linux` is the independent playable reconstruction lane.

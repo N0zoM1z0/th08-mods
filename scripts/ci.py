@@ -61,6 +61,10 @@ def main() -> int:
             run("Check shell syntax", ["bash", "-n", *sorted(set(shell_files))])
 
         run(
+            "Enforce Web retail-data provenance boundary",
+            [sys.executable, "scripts/check-web-provenance.py"],
+        )
+        run(
             "Validate static reconstruction ledgers",
             [sys.executable, "scripts/validate-tracking.py", "--skip-target-bytes"],
         )

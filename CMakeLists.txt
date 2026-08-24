@@ -76,6 +76,36 @@ set(TH08_GAME_SOURCES
     src/pbg/PbgFile.cpp
 )
 
+# Browser-port feasibility gate: compile every shared authored translation unit
+# as wasm32 without linking a desktop runtime.  This intentionally proves only
+# source/compiler portability; the browser platform, renderer, filesystem, and
+# event-loop boundaries are separate milestones.
+if(EMSCRIPTEN)
+    add_library(th08-web-authored-compile OBJECT ${TH08_GAME_SOURCES})
+    add_dependencies(th08-web-authored-compile th08-modern-generated)
+    target_compile_features(th08-web-authored-compile PRIVATE cxx_std_98)
+    target_compile_definitions(th08-web-authored-compile PRIVATE
+        TH08_MODERN_PORT
+        TH08_MODERN_LINUX
+        TH08_MODERN_WEB
+        WIN32_LEAN_AND_MEAN
+    )
+    target_include_directories(th08-web-authored-compile BEFORE PRIVATE
+        "${CMAKE_SOURCE_DIR}/src/modern/linux/include"
+        "${CMAKE_SOURCE_DIR}/src"
+        "${TH08_GENERATED_DIR}"
+    )
+    target_compile_options(th08-web-authored-compile PRIVATE
+        -O0
+        -fms-extensions
+        -Wno-address-of-temporary
+        -Wno-write-strings
+        -Wno-ignored-pragmas
+        "-include${CMAKE_SOURCE_DIR}/src/modern/web/web_compat.hpp"
+    )
+    return()
+endif()
+
 if(WIN32)
     list(APPEND TH08_GAME_SOURCES src/modern/windows_runtime.cpp)
     add_executable(th08-modern WIN32 ${TH08_GAME_SOURCES})

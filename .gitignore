@@ -20,6 +20,11 @@ reccmp-build.yml
 /resources/*.dat
 /resources/*.zip
 /resources/*.rar
+*.dat
+*.rar
+*.7z
+/web-data/
+/reference/
 
 # Local adjacent-version sources and reverse-engineering state.
 /_references/
