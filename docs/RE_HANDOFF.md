@@ -44,7 +44,13 @@ Web-port state on 2026-08-25:
   `_headers` file preserves COOP/COEP/CORP and its `_redirects` file handles the
   site root. The provenance gate now requires exactly these six regular files,
   rejecting unlisted files, missing files, symbolic links, DATs, original
-  executables, and common retail containers before Direct Upload;
+  executables, and common retail containers before Direct Upload. The first
+  production deployment is live at `https://th08-web.pages.dev/`: the root
+  redirect and isolation headers work, the Wasm MIME is correct, its remote
+  digest matches the local Release artifact, and Chromium reports a secure,
+  cross-origin-isolated document without browser errors. A `main`-only GitHub
+  Actions workflow validates, rebuilds, rechecks, and deploys subsequent
+  revisions using repository secrets;
 - Wasm-specific references now preserve overlapping target ownership for ECL
   time/state, player and gauge fields, effect/GUI data tables, enemy timeline
   storage, and spell callback lifetime. A Stage 2 Normal endurance run observed
@@ -84,8 +90,8 @@ Web-port state on 2026-08-25:
   Stage 6B practice run. This Firefox evidence used Xvfb `llvmpipe`, so it is
   correctness evidence rather than a hardware performance result;
 - `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence. The
-  next bounded tasks are a Cloudflare Pages deployment with a Pages Edit token,
-  hardware Firefox pacing, replay endurance, and memory-ceiling measurement.
+  next bounded tasks are hardware Firefox pacing, replay endurance, and
+  memory-ceiling measurement.
 
 ## Active playable-port branch
 

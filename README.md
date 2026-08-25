@@ -35,6 +35,11 @@ boundary](docs/WEB_ARCHITECTURE.md) for the design and observed evidence.
 Settings, scores, replays, backups, and snapshots persist in the browser under
 a separate allowlisted storage mount; the retail archives never enter it.
 
+The public Web release is available at
+[th08-web.pages.dev](https://th08-web.pages.dev/). It contains only the
+source-built launcher, JavaScript, WebAssembly, project-owned icon, and static
+host metadata. It does not contain game data.
+
 Build and launch the preview with Docker and Python 3:
 
 ```bash
@@ -60,6 +65,11 @@ npx wrangler pages deploy build/web-dist --project-name=th08-web
 Keep the token outside the repository and CI logs. A bare GitHub Pages site is
 not a supported host for the pthread build because it cannot attach the
 repository-defined COOP and COEP response headers.
+
+Pushes to `main` deploy automatically after repository validation, the pinned
+Release build, and the deployment-boundary check succeed. Configure
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repository
+secrets; pull requests never receive those secrets and never deploy.
 
 This project reconstructs the source code of the original Japanese
 `東方永夜抄 ～ Imperishable Night` version 1.00d executable. All 1,107 authored

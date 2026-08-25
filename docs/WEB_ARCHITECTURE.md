@@ -218,6 +218,15 @@ headers, so a bare GitHub Pages deployment is not a supported host for this
 pthread build. GitHub remains the source and build-automation host; only the
 allowlisted `build/web-dist` payload belongs in a Pages deployment.
 
+The production deployment is `https://th08-web.pages.dev/`. A direct upload
+verified that the root redirect, HTML, and Wasm responses preserve the staged
+isolation headers, that the Wasm response uses `application/wasm`, and that its
+downloaded SHA-256 matches the local Release artifact. A Chromium navigation
+reported a secure, cross-origin-isolated document without browser errors.
+`.github/workflows/deploy-web.yml` repeats repository validation, the pinned
+Release build, and the artifact-boundary check before deploying a `main` push.
+The workflow reads Cloudflare credentials only from repository secrets.
+
 ## Reproducible evidence
 
 All Web builds use

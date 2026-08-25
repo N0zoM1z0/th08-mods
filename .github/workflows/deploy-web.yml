@@ -1,0 +1,49 @@
+name: Deploy Web to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: th08-web-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Validate, build, and deploy Web release
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Run repository-owned validation
+        run: python3 scripts/ci.py
+
+      - name: Build provenance-gated Web release
+        run: scripts/build-web-game.sh
+
+      - name: Verify the exact deployment boundary
+        run: python3 scripts/check-web-provenance.py --artifact build/web-dist
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy build/web-dist
+            --project-name=th08-web
+            --branch=main
+            --commit-hash=${{ github.sha }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
