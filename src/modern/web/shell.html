@@ -41,6 +41,7 @@
           </div>
         </div>
         <p class="policy">Select <code>th08.dat</code> and <code>thbgm.dat</code> from a legally obtained TH08 installation. The game archive is copied only into volatile session memory, while the music archive is range-read from its browser <code>File</code> object. Neither file is uploaded, bundled, or persisted by this page.</p>
+        <p class="policy">Settings, scores, replays, backups, and snapshots are stored separately in this browser so they survive a page reload. Clearing this site's browser data removes them.</p>
         <p class="controls"><strong>Keyboard:</strong> arrow keys move, <code>Z</code> confirms/fires, <code>X</code> cancels/bombs, <code>Shift</code> focuses, and <code>Esc</code> pauses.</p>
         <label>Game data
           <input id="game-data" type="file" accept=".dat,application/octet-stream">
@@ -65,6 +66,11 @@
       const canvas = document.querySelector("#canvas");
       let runtimeReady = false;
       let started = false;
+      let gameFileSystemReady = false;
+
+      const persistentFiles = ["th08.cfg", "score.dat", "score.txt"];
+      const persistentDirectories = ["replay", "backup", "snapshot"];
+      const retailArchiveNames = new Set(["th08.dat", "thbgm.dat"]);
 
       function appendLog(line) {
         logElement.textContent += `${line}\n`;
@@ -91,6 +97,106 @@
           const [game, bgm] = selectedFiles();
           statusElement.textContent = `Ready: ${game.name} (${game.size.toLocaleString()} bytes), ${bgm.name} (${bgm.size.toLocaleString()} bytes).`;
         }
+      }
+
+      function ensureDirectory(path) {
+        try {
+          Module.FS.mkdir(path);
+        } catch (error) {
+          const mode = Module.FS.stat(path).mode;
+          if (!Module.FS.isDir(mode)) throw error;
+        }
+      }
+
+      function syncFileSystem(populate) {
+        return new Promise((resolve, reject) => {
+          Module.FS.syncfs(populate, (error) => error ? reject(error) : resolve());
+        });
+      }
+
+      function removeRetailArchivesFromSaveTree(path) {
+        let removed = false;
+        for (const name of Module.FS.readdir(path)) {
+          if (name === "." || name === "..") continue;
+          const child = `${path}/${name}`;
+          const mode = Module.FS.lstat(child).mode;
+          if (retailArchiveNames.has(name.toLowerCase())) {
+            if (Module.FS.isDir(mode)) {
+              removeTree(child);
+              Module.FS.rmdir(child);
+            } else {
+              Module.FS.unlink(child);
+            }
+            removed = true;
+          } else if (Module.FS.isDir(mode)) {
+            removed = removeRetailArchivesFromSaveTree(child) || removed;
+          }
+        }
+        return removed;
+      }
+
+      function removeTree(path) {
+        for (const name of Module.FS.readdir(path)) {
+          if (name === "." || name === "..") continue;
+          const child = `${path}/${name}`;
+          const mode = Module.FS.lstat(child).mode;
+          if (Module.FS.isDir(mode)) {
+            removeTree(child);
+            Module.FS.rmdir(child);
+          } else {
+            Module.FS.unlink(child);
+          }
+        }
+      }
+
+      function addSaveLink(name) {
+        const gamePath = `/game/${name}`;
+        const savePath = `/save/${name}`;
+        Module.FS.symlink(savePath, gamePath);
+      }
+
+      async function prepareGameFileSystem() {
+        if (gameFileSystemReady) return;
+        ensureDirectory("/game");
+        ensureDirectory("/save");
+        for (const directory of persistentDirectories) {
+          ensureDirectory(`/game/${directory}`);
+        }
+
+        let persistenceAvailable = false;
+        const persistenceMounts = [
+          "/save",
+          ...persistentDirectories.map((directory) => `/game/${directory}`),
+        ];
+        try {
+          for (const mount of persistenceMounts) {
+            Module.FS.mount(Module.IDBFS, { autoPersist: true }, mount);
+          }
+          await syncFileSystem(true);
+          persistenceAvailable = true;
+        } catch (error) {
+          console.error("Browser save persistence is unavailable; saves are session-only.", error);
+          appendLog("th08-web: browser save persistence unavailable; using volatile saves");
+        }
+
+        const removedRetailData = persistenceMounts.reduce(
+          (removed, mount) => removeRetailArchivesFromSaveTree(mount) || removed,
+          false,
+        );
+        if (removedRetailData) {
+          appendLog("th08-web: removed forbidden retail archive entries from browser save storage");
+        }
+        for (const name of persistentFiles) {
+          addSaveLink(name);
+        }
+
+        Module.th08SavePersistence = {
+          available: persistenceAvailable,
+          mounts: persistenceMounts,
+          files: [...persistentFiles],
+          directories: [...persistentDirectories],
+        };
+        gameFileSystemReady = true;
       }
 
       gameInput.addEventListener("change", updateStartState);
@@ -143,8 +249,12 @@
         started = true;
         updateStartState();
         try {
-          statusElement.textContent = "Loading the local game archive into session memory…";
-          const gameBytes = new Uint8Array(await game.arrayBuffer());
+          statusElement.textContent = "Loading local retail data and restoring browser-local saves…";
+          const [gameBuffer] = await Promise.all([
+            game.arrayBuffer(),
+            prepareGameFileSystem(),
+          ]);
+          const gameBytes = new Uint8Array(gameBuffer);
           const gameDataPointer = Module._th08_web_allocate_game_data(gameBytes.byteLength);
           if (!gameDataPointer) {
             throw new Error("Unable to allocate session memory for th08.dat.");
@@ -152,9 +262,6 @@
           Module.HEAPU8.set(gameBytes, gameDataPointer);
           Module.th08RetailFiles = [game, bgm];
           Module._th08_web_set_retail_file_sizes(game.size, bgm.size);
-          try { Module.FS.mkdir("/game"); } catch (error) {
-            if (error?.errno !== 20) throw error;
-          }
           Module.FS.chdir("/game");
           Module.FS.writeFile("th08.dat", new Uint8Array(0));
           Module.FS.writeFile("thbgm.dat", new Uint8Array(0));

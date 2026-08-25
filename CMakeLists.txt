@@ -143,8 +143,9 @@ if(EMSCRIPTEN)
         --use-port=sdl2_ttf
         "--shell-file=${CMAKE_SOURCE_DIR}/src/modern/web/shell.html"
         -sINVOKE_RUN=0
-        -sEXPORTED_RUNTIME_METHODS=FS,callMain,HEAPU8
+        -sEXPORTED_RUNTIME_METHODS=FS,IDBFS,callMain,HEAPU8
         -sFORCE_FILESYSTEM
+        -lidbfs.js
         -sPROXY_TO_PTHREAD
         -sOFFSCREENCANVAS_SUPPORT
         -sMIN_WEBGL_VERSION=2
@@ -157,6 +158,7 @@ if(EMSCRIPTEN)
         -sEXIT_RUNTIME=0
     )
     set_target_properties(th08-web PROPERTIES
+        LINK_DEPENDS "${CMAKE_SOURCE_DIR}/src/modern/web/shell.html"
         OUTPUT_NAME "th08-web"
         SUFFIX ".html"
     )

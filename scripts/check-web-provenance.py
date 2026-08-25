@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -24,6 +25,7 @@ FORBIDDEN_NAMES = {
     "replayview.exe",
 }
 FORBIDDEN_SUFFIXES = {".dat", ".exe", ".dll", ".zip", ".rar", ".7z", ".iso", ".cab"}
+WEB_SHELL = ROOT / "src" / "modern" / "web" / "shell.html"
 
 
 def tracked_paths() -> list[Path]:
@@ -48,6 +50,45 @@ def artifact_paths(root: Path) -> list[Path]:
     return [path for path in root.rglob("*") if path.is_file() or path.is_symlink()]
 
 
+def save_boundary_violations() -> list[str]:
+    if not WEB_SHELL.is_file():
+        return [f"missing Web launcher: {WEB_SHELL.relative_to(ROOT)}"]
+
+    source = WEB_SHELL.read_text(encoding="utf-8")
+    violations: list[str] = []
+    if re.search(r'Module\.FS\.mount\s*\([^;]*?["\']/game["\']', source, re.DOTALL):
+        violations.append("persistent or external filesystems must never be mounted at the /game root")
+    has_save_mount = re.search(
+        r'const\s+persistenceMounts\s*=\s*\[\s*["\']/save["\']', source, re.DOTALL
+    ) and re.search(
+        r'Module\.FS\.mount\s*\(\s*Module\.IDBFS\s*,.*?,\s*mount\s*\)',
+        source,
+        re.DOTALL,
+    )
+    if not has_save_mount:
+        violations.append("the browser save filesystem must be isolated at /save")
+
+    for declaration in ("persistentFiles", "persistentDirectories"):
+        match = re.search(rf"const\s+{declaration}\s*=\s*\[(.*?)\];", source, re.DOTALL)
+        if match is None:
+            violations.append(f"missing explicit {declaration} allowlist")
+            continue
+        names = re.findall(r'["\']([^"\']+)["\']', match.group(1))
+        forbidden_names = sorted(name for name in names if name.lower() in FORBIDDEN_NAMES)
+        if forbidden_names:
+            violations.append(
+                f"{declaration} contains forbidden retail names: {', '.join(forbidden_names)}"
+            )
+
+    if re.search(
+        r'Module\.FS\.writeFile\s*\(\s*["\']/save/(?:th08|thbgm)\.dat["\']',
+        source,
+        re.IGNORECASE,
+    ):
+        violations.append("the launcher writes a retail archive name into /save")
+    return violations
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -60,6 +101,7 @@ def main() -> int:
     args = parser.parse_args()
 
     tracked_violations = [path.as_posix() for path in tracked_paths() if forbidden(path)]
+    boundary_violations = save_boundary_violations()
     artifact_roots = args.artifact
     default_artifact = ROOT / "build" / "web-dist"
     if not artifact_roots and default_artifact.exists():
@@ -75,7 +117,7 @@ def main() -> int:
     except ValueError as error:
         parser.error(str(error))
 
-    if tracked_violations or artifact_violations:
+    if tracked_violations or artifact_violations or boundary_violations:
         if tracked_violations:
             print("error: tracked retail/archive payloads violate Web provenance:", file=sys.stderr)
             for path in tracked_violations:
@@ -84,6 +126,10 @@ def main() -> int:
             print("error: deployable Web artifacts contain forbidden payloads:", file=sys.stderr)
             for path in artifact_violations:
                 print(f"  {path}", file=sys.stderr)
+        if boundary_violations:
+            print("error: browser save isolation violates Web provenance:", file=sys.stderr)
+            for violation in boundary_violations:
+                print(f"  {violation}", file=sys.stderr)
         print(
             "Supply th08.dat and thbgm.dat only through the browser's local file picker.",
             file=sys.stderr,

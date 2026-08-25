@@ -28,6 +28,7 @@ pthread worker running wasm32 authored game
            |
            +-- th08.dat: one volatile 46.8 MB session-memory copy
            +-- thbgm.dat: byte-range reads from the browser Blob
+           +-- allowlisted cfg/score/replay IDBFS mounts
 ```
 
 ## Provenance boundary
@@ -42,8 +43,9 @@ local installation. The launcher does not contain an upload API. It keeps the
 two browser `File` objects in the page, copies `th08.dat` into volatile Wasm
 memory, and services `thbgm.dat` reads from Blob slices. Empty MEMFS directory
 entries provide only the filenames expected by original path and `stat` code;
-they contain no retail bytes. Reloading or closing the page discards the
-session.
+they contain no retail bytes. Reloading or closing the page discards both
+retail archive handles and the game archive's memory copy, so the user must
+select the two legal local files again.
 
 The different strategies are intentional. Game archive reads are synchronous,
 frequent, and small enough for a one-time memory copy. The roughly 450 MB music
@@ -84,9 +86,20 @@ close operations retain their synchronous authored-facing behavior.
 - `thbgm.dat` stays a browser `File`. Reads use `File.slice().arrayBuffer()` on
   the main runtime thread, copy only the requested range into Wasm memory, and
   wake the blocked worker through an atomic word.
-- All configuration, score, replay, and backup writes currently use volatile
-  MEMFS. Persistence is a separate milestone and must never include retail
-  data.
+- Browser persistence is never mounted at the `/game` root. Top-level
+  `th08.cfg`, `score.dat`, and `score.txt` links target a dedicated `/save`
+  IDBFS mount. The `replay/`, `backup/`, and `snapshot/` directories are
+  separate IDBFS mounts at their original `/game` paths, preserving authored
+  `chdir("directory")` followed by `chdir("../")` semantics. The launcher
+  restores all four mounts before `main()`, and IDBFS `autoPersist` writes
+  changes back asynchronously. Diagnostics and the two empty retail-name
+  entries remain in `/game`'s volatile MEMFS root.
+- The launcher recursively removes any `th08.dat` or `thbgm.dat` entry found
+  in any persistent mount before starting the game. This is a
+  defense-in-depth invariant; the authored game has no mapped path capable of
+  writing either retail archive into the persistent tree.
+- If IndexedDB is unavailable, the same allowlisted layout remains usable as
+  session-only MEMFS and the launcher reports the fallback in its runtime log.
 
 ### Rendering and frame pacing
 
@@ -214,8 +227,17 @@ All Web builds use
   cutoff and skipped the remaining request. A separate collision-free Stage
   6B practice run followed the real ECL flow through spell 190 and its All
   Clear transition, completing conditional coverage of all 37 expected route
-  spells. The result path wrote a 17,074-byte `score.dat` into volatile
-  `/game`; persistence remains deliberately disabled.
+  spells. That pre-persistence result path wrote a 17,074-byte `score.dat`;
+  the unchanged authored path now resolves to the persistent `score.dat`
+  overlay.
+- A clean-profile Chromium persistence test created an authored 60-byte
+  `th08.cfg` and a replay-directory probe through IDBFS `autoPersist`, reloaded
+  the page without an explicit sync, reselected the legal local DAT files, and
+  recovered both byte-for-byte. Injected three-byte fake `th08.dat` and
+  `thbgm.dat` entries in two different persistent mounts were removed during
+  restore; both `/game` DAT entries remained zero bytes, every persistent mount
+  was DAT-free, and all three authored directory round trips returned to
+  `/game`.
 
 Run the bounded probes with:
 
@@ -230,16 +252,15 @@ python3 scripts/check-web-provenance.py
 ## Remaining work
 
 The port has crossed the full-link, title/menu, input, audio-device, BGM-range,
-direct-renderer, full-route, conditional-spell, and volatile result/save gates.
+direct-renderer, full-route, conditional-spell, and isolated persistent-save
+gates.
 It is an engineering preview, not a release. The next work is:
 
-1. add an IDBFS save overlay for cfg, score, replay, and backup files, with an
-   explicit guarantee that the retail archives cannot enter it;
-2. run Firefox full-route plus Chromium/Firefox replay, pause/focus,
+1. run Firefox full-route plus Chromium/Firefox replay, pause/focus,
    audio-underrun, and repeated stage-reload regressions;
-3. measure and tune the fixed shared-memory ceiling, then produce an
+2. measure and tune the fixed shared-memory ceiling, then produce an
    allowlisted static release artifact and clean-profile deployment test;
-4. add gamepad mapping and user-facing diagnostics for unsupported browsers.
+3. add gamepad mapping and user-facing diagnostics for unsupported browsers.
 
 ## Primary references
 

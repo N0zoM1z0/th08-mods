@@ -23,14 +23,17 @@
 | macOS | [Native macOS guide](docs/PLAY_MACOS.md) | In progress |
 
 The Web edition now links and runs the reconstructed C++ game in a browser.
-The title, menus, keyboard input, Web Audio device, local BGM range reads, and
-initial gameplay setup have been exercised with retail data supplied through
-the local file picker. The browser glue contains no gameplay reimplementation.
+The title, menus, keyboard input, Web Audio device, local BGM range reads, a
+complete Lunatic Final-B route, and isolated browser-local saves have been
+exercised with retail data supplied through the local file picker. The browser
+glue contains no gameplay reimplementation.
 
 The Web build will never ship `th08.dat`, `thbgm.dat`, the original executable,
 or extracted retail assets. Users must select the two DAT files from their own
 legally obtained installation. See the [Web architecture and provenance
 boundary](docs/WEB_ARCHITECTURE.md) for the design and observed evidence.
+Settings, scores, replays, backups, and snapshots persist in the browser under
+a separate allowlisted storage mount; the retail archives never enter it.
 
 Build and launch the preview with Docker and Python 3:
 

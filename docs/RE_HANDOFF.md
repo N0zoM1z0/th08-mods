@@ -57,11 +57,21 @@ Web-port state on 2026-08-25:
   so the retail 5:00 rule ended the remaining requests. A separate
   collision-free Stage 6B practice run then observed the complete
   150, 154, 158, 162, 166, 170, 174, 178, 182, 186, 190 sequence. The result
-  path created a 17,074-byte `score.dat` in volatile `/game` session storage;
+  path created a 17,074-byte `score.dat`;
+- browser saves now use allowlisted IDBFS mounts. `th08.cfg`, `score.dat`, and
+  `score.txt` link to `/save`; `replay/`, `backup/`, and `snapshot/` mount at
+  their original paths so authored `chdir("directory")`/`chdir("../")`
+  behavior returns to `/game`. The `/game` root remains MEMFS, and the two
+  retail archive names remain zero-byte entries backed at runtime by the
+  private memory/Blob bridge. Clean-profile Chromium
+  reload tests recovered a 60-byte authored config and an auto-persisted probe
+  without an explicit sync. Deliberately injected fake `th08.dat` and
+  `thbgm.dat` entries in separate mounts were removed on restore, recursive
+  inventory confirmed no DAT in any IDBFS mount, and `chdir` round trips for
+  all three persistent directories returned to `/game`;
 - `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence. The
-  active bounded task is persistent save isolation plus Firefox and replay
-  endurance. An IDBFS save overlay remains later work and must never include
-  retail archives.
+  next bounded tasks are Firefox and replay endurance, followed by memory
+  ceiling measurement and an allowlisted static deployment test.
 
 ## Active playable-port branch
 
