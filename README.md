@@ -1,46 +1,149 @@
-# Touhou Eiyashou — Imperishable Night
+<p align="center">
+  <img src="resources/modern-icon.png" width="128" alt="TH08 Web icon">
+</p>
 
-<h3 align="center">Authored reconstruction complete — Linux playable — source-built Web preview running</h3>
+<h1 align="center">TH08 Web</h1>
 
 <p align="center">
-  <img
-    src="resources/title-screen.png"
-    width="640"
-    alt="Original Japanese TH08 1.00d title screen">
+  <strong>One browser tab. Two legal DAT files. One endless night.</strong>
 </p>
 
 <p align="center">
-  <img src="resources/progress.svg" alt="TH08 exact-source and playable-platform progress">
+  <em>Touhou Eiyashou ~ Imperishable Night, source-built for the Web.</em>
 </p>
 
-## Platform guides
+<p align="center">
+  <a href="https://th08-web.pages.dev/"><strong>Enter the endless night</strong></a>
+  ·
+  <a href="docs/WEB_PORTING.md">How we brought TH08 to the Web</a>
+  ·
+  <a href="docs/WEB_ARCHITECTURE.md">Architecture and verification</a>
+</p>
 
-| Platform | Guide | Status |
+<p align="center">
+  <a href="https://github.com/N0zoM1z0/th08-web/actions/workflows/deploy-web.yml"><img src="https://github.com/N0zoM1z0/th08-web/actions/workflows/deploy-web.yml/badge.svg?branch=main" alt="Web deployment status"></a>
+  <a href="https://github.com/N0zoM1z0/th08-web/actions/workflows/ci.yml"><img src="https://github.com/N0zoM1z0/th08-web/actions/workflows/ci.yml/badge.svg?branch=main" alt="Repository validation status"></a>
+</p>
+
+<p align="center">
+  <img src="resources/web-launcher.png" width="1180" alt="TH08 Web launcher waiting for locally selected retail DAT files">
+</p>
+
+The false moon is up, the clock is moving, and Gensokyo has found one more
+window: your browser.
+
+**TH08 Web** brings the original Japanese TH08 version 1.00d across the browser
+boundary. The reconstructed C++ game code runs as WebAssembly; a small
+JavaScript layer handles browser file access, input, audio, saves, and the
+canvas. This is the game logic compiled for the Web, not a TypeScript remake or
+an executable running inside an emulator.
+
+> [!IMPORTANT]
+> This project does not distribute `th08.dat`, `thbgm.dat`, `th08.exe`, or
+> extracted retail assets. You must provide the two DAT files from your own
+> legally obtained copy of TH08. They remain local to your browser and are
+> never uploaded to the site.
+
+## Enter the night
+
+1. Open **[th08-web.pages.dev](https://th08-web.pages.dev/)** in a desktop
+   browser. Current desktop Chrome is recommended.
+2. Select `th08.dat` and `thbgm.dat` from your legally obtained TH08
+   installation.
+3. Choose **Start TH08**, then click the game canvas if it does not already
+   have keyboard focus.
+
+The launcher copies `th08.dat` into volatile session memory. The much larger
+`thbgm.dat` remains a browser `File` and is read in small ranges as music is
+needed. Neither archive is bundled, transmitted, cached by the site, or stored
+in browser persistence.
+
+Settings, scores, replays, backups, and snapshots are stored separately in the
+browser's IndexedDB storage. They survive a normal reload and remain private to
+that browser profile. Clearing site data for `th08-web.pages.dev` removes them.
+
+That is the whole ritual. There is no installer, account, upload, or server-side
+game session: once the static Web build arrives, the night unfolds entirely on
+your machine.
+
+## Choose your browser
+
+| Browser | Status | Notes |
 | --- | --- | --- |
-| Linux | **[Download, install, and play](docs/PLAY_LINUX.md)** | **Playable** |
-| Web | [Build, run, architecture, and evidence](docs/WEB_ARCHITECTURE.md) | Playable engineering preview |
-| Windows | [Native Windows guide](docs/PLAY_WINDOWS.md) | In progress |
-| macOS | [Native macOS guide](docs/PLAY_MACOS.md) | In progress |
+| Chrome | **Recommended** | Best observed performance and frame pacing. |
+| Chromium-based desktop browsers | Expected to work | Use a current version with hardware acceleration enabled. |
+| Firefox | Supported | Gameplay, audio, saves, and complete routes work, but performance is currently lower on typical Firefox configurations. |
+| Safari and mobile browsers | Not verified | Keyboard play, WebAssembly threads, and the current presentation path are desktop-oriented. |
 
-The Web edition now links and runs the reconstructed C++ game in a browser.
-The title, menus, keyboard input, Web Audio device, local BGM range reads, a
-complete Lunatic Final-B route, and isolated browser-local saves have been
-exercised with retail data supplied through the local file picker. The browser
-glue contains no gameplay reimplementation.
+The game requires WebAssembly threads, `SharedArrayBuffer`, WebGL 2, Web Audio,
+and a cross-origin-isolated HTTPS page. The production site supplies the
+required COOP and COEP headers.
 
-The Web build will never ship `th08.dat`, `thbgm.dat`, the original executable,
-or extracted retail assets. Users must select the two DAT files from their own
-legally obtained installation. See the [Web architecture and provenance
-boundary](docs/WEB_ARCHITECTURE.md) for the design and observed evidence.
-Settings, scores, replays, backups, and snapshots persist in the browser under
-a separate allowlisted storage mount; the retail archives never enter it.
+For the smoothest bullet-hell input and pacing, close heavily loaded tabs,
+leave browser hardware acceleration enabled, and avoid power-saving modes that
+throttle the display refresh rate.
 
-The public Web release is available at
-[th08-web.pages.dev](https://th08-web.pages.dev/). It contains only the
-source-built launcher, JavaScript, WebAssembly, project-owned icon, and static
-host metadata. It does not contain game data.
+## Danmaku controls
 
-Build and launch the preview with Docker and Python 3:
+| Key | Action |
+| --- | --- |
+| Arrow keys | Move / navigate menus |
+| `Z` | Shoot / confirm |
+| `X` | Bomb / cancel |
+| `Shift` | Focus movement and show the hitbox |
+| `Esc` | Pause |
+
+## Inside the spell circle
+
+- The reconstructed authored C++ game and PBG archive code compile to
+  WebAssembly with Emscripten 6.0.8.
+- `PROXY_TO_PTHREAD` keeps the authored game loop off the browser UI thread and
+  retains the existing startup and BGM thread structure.
+- A direct WebGL 2 renderer translates the D3D8-shaped draw interface into
+  shaders, batched vertex uploads, and browser canvas presentation.
+- The authored DirectSound-shaped mixer feeds Web Audio while BGM data is
+  range-read from the user-selected local file.
+- Browser key events enter shared atomic state and are merged with the
+  DirectInput-shaped polling path, preserving short key presses between frames.
+- IDBFS persists only the allowlisted save paths. Retail archives stay outside
+  persistent storage.
+
+The implementation and its verified boundaries are documented in
+**[docs/WEB_ARCHITECTURE.md](docs/WEB_ARCHITECTURE.md)**. For the complete
+from-zero engineering story—including the failed bring-up paths, renderer
+replacement, browser boundaries, correctness work, and public release—read
+**[Engineering TH08 Web](docs/WEB_PORTING.md)**.
+
+## Route status
+
+The imperishable night is playable from title to ending. The following paths
+have been exercised with locally selected retail data:
+
+- title, difficulty, team, practice, Music Room, dialogue, and result screens;
+- keyboard movement, shooting, focus, bombs, score, and browser-local saves;
+- direct WebGL 2 rendering and Web Audio playback;
+- a complete Lunatic Border Team Final-B route in Chromium;
+- a complete Lunatic Border Team Final-B endurance route in Firefox, including
+  return through Result to the title screen;
+- a separate Stage 6B practice run covering the final spell sequence;
+- reload and persistence tests confirming that no DAT enters IndexedDB.
+
+Remaining engineering work includes hardware-specific Firefox pacing,
+additional replay endurance, and browser memory-ceiling measurement. See the
+architecture document for the exact evidence and limitations behind each
+claim.
+
+## Build your own night
+
+Requirements:
+
+- Docker
+- Python 3
+- a desktop browser
+- your own legal `th08.dat` and `thbgm.dat`
+
+Build the pinned Release configuration and start the repository development
+server:
 
 ```bash
 scripts/build-web-game.sh
@@ -48,214 +151,85 @@ python3 scripts/check-web-provenance.py --artifact build/web-dist
 scripts/serve-web.py --port 8000
 ```
 
-Then open `http://127.0.0.1:8000/` and select your legally obtained
-`th08.dat` and `thbgm.dat`. A remote browser requires HTTPS in addition to the
-cross-origin-isolation headers supplied by the development server.
+Open `http://127.0.0.1:8000/`. Do not use a generic static server for this
+build: Emscripten pthreads require the COOP, COEP, and CORP headers supplied by
+`scripts/serve-web.py`.
 
-The staged directory is also ready for Cloudflare Pages Direct Upload. Its
-checked-in `_headers` metadata preserves the required isolation headers, and
-the deployment contains no retail data:
+The generated deployment directory contains exactly six allowlisted files:
+
+```text
+_headers
+_redirects
+th08-web.html
+th08-web.js
+th08-web.wasm
+th08-web-icon.png
+```
+
+Any extra file, missing file, symbolic link, executable, retail archive, or
+common archive container causes the provenance check to fail.
+
+## Release boundary
+
+Cloudflare Pages hosts the public static build because it applies the checked-in
+`_headers` policy required by WebAssembly threads. Bare GitHub Pages hosting is
+not used because it cannot attach the repository-defined isolation headers.
+
+Pushes to `main` run the following release chain:
+
+1. repository-owned validation;
+2. the digest-pinned Emscripten Release build;
+3. the exact deployment-boundary check;
+4. Cloudflare Pages Direct Upload.
+
+The workflow is defined in
+[`deploy-web.yml`](.github/workflows/deploy-web.yml). It requires these GitHub
+repository secrets:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN`, scoped to **Account → Cloudflare Pages → Edit**
+
+Pull requests do not deploy and do not receive these secrets.
+
+For an authorized manual deployment:
 
 ```bash
 export CLOUDFLARE_ACCOUNT_ID=<account-id>
 export CLOUDFLARE_API_TOKEN=<token-with-pages-edit>
-npx wrangler pages deploy build/web-dist --project-name=th08-web
+npx wrangler@4.125.0 pages deploy build/web-dist --project-name=th08-web --branch=main
 ```
 
-Keep the token outside the repository and CI logs. A bare GitHub Pages site is
-not a supported host for the pthread build because it cannot attach the
-repository-defined COOP and COEP response headers.
+Never write deployment credentials into this repository or command logs.
 
-Pushes to `main` deploy automatically after repository validation, the pinned
-Release build, and the deployment-boundary check succeed. Configure
-`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repository
-secrets; pull requests never receive those secrets and never deploy.
+## Map of the boundary
 
-This project reconstructs the source code of the original Japanese
-`東方永夜抄 ～ Imperishable Night` version 1.00d executable. All 1,107 authored
-functions are now present in source, and 1,105 are accepted as byte-exact by
-reproducible comparison. The authored-source recovery milestone is complete;
-current work focuses on whole-image reconstruction, compiler/runtime libraries,
-and playable Windows, Linux, and macOS products.
-
-The repository continues the work of
-[GensokyoClub/th08](https://github.com/GensokyoClub/th08). Its complete Git
-history was imported rather than squashed, preserving the authorship and
-contribution record of the original project. New infrastructure and
-reconstruction work build on that baseline.
-
-The project remains active reconstruction and platform-engineering work.
-Existing source, symbol mappings, or generated progress artwork must not be
-interpreted as a new exact matching percentage without a reproducible report
-against the target binary. Current source-presence inventory is generated in
-[docs/PROGRESS.md](docs/PROGRESS.md) and is deliberately labeled separately
-from strict exact-match coverage.
-
-## Target executable
-
-Supply your own original executable as `resources/th08.exe`:
-
-| Property | Required value |
+| Path | Purpose |
 | --- | --- |
-| Version | Original Japanese 1.00d |
-| Size | `840,704` bytes |
-| SHA-256 | `330fbdbf58a710829d65277b4f312cfbb38d5448b3df523e79350b879213d924` |
-| PE image base | `0x00400000` |
-| Entry point | `0x004A619E` |
+| `src/` | Reconstructed authored game code and modern host adapters |
+| `src/modern/web/` | Browser launcher, Web compatibility boundary, and Pages metadata |
+| `scripts/build-web-game.sh` | Reproducible Emscripten Release build and staging |
+| `scripts/check-web-provenance.py` | Retail-data and exact-artifact deployment gate |
+| `scripts/serve-web.py` | Local server with cross-origin-isolation headers |
+| `docs/WEB_PORTING.md` | From-zero engineering narrative and reproducible porting method |
+| `docs/WEB_ARCHITECTURE.md` | Architecture, provenance model, and observed verification |
+| `.github/workflows/deploy-web.yml` | Validated `main` deployment to Cloudflare Pages |
 
-Localized or patched executables are different binaries and are intentionally
-out of scope. The executable and game data are copyrighted assets and are not
-included.
+## Credits
 
-```bash
-python3 scripts/verify-target.py
-```
+Touhou Project and `東方永夜抄 ～ Imperishable Night` are works of Team Shanghai
+Alice / ZUN. This project is unofficial and is not affiliated with or endorsed
+by Team Shanghai Alice.
 
-## Build
+This repository is the Web-focused fork of our source reconstruction,
+[N0zoM1z0/th08](https://github.com/N0zoM1z0/th08). Its authored C++ game code is
+the foundation beneath the browser boundary, and its contributor authorship
+and commit history remain intact here.
 
-Initialize the third-party submodules, then create the upstream Visual Studio
-.NET 2002/DirectX 8 environment. On Linux or macOS:
-
-```bash
-git submodule update --init --recursive
-./scripts/create_th08_prefix
-python3 ./scripts/build.py
-```
-
-The prefix helper uses Wine by default; set `WINE` before invoking it when a
-different compatible runner is required. On Windows, use the upstream setup
-script directly:
-
-```text
-python scripts/create_devenv.py scripts/dls scripts/prefix
-python scripts/build.py
-```
-
-See [Build and exact matching](docs/BUILD_MATCHING.md) for dependency,
-build-mode, reccmp, and objdiff details.
-
-### Playable modern ports
-
-An independent CMake target compiles the production-authored sources for
-modern hosts. It does not replace or make an exactness claim about the VC7
-build.
-
-| Platform | Status | Delivery |
-| --- | --- | --- |
-| Linux i386 | **Done** | Local one-command build/run and CI portable archive |
-| Windows x86 | **In progress** | Native startup and redistributable packaging are not complete |
-| macOS | **In progress** | Native backend and packaging remain to be implemented |
-
-For build dependencies, runtime asset expectations, `--data-dir`, and the
-remaining platform sequence, see
-[Playable reconstruction ports](docs/PORTING.md).
-
-For a source checkout on Debian or Ubuntu, the Linux quick start installs
-missing i386 dependencies, builds, and runs using only the original data
-directory:
-
-```bash
-scripts/setup-modern-linux.sh "/path/to/the/original/TH08 directory"
-```
-
-The [Portable Linux build workflow](.github/workflows/portable-linux.yml)
-also publishes `th08-modern-linux-i386.tar.gz` as a downloadable Actions
-artifact. Extract it and pass only the original game-data directory:
-
-```bash
-./run-th08.sh "/path/to/the/original/TH08 directory"
-```
-
-Neither path embeds the original executable or DAT archives.
-
-The native i386 build has been exercised under both WSLg and a Kali Linux
-x86-64 virtual machine. The Kali recording below was made in a low-memory VM
-without 3D acceleration; its slow first 45 seconds are shown at 8x speed, while
-the remainder plays at the recorded speed.
-
-<p align="center">
-  <img
-    src="resources/kali-linux-port.gif"
-    width="800"
-    alt="TH08 native Linux reconstruction starting and running on Kali Linux">
-</p>
-
-Only `th08.dat` and `thbgm.dat` are runtime data requirements. The Linux port
-does not open or execute the original `th08.exe`. A clean two-DAT directory
-previously exposed a Linux compatibility bug during the first score-backup
-rotation: Win32 rejects an invalid search handle harmlessly, while the Linux
-backend tried to delete it and crashed. The corrected backend now creates the
-backup and continues into the title assets with an initially empty `backup/`
-directory. On a software-rendered VM, a fresh configuration's fullscreen
-FPS/vsync calibration can still be slow; reusing an existing `th08.cfg` is an
-optional startup convenience, not a data requirement.
-
-The portable Linux window uses the project-owned
-[`resources/modern-icon.png`](resources/modern-icon.png), derived from the
-Touhou Lab artwork supplied for this reconstruction. It is not an icon
-extracted from the original executable.
-
-#### Known Linux issue
-
-- During the Stage 4-to-5 transition, a dynamic text texture can still tile
-  across the outer frame and HUD (most visibly as repeated `Yakumo Yukari`
-  text). This is a known renderer/texture-state bug in the Linux port, not a
-  damaged DAT archive; gameplay testing can continue past it.
-
-<p align="center">
-  <img
-    src="resources/linux-stage5-texture-tiling.png"
-    width="640"
-    alt="Known Linux Stage 5 dynamic text texture tiling bug">
-</p>
-
-## Analysis status
-
-IDA MCP follows whichever database is active in the GUI; it has no reliable
-program selector. Use it for TH08 only after the active database passes the
-attestation in [IDA and analysis safety](docs/IDA_MCP.md). Otherwise use
-target-side `objdump`/`llvm-objdump`, the verified disposable Ghidra import, and
-the target-pinned repository tools.
-
-To see the live authored and library inventory instead of relying on prose:
-
-```bash
-python3 scripts/analysis/report-reconstruction-status.py --summary
-```
-
-## Project map
-
-- [Linux download, installation, and play guide](docs/PLAY_LINUX.md)
-- [Native Windows user guide and status](docs/PLAY_WINDOWS.md)
-- [Native macOS user guide and status](docs/PLAY_MACOS.md)
-- [Architecture and binary inventory](docs/ARCHITECTURE.md)
-- [Reverse-engineering workflow](docs/RE_WORKFLOW.md)
-- [IDA and analysis safety](docs/IDA_MCP.md)
-- [Build and exact matching](docs/BUILD_MATCHING.md)
-- [Playable reconstruction ports](docs/PORTING.md)
-- [Native Linux playable reconstruction](docs/LINUX_PORTING.md)
-- [Web port architecture and feasibility evidence](docs/WEB_ARCHITECTURE.md)
-- [Tool selection and command recipes](docs/TOOLS.md)
-- [Reusable knowledge map and contribution policy](docs/KNOWLEDGE_BASE.md)
-- [Current handoff and next milestones](docs/RE_HANDOFF.md)
-- [Generated reconstruction progress](docs/PROGRESS.md)
-- [Agent operating rules](AGENTS.md)
-
-## Credits and provenance
-
-This continuation exists because of the reconstruction and tooling work by
-the contributors to [GensokyoClub/th08](https://github.com/GensokyoClub/th08).
-Their commits retain their original author/committer metadata in this
-repository. The upstream project also credits @EstexNT for porting its
-`var_order` pragma to MSVC7.
-
-The [N0zoM1z0/th07 reconstruction](https://github.com/N0zoM1z0/th07) supplies
-this repository's workflow, structure, target gates, matching, and
-documentation model. [GensokyoClub/th06](https://github.com/GensokyoClub/th06)
-is adjacent-engine corroboration only; neither reference overrides TH08 target
-evidence.
+The Web icon is project-owned artwork carried over from the modern port. It is
+not extracted from the retail executable or archives.
 
 ## License
 
 Repository code and documentation are provided under the included MIT License.
-This does not grant rights to the original game, executable, or game data.
+That license does not grant rights to the original game, executable, DAT files,
+music, dialogue, graphics, or other retail content.

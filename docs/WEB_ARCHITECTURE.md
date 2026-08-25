@@ -1,5 +1,10 @@
 # Web port architecture and status
 
+For the chronological engineering story—from the first wasm32 compiler gate
+through renderer replacement, correctness work, and public deployment—see
+[Engineering TH08 Web](WEB_PORTING.md). This document is the current technical
+contract and verification record.
+
 ## Outcome
 
 TH08 Web is built from the reconstructed C++ game sources with Emscripten and
@@ -130,10 +135,12 @@ approximately 0.08--0.15 ms of CPU game submission and 0.01--0.03 ms of blit
 work per frame in representative scenes. A headed Firefox title/menu test on
 Xvfb's software `llvmpipe` renderer kept callbacks and authored calculations in
 exact 236/236 lockstep over five seconds, although that software-only setup ran
-at about 47 FPS. These bounded observations demonstrate that the previous
-renderer bottleneck is gone and that the Firefox fallback preserves timing
-lockstep; they are not hardware Firefox performance claims or substitutes for
-full-route browser endurance testing.
+at about 47 FPS. A later 45-minute Firefox Lunatic Final-B endurance route
+completed all six route stages and returned through Result to title without a
+browser, worker, or Wasm memory error. These observations demonstrate that the
+previous renderer bottleneck is gone and that the Firefox fallback preserves
+functional timing; the software-rendered run is not a hardware Firefox
+performance claim.
 
 An earlier blocking-loop experiment rendered correctly into the WebGL default
 framebuffer but remained black on screen. In Emscripten 6, the native
@@ -197,9 +204,10 @@ scripts/serve-web.py --bind 127.0.0.1 --port 8000
 Open `http://127.0.0.1:8000/`, select local files named exactly `th08.dat` and
 `thbgm.dat`, and choose **Start TH08**. Keyboard controls are listed in the
 launcher. The generated static artifact consists of `th08-web.html`,
-`th08-web.js`, `th08-web.wasm`, and the project-owned `th08-web-icon.png` copied
-from the Linux port. CMake metadata stays in `build/web-game`; only the
-allowlisted files are staged in `build/web-dist`.
+`th08-web.js`, `th08-web.wasm`, the project-owned `th08-web-icon.png`, and the
+two static-host metadata files `_headers` and `_redirects`. CMake metadata stays
+in `build/web-game`; only these allowlisted files are staged in
+`build/web-dist`.
 
 The normal script builds `Release`; the staged JavaScript and Wasm are
 approximately 232 KiB and 1.4 MiB respectively. The old Debug Wasm was about
@@ -273,9 +281,13 @@ All Web builds use
   bridge to render the title and difficulty menu, accepted Z input, reloaded,
   reselected both local retail files, and recovered an auto-persisted probe.
   Recursive inspection after restore found no retail DAT in any persistent
-  mount. This test ran with Xvfb's software `llvmpipe` renderer and therefore
-  establishes functional presentation, input, and storage behavior rather
-  than production GPU performance.
+  mount. A subsequent 45-minute Lunatic Border Team Final-B endurance run
+  crossed Stages 1, 2, 3, 4B, 5, and 6B, wrote `score.dat`, returned through
+  Result to the title, and raised no page, worker, or Wasm memory error. It
+  observed the expected route spells through 186; the original 5:00 cutoff
+  skipped 190, which is separately covered by the Chromium Stage 6B practice
+  run. These Firefox tests used Xvfb's software `llvmpipe` renderer and
+  therefore establish correctness rather than production GPU performance.
 
 Run the bounded probes with:
 
@@ -290,14 +302,13 @@ python3 scripts/check-web-provenance.py
 ## Remaining work
 
 The port has crossed the full-link, title/menu, input, audio-device, BGM-range,
-direct-renderer, full-route, conditional-spell, and isolated persistent-save
-gates.
-It is an engineering preview, not a release. The next work is:
+direct-renderer, full-route, conditional-spell, isolated persistent-save, and
+public-deployment gates. It is a public engineering release. The next work is:
 
-1. run a hardware-accelerated Firefox full route plus Chromium/Firefox replay,
+1. tune hardware Firefox pacing and expand Chromium/Firefox replay,
    pause/focus, audio-underrun, and repeated stage-reload regressions;
-2. measure and tune the fixed shared-memory ceiling, then produce an
-   allowlisted static release artifact and clean-profile deployment test;
+2. measure and tune the fixed shared-memory ceiling under repeated long
+   sessions;
 3. add gamepad mapping and user-facing diagnostics for unsupported browsers.
 
 ## Primary references

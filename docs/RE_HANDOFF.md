@@ -89,9 +89,11 @@ Web-port state on 2026-08-25:
   cutoff skipped spell 190, which remains covered separately by the Chromium
   Stage 6B practice run. This Firefox evidence used Xvfb `llvmpipe`, so it is
   correctness evidence rather than a hardware performance result;
-- `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence. The
-  next bounded tasks are hardware Firefox pacing, replay endurance, and
-  memory-ceiling measurement.
+- `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence, while
+  `docs/WEB_PORTING.md` gives the chronological from-zero engineering narrative
+  from compiler feasibility through the public release. The next bounded tasks
+  are hardware Firefox pacing, replay endurance, and memory-ceiling
+  measurement.
 
 ## Active playable-port branch
 
