@@ -40,8 +40,11 @@ Web-port state on 2026-08-25:
   Localhost works directly; remote browsers require HTTPS. The temporary
   tailnet preview uses HTTPS port 8443 without changing the existing service on
   port 443;
-- `scripts/check-web-provenance.py` checks tracked source and staged Web
-  artifacts for DATs, original executables, and common retail containers;
+- Cloudflare Pages metadata is staged beside the four generated assets. Its
+  `_headers` file preserves COOP/COEP/CORP and its `_redirects` file handles the
+  site root. The provenance gate now requires exactly these six regular files,
+  rejecting unlisted files, missing files, symbolic links, DATs, original
+  executables, and common retail containers before Direct Upload;
 - Wasm-specific references now preserve overlapping target ownership for ECL
   time/state, player and gauge fields, effect/GUI data tables, enemy timeline
   storage, and spell callback lifetime. A Stage 2 Normal endurance run observed
@@ -73,15 +76,16 @@ Web-port state on 2026-08-25:
   OffscreenCanvas even though its completed default framebuffer is valid. A
   Firefox-only bridge now transfers the finished frame as an `ImageBitmap` to
   a main-thread `bitmaprenderer`; Chromium keeps the direct compositor path.
-  A headed Firefox test rendered the title and difficulty menu, accepted Z,
-  reloaded, recovered an auto-persisted probe, and found no DAT in persistent
-  storage. Its Xvfb `llvmpipe` sample kept callbacks/calculations in 236/236
-  lockstep over five seconds at about 47 FPS, which is functional evidence but
-  not a hardware performance result;
+  A headed Firefox 153 Lunatic Border Team Final-B endurance run traversed
+  Stages 1, 2, 3, 4B, 5, and 6B for 45 minutes, returned through Result to the
+  title, wrote `score.dat`, and raised no browser, worker, or Wasm memory error.
+  It observed the expected route sequence through spell 186; the retail 5:00
+  cutoff skipped spell 190, which remains covered separately by the Chromium
+  Stage 6B practice run. This Firefox evidence used Xvfb `llvmpipe`, so it is
+  correctness evidence rather than a hardware performance result;
 - `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence. The
-  next bounded tasks are hardware Firefox full-route and replay endurance,
-  followed by memory-ceiling measurement and an allowlisted static deployment
-  test.
+  next bounded tasks are a Cloudflare Pages deployment with a Pages Edit token,
+  hardware Firefox pacing, replay endurance, and memory-ceiling measurement.
 
 ## Active playable-port branch
 

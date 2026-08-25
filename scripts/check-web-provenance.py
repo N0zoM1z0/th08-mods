@@ -26,6 +26,14 @@ FORBIDDEN_NAMES = {
 }
 FORBIDDEN_SUFFIXES = {".dat", ".exe", ".dll", ".zip", ".rar", ".7z", ".iso", ".cab"}
 WEB_SHELL = ROOT / "src" / "modern" / "web" / "shell.html"
+ALLOWED_WEB_ARTIFACTS = {
+    "_headers",
+    "_redirects",
+    "th08-web.html",
+    "th08-web.js",
+    "th08-web.wasm",
+    "th08-web-icon.png",
+}
 
 
 def tracked_paths() -> list[Path]:
@@ -112,8 +120,21 @@ def main() -> int:
         for root in artifact_roots:
             resolved = root if root.is_absolute() else ROOT / root
             for path in artifact_paths(resolved):
-                if forbidden(path):
+                relative = path.relative_to(resolved).as_posix()
+                if path.is_symlink():
+                    artifact_violations.append(f"{path} (symbolic links are not deployable)")
+                elif relative not in ALLOWED_WEB_ARTIFACTS:
+                    artifact_violations.append(f"{path} (not in the Web artifact allowlist)")
+                elif forbidden(path):
                     artifact_violations.append(str(path))
+            missing = sorted(ALLOWED_WEB_ARTIFACTS - {
+                path.relative_to(resolved).as_posix()
+                for path in artifact_paths(resolved)
+                if path.is_file() and not path.is_symlink()
+            })
+            artifact_violations.extend(
+                f"{resolved / name} (required Web artifact is missing)" for name in missing
+            )
     except ValueError as error:
         parser.error(str(error))
 
@@ -123,7 +144,7 @@ def main() -> int:
             for path in tracked_violations:
                 print(f"  {path}", file=sys.stderr)
         if artifact_violations:
-            print("error: deployable Web artifacts contain forbidden payloads:", file=sys.stderr)
+            print("error: deployable Web artifact boundary violations:", file=sys.stderr)
             for path in artifact_violations:
                 print(f"  {path}", file=sys.stderr)
         if boundary_violations:

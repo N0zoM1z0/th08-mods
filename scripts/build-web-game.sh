@@ -32,6 +32,11 @@ cmake -E make_directory "${dist_dir}"
 for artifact in th08-web.html th08-web.js th08-web.wasm th08-web-icon.png; do
     cmake -E copy_if_different "${build_dir}/${artifact}" "${dist_dir}/${artifact}"
 done
+for metadata in _headers _redirects; do
+    cmake -E copy_if_different \
+        "${repo_root}/src/modern/web/cloudflare/${metadata}" \
+        "${dist_dir}/${metadata}"
+done
 
 python3 "${repo_root}/scripts/check-web-provenance.py" --artifact "${dist_dir}"
 echo "Staged ${dist_dir}"

@@ -47,6 +47,20 @@ Then open `http://127.0.0.1:8000/` and select your legally obtained
 `th08.dat` and `thbgm.dat`. A remote browser requires HTTPS in addition to the
 cross-origin-isolation headers supplied by the development server.
 
+The staged directory is also ready for Cloudflare Pages Direct Upload. Its
+checked-in `_headers` metadata preserves the required isolation headers, and
+the deployment contains no retail data:
+
+```bash
+export CLOUDFLARE_ACCOUNT_ID=<account-id>
+export CLOUDFLARE_API_TOKEN=<token-with-pages-edit>
+npx wrangler pages deploy build/web-dist --project-name=th08-web
+```
+
+Keep the token outside the repository and CI logs. A bare GitHub Pages site is
+not a supported host for the pthread build because it cannot attach the
+repository-defined COOP and COEP response headers.
+
 This project reconstructs the source code of the original Japanese
 `東方永夜抄 ～ Imperishable Night` version 1.00d executable. All 1,107 authored
 functions are now present in source, and 1,105 are accepted as byte-exact by

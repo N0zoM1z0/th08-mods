@@ -203,11 +203,20 @@ allowlisted files are staged in `build/web-dist`.
 
 The normal script builds `Release`; the staged JavaScript and Wasm are
 approximately 232 KiB and 1.4 MiB respectively. The old Debug Wasm was about
-21 MiB and is not the public build path.
+21 MiB and is not the public build path. The staged directory also contains
+Cloudflare Pages `_headers` and `_redirects` metadata. The headers preserve
+cross-origin isolation, while the root redirect leads to `th08-web.html`.
 
 For another device, place the same server behind HTTPS and preserve the COOP,
 COEP, CORP, and no-store headers. Static hosts that cannot provide
 cross-origin isolation cannot run this pthread build.
+
+Cloudflare Pages can publish `build/web-dist` directly because it applies the
+staged `_headers` file to static responses. GitHub Pages can publish the same
+files, but its static hosting does not provide repository-defined response
+headers, so a bare GitHub Pages deployment is not a supported host for this
+pthread build. GitHub remains the source and build-automation host; only the
+allowlisted `build/web-dist` payload belongs in a Pages deployment.
 
 ## Reproducible evidence
 
