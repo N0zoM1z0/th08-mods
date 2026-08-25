@@ -48,7 +48,11 @@ DIFFABLE_STATIC(ChainElem, g_EffectManagerCalcChain);
 DIFFABLE_STATIC(ChainElem, g_EffectManagerDrawChain);
 
 // Target 0x004E4B64 is owned by Gui.cpp but participates in effect-resource setup.
+#ifdef TH08_MODERN_WEB
+extern i32 &g_GuiMessageStageMode;
+#else
 extern i32 g_GuiMessageStageMode;
+#endif
 
 
 
@@ -63,7 +67,9 @@ extern i32 g_GuiMessageStageMode;
 
 
 
+#ifndef TH08_MODERN_WEB
 extern f32 g_EclGameTimeScale;
+#endif
 
 
 
@@ -78,7 +84,16 @@ struct EffectTemplate
     i32 field348;
     i32 (__fastcall *callback)(AnmVm *effect);
 };
+#ifdef TH08_MODERN_WEB
+// The retail table has 66 entries.  Native modern builds bind this symbol to
+// the target data arena through th08-layout.ld; WebAssembly cannot use that
+// linker layout, so retain the same ownership explicitly.  InitializeTargetData
+// populates this arena before the first effect is spawned.
+EffectTemplate (&g_EffectTemplates)[66] =
+    *reinterpret_cast<EffectTemplate (*)[66]>(0x004c6d30);
+#else
 DIFFABLE_STATIC_ARRAY(EffectTemplate, 20, g_EffectTemplates);
+#endif
 
 // FUNCTION: th08 0x423d70
 Float3 *Float3::operator*=(f32 scalar)
@@ -1309,7 +1324,11 @@ void __fastcall FUN_00428310(AnmVm *effect, D3DXVECTOR3 *base)
             }
         }
 
+#ifdef TH08_MODERN_PORT
+        delta = point - reinterpret_cast<D3DXVECTOR3 &>(EclOperands::g_TargetPlayerPosition017D61AC);
+#else
         delta = point - *reinterpret_cast<D3DXVECTOR3 *>(0x17D61AC);
+#endif
         delta.x -= 32.0f;
         delta.y -= 16.0f;
         delta.z = 0.0f;

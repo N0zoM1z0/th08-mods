@@ -31,8 +31,6 @@ docker run --rm \
         -Isrc \
         -include src/modern/web/web_compat.hpp \
         --use-port=sdl2 \
-        -sLEGACY_GL_EMULATION \
-        -sGL_FFP_ONLY \
         -sMIN_WEBGL_VERSION=2 \
         -sMAX_WEBGL_VERSION=2 \
         -sEXIT_RUNTIME=0 \

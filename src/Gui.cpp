@@ -24,23 +24,44 @@ namespace th08
 DIFFABLE_STATIC(Gui, g_Gui);
 DIFFABLE_STATIC(ChainElem, g_GuiCalcChain);
 DIFFABLE_STATIC(ChainElem, g_GuiDrawChain);
+#ifdef TH08_MODERN_WEB
+i32 &g_GuiFullPowerModeFrames = g_Supervisor.unk174;
+i32 &g_GuiMessageStageMode = g_Background.EclExBarrierState().unknown4;
+#else
 DIFFABLE_STATIC(i32, g_GuiFullPowerModeFrames);
 DIFFABLE_STATIC(i32, g_GuiMessageStageMode);
+#endif
 DIFFABLE_STATIC(u16, g_GuiMessageInputCurrent);
 DIFFABLE_STATIC(u16, g_GuiMessageInputPrevious);
+#ifdef TH08_MODERN_WEB
+i32 &g_GuiMessageScreenEffectDuration = g_Supervisor.unk174;
+#else
 DIFFABLE_STATIC(i32, g_GuiMessageScreenEffectDuration);
-DIFFABLE_STATIC_ARRAY(i32 *, MAX_STAGES, g_GuiStageScoreTables);
+#endif
 struct GuiMessageTextColorSet
 {
     u32 colors[4];
 };
-DIFFABLE_STATIC_ARRAY(GuiMessageTextColorSet, SHOT_ALL, g_GuiMessageTextColors);
 
 struct GuiStageMusicContextSet
 {
     i32 values[3];
 };
+#ifdef TH08_MODERN_WEB
+// These retail tables are initialized in the target data arena.  Native
+// modern builds bind the named symbols there with th08-layout.ld; WebAssembly
+// keeps explicit references because it cannot reproduce that linker layout.
+i32 *(&g_GuiStageScoreTables)[MAX_STAGES] =
+    *reinterpret_cast<i32 *(*)[MAX_STAGES]>(0x004c7158);
+GuiMessageTextColorSet (&g_GuiMessageTextColors)[SHOT_ALL] =
+    *reinterpret_cast<GuiMessageTextColorSet (*)[SHOT_ALL]>(0x004c7180);
+GuiStageMusicContextSet (&g_GuiStageMusicContexts)[MAX_STAGES] =
+    *reinterpret_cast<GuiStageMusicContextSet (*)[MAX_STAGES]>(0x004c7240);
+#else
+DIFFABLE_STATIC_ARRAY(i32 *, MAX_STAGES, g_GuiStageScoreTables);
+DIFFABLE_STATIC_ARRAY(GuiMessageTextColorSet, SHOT_ALL, g_GuiMessageTextColors);
 DIFFABLE_STATIC_ARRAY(GuiStageMusicContextSet, MAX_STAGES, g_GuiStageMusicContexts);
+#endif
 DIFFABLE_STATIC_ARRAY_ASSIGN(u32, 4, g_GuiBossTimerColors) = {0x00a0d0ff, 0x00a080ff, 0x00e080c0, 0x00ff4040};
 DIFFABLE_STATIC_ARRAY_ASSIGN(const char *, 2, g_GuiTimePeriodLabels) = {"AM", "PM"};
 

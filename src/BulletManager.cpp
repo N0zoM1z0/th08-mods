@@ -12,11 +12,21 @@
 namespace th08
 {
 
+#ifdef TH08_MODERN_WEB
+extern AnmLoaded *&g_AsciiManagerDemoAnm0577EB4;
+#else
 DIFFABLE_EXTERN(AnmLoaded *, g_AsciiManagerDemoAnm0577EB4);
+#endif
 
 DIFFABLE_STATIC(BulletManager, g_BulletManager);
 DIFFABLE_STATIC(ChainElem, g_BulletManagerCalcChain);
 DIFFABLE_STATIC(ChainElem, g_BulletManagerDrawChain);
+
+#ifdef TH08_MODERN_PORT
+#define TH08_BULLET_TIME_SCALE g_EclGameTimeScale
+#else
+#define TH08_BULLET_TIME_SCALE (*reinterpret_cast<f32 *>(0x17CE8E0))
+#endif
 
 void __fastcall CopyBulletAnmVmCore(AnmVm *dst, const AnmVm *src);
 void __fastcall SelectBulletSprite(AnmVm *dst, AnmVm *base, AnmVm *sizeSource, i32 offset);
@@ -1181,7 +1191,7 @@ void Bullet::FUN_00432210()
         reinterpret_cast<Float3 *>(reinterpret_cast<u8 *>(this) + 0xD50)
             ->FromAngleMagnitude(*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD74),
                                  (magnitude + *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD68)) *
-                                     *reinterpret_cast<f32 *>(0x17CE8E0));
+                                     TH08_BULLET_TIME_SCALE);
     }
     else
     {
@@ -1205,7 +1215,7 @@ void Bullet::FUN_004322b0()
     {
         *reinterpret_cast<Float3 *>(reinterpret_cast<u8 *>(this) + 0xD50) +=
             *reinterpret_cast<Float3 *>(reinterpret_cast<u8 *>(this) + 0xFC0) *
-            *reinterpret_cast<f32 *>(0x17CE8E0);
+            TH08_BULLET_TIME_SCALE;
 
         if (fabsf(*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD50)) > 0.0001f ||
             fabsf(*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD54)) > 0.0001f)
@@ -1231,13 +1241,13 @@ void Bullet::FUN_00432390()
     {
         *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD74) =
             AddNormalizeAngle(*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD74),
-                              *reinterpret_cast<f32 *>(0x17CE8E0) *
+                              TH08_BULLET_TIME_SCALE *
                                   *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xFE8));
         *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD68) +=
-            *reinterpret_cast<f32 *>(0x17CE8E0) * *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xFE4);
+            TH08_BULLET_TIME_SCALE * *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xFE4);
         reinterpret_cast<Float3 *>(reinterpret_cast<u8 *>(this) + 0xD50)
             ->FromAngleMagnitude(*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD74),
-                                 *reinterpret_cast<f32 *>(0x17CE8E0) *
+                                 TH08_BULLET_TIME_SCALE *
                                      *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD68));
     }
 
@@ -1280,7 +1290,7 @@ void Bullet::FUN_00432460()
 
     reinterpret_cast<Float3 *>(reinterpret_cast<u8 *>(this) + 0xD50)
         ->FromAngleMagnitude(*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD74),
-                             magnitude * *reinterpret_cast<f32 *>(0x17CE8E0));
+                             magnitude * TH08_BULLET_TIME_SCALE);
     (*reinterpret_cast<ZunTimer *>(reinterpret_cast<u8 *>(this) + 0x1004))++;
 }
 
@@ -1320,7 +1330,7 @@ void Bullet::FUN_004325a0()
 
     reinterpret_cast<Float3 *>(reinterpret_cast<u8 *>(this) + 0xD50)
         ->FromAngleMagnitude(*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD74),
-                             magnitude * *reinterpret_cast<f32 *>(0x17CE8E0));
+                             magnitude * TH08_BULLET_TIME_SCALE);
     (*reinterpret_cast<ZunTimer *>(reinterpret_cast<u8 *>(this) + 0x1004))++;
 }
 
@@ -1361,7 +1371,7 @@ void Bullet::FUN_004326e0()
 
     reinterpret_cast<Float3 *>(reinterpret_cast<u8 *>(this) + 0xD50)
         ->FromAngleMagnitude(*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD74),
-                             magnitude * *reinterpret_cast<f32 *>(0x17CE8E0));
+                             magnitude * TH08_BULLET_TIME_SCALE);
     (*reinterpret_cast<ZunTimer *>(reinterpret_cast<u8 *>(this) + 0x1004))++;
 }
 
@@ -1404,7 +1414,7 @@ void Bullet::FUN_00432830()
         magnitude = *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD68);
         reinterpret_cast<Float3 *>(reinterpret_cast<u8 *>(this) + 0xD50)
             ->FromAngleMagnitude(*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xD74),
-                                 magnitude * *reinterpret_cast<f32 *>(0x17CE8E0));
+                                 magnitude * TH08_BULLET_TIME_SCALE);
         *reinterpret_cast<i32 *>(reinterpret_cast<u8 *>(this) + 0x1050) += 1;
         if (*reinterpret_cast<i32 *>(reinterpret_cast<u8 *>(this) + 0x1050) >=
             *reinterpret_cast<i32 *>(reinterpret_cast<u8 *>(this) + 0x1054))
@@ -1737,5 +1747,7 @@ i32 IsBulletManagerAnmReleaseRequired()
 {
     return g_Supervisor.unk168;
 }
+
+#undef TH08_BULLET_TIME_SCALE
 
 } /* namespace th08 */

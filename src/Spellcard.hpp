@@ -349,9 +349,17 @@ C_ASSERT(sizeof(Spellcard) == 0x2644);
 DIFFABLE_EXTERN_ARRAY(i32 *, 6, g_SpellcardNumbersPerDifficulty);
 DIFFABLE_EXTERN_ARRAY(i32, 6, g_SpellcardCountsPerDifficulty);
 DIFFABLE_EXTERN_ARRAY(i32, 43, g_LastSpellNumbers);
+#ifdef TH08_MODERN_WEB
+extern i32 &g_LastSpellCount;
+#else
 DIFFABLE_EXTERN(i32, g_LastSpellCount);
+#endif
 DIFFABLE_EXTERN(Spellcard, g_Spellcard);
+#ifdef TH08_MODERN_WEB
+extern ChainElem *&g_SpellcardCalcChain;
+#else
 DIFFABLE_EXTERN(ChainElem *, g_SpellcardCalcChain);
+#endif
 DIFFABLE_EXTERN_ARRAY(i32 *, 10, g_SpellcardNumbersPerStage)
 DIFFABLE_EXTERN_ARRAY(i32, 10, g_SpellcardCountPerStage)
 

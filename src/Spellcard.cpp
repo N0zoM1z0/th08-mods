@@ -16,11 +16,29 @@
 namespace th08
 {
 ZunBool IsDisableResourceReload();
+#ifdef TH08_MODERN_WEB
+extern AnmLoaded *&g_AsciiManagerDemoAnm0577EB4;
+#else
 DIFFABLE_EXTERN(AnmLoaded *, g_AsciiManagerDemoAnm0577EB4);
+#endif
 DIFFABLE_STATIC(Spellcard, g_Spellcard);
+#ifdef TH08_MODERN_WEB
+ChainElem *&g_SpellcardCalcChain =
+    *reinterpret_cast<ChainElem **>(&g_Spellcard.lifetimeObject);
+#else
 DIFFABLE_STATIC(ChainElem *, g_SpellcardCalcChain);
+#endif
+#ifdef TH08_MODERN_WEB
+i32 &g_LastSpellCount = *reinterpret_cast<i32 *>(0x004c6c3c);
+#else
 DIFFABLE_STATIC(i32, g_LastSpellCount);
+#endif
+#ifdef TH08_MODERN_WEB
+AnmLoaded *&g_SpellcardBackgroundAnm =
+    *reinterpret_cast<AnmLoaded **>(reinterpret_cast<u8 *>(&g_EffectManager) + 0x8B058);
+#else
 DIFFABLE_STATIC(AnmLoaded *, g_SpellcardBackgroundAnm);
+#endif
 
 struct SpellcardFlagBits
 {
@@ -418,7 +436,11 @@ Spellcard::Spellcard()
 }
 
 
+#ifdef TH08_MODERN_WEB
+extern i32 &g_GuiFullPowerModeFrames;
+#else
 DIFFABLE_EXTERN(i32, g_GuiFullPowerModeFrames);
+#endif
 
 // FUNCTION: th08 0x4144d0
 #pragma var_order(difficulty, i)

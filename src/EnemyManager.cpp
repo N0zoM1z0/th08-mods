@@ -21,8 +21,15 @@ i32 IsResourceReloadEnabled();
 f32 __stdcall FUN_0042eb10(f32 angle1, f32 angle2, f32 factor);
 
 DIFFABLE_STATIC(EnemyManager, g_EnemyManager);
+#ifdef TH08_MODERN_WEB
+u16 &g_EnemyDropCounter = *reinterpret_cast<u16 *>(
+    reinterpret_cast<u8 *>(&g_EnemyManager) + 0x9DCDC0);
+u16 &g_EnemyDropScheduleIndex = *reinterpret_cast<u16 *>(
+    reinterpret_cast<u8 *>(&g_EnemyManager) + 0x9DCDC2);
+#else
 DIFFABLE_STATIC(u16, g_EnemyDropCounter);
 DIFFABLE_STATIC(u16, g_EnemyDropScheduleIndex);
+#endif
 DIFFABLE_STATIC_ARRAY_ASSIGN(u8, 32, g_EnemyDropSchedule) = {
     0, 0, 1, 0, 1, 0, 0, 0,
     1, 1, 0, 0, 1, 1, 1, 0,
@@ -205,7 +212,11 @@ void EnemyManager::Initialize()
     *reinterpret_cast<i32 *>(enemy + 0x3024) = 7;
     *reinterpret_cast<i32 *>(enemy + 0x3028) = 25;
     *reinterpret_cast<u32 *>(enemy + 0x3350) = 0x44800000;
+#ifdef TH08_MODERN_PORT
+    *reinterpret_cast<i32 *>(enemy + 0x2E10) = g_Player.damageAccumulatorThreshold;
+#else
     *reinterpret_cast<i32 *>(enemy + 0x2E10) = *reinterpret_cast<i32 *>(0x18B8A24);
+#endif
 }
 
 // FUNCTION: th08 0x42a210

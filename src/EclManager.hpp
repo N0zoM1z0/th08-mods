@@ -77,8 +77,13 @@ DIFFABLE_EXTERN(ChainElem, g_EffectManagerDrawChain);
 // A dword published by an ECL enemy callback from the target object's +0x18
 // field.  Its consumer semantics are still unknown; this name records only
 // the observed callback ownership and width.
+#ifdef TH08_MODERN_WEB
+extern i32 &g_EclCallbackPublishedEnemyField24;
+extern i32 &g_EclCallbackPublishedEnemyField56;
+#else
 DIFFABLE_EXTERN(i32, g_EclCallbackPublishedEnemyField24);
 DIFFABLE_EXTERN(i32, g_EclCallbackPublishedEnemyField56);
+#endif
 struct EclExBarrierRenderState
 {
     i32 mode;
@@ -88,9 +93,15 @@ struct EclExBarrierRenderState
 };
 C_ASSERT(offsetof(EclExBarrierRenderState, vm0) == 0x8);
 C_ASSERT(offsetof(EclExBarrierRenderState, vm1) == 0x2ac);
+#ifdef TH08_MODERN_WEB
+extern i8 &g_EclScriptedGlobalUpdateFreeze;
+extern f32 &g_EclGameTimeScale;
+extern u32 &g_EclGameTimeScaleFlags;
+#else
 DIFFABLE_EXTERN(i8, g_EclScriptedGlobalUpdateFreeze);
 DIFFABLE_EXTERN(f32, g_EclGameTimeScale);
 DIFFABLE_EXTERN(u32, g_EclGameTimeScaleFlags);
+#endif
 struct EclRawInstruction
 {
     i32 time;

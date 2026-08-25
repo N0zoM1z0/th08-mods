@@ -16,7 +16,12 @@ namespace th08
 {
 
 // Placeholder for the unledgered global AnmLoaded* observed at 0x00577eb4.
+#ifdef TH08_MODERN_WEB
+AnmLoaded *&g_AsciiManagerDemoAnm0577EB4 =
+    *reinterpret_cast<AnmLoaded **>(reinterpret_cast<u8 *>(&g_EffectManager) + 0x8B054);
+#else
 DIFFABLE_STATIC(AnmLoaded *, g_AsciiManagerDemoAnm0577EB4);
+#endif
 
 namespace EclOperands
 {
@@ -29,7 +34,11 @@ struct Vector3
     Vector3 operator-(const Vector3 &other) const;
     f32 Length() const;
 };
+#ifdef TH08_MODERN_WEB
+Vector3 &g_TargetPlayerPosition017D61AC = reinterpret_cast<Vector3 &>(g_Player.position);
+#else
 Vector3 g_TargetPlayerPosition017D61AC;
+#endif
 } // namespace EclOperands
 
 DIFFABLE_STATIC(ChainElem, g_AsciiManagerDrawChainLowPrio);

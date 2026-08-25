@@ -177,7 +177,11 @@ ChainCallbackResult Background::OnUpdate(Background *background)
         return CHAIN_CALLBACK_RESULT_CONTINUE;
     }
 
+#ifdef TH08_MODERN_PORT
+    if (g_GameManager.currentStage == 7)
+#else
     if (*reinterpret_cast<i32 *>(0x164D2CC) == 7)
+#endif
     {
         if (*reinterpret_cast<AnmVm **>(reinterpret_cast<u8 *>(background) + 0xAE8) == NULL)
         {

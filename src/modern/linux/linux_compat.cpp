@@ -575,7 +575,11 @@ bool RenderWebText(GdiDc *dc, int x, int y, const char *text, int length)
                 return;
             }
 
-            const bytes = HEAPU8.subarray($0, $0 + $1);
+            // TextDecoder rejects SharedArrayBuffer-backed views.  The Web
+            // build uses pthreads, so copy this short Shift-JIS string into a
+            // regular ArrayBuffer before decoding it on the browser thread.
+            const bytes = new Uint8Array($1);
+            bytes.set(HEAPU8.subarray($0, $0 + $1));
             if (!Module.th08WebShiftJisDecoder)
                 Module.th08WebShiftJisDecoder = new TextDecoder('shift_jis');
             const value = Module.th08WebShiftJisDecoder.decode(bytes);

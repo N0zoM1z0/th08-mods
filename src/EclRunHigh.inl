@@ -41,8 +41,13 @@
 namespace th08
 {
 extern void *g_EclExInsn[];
+#ifdef TH08_MODERN_WEB
+extern i32 &g_EclGlobal004EA290; // target alias: Background::unk6260
+extern i32 &g_EclGlobal004ECCA8; // target alias: Spellcard::scoreLimit
+#else
 extern i32 g_EclGlobal004EA290; // target 0x004EA290
 extern i32 g_EclGlobal004ECCA8; // target 0x004ECCA8
+#endif
 void __fastcall StartEnemySpell(u8 *enemy, void *instruction);
 void __fastcall EndEnemySpell(u8 *enemy, void *instruction);
 

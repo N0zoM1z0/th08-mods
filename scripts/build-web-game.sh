@@ -16,7 +16,7 @@ docker run --rm \
     "${image}" \
     env EM_CACHE=/src/build/emscripten-cache \
     emcmake cmake -S /src -B /src/build/web-game -G "Unix Makefiles" \
-        -DCMAKE_BUILD_TYPE=Debug
+        -DCMAKE_BUILD_TYPE=Release
 
 docker run --rm \
     --volume "${repo_root}:/src" \

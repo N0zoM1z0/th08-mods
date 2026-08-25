@@ -23,7 +23,11 @@ namespace th08
 
 extern i32 FUN_00439916(i32 unused);
 extern i32 FUN_0043bbe1();
+#ifdef TH08_MODERN_WEB
+extern i32 &g_GuiMessageStageMode;
+#else
 extern i32 g_GuiMessageStageMode;
+#endif
 extern i32 g_TimeRequirementParams[][4];
 
 #define GM_BYTE(gm, off) (*reinterpret_cast<u8 *>(reinterpret_cast<u8 *>(gm) + (off)))

@@ -13,7 +13,11 @@ namespace th08
 {
 
 DIFFABLE_STATIC(ItemManager, g_ItemManager);
+#ifdef TH08_MODERN_WEB
+i32 &g_MaxValuePointItemsCollected = g_GameManager.unk3DB94;
+#else
 DIFFABLE_STATIC(i32, g_MaxValuePointItemsCollected);
+#endif
 DIFFABLE_STATIC_ARRAY_ASSIGN(i32, 6, g_PowerUpThresholds) = {8, 24, 48, 80, 128, 999};
 
 // FUNCTION: th08 0x441830

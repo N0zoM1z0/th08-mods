@@ -48,7 +48,9 @@ extern AsciiManager g_AsciiManager;
 extern ReplayManager *g_ReplayManager;
 extern ZunMemory g_ZunMemory;
 extern EnemyManager g_EnemyManager;
+#ifndef TH08_MODERN_WEB
 extern i8 g_EclScriptedGlobalUpdateFreeze;
+#endif
 
 /*
  * Private target-pinned overlays for EnemyManager::OnUpdate at 0x0042C660.

@@ -20,13 +20,13 @@ Web-port state on 2026-08-25:
   It copies the 46,838,025-byte game archive once into volatile Wasm session
   memory and range-reads the 449,961,024-byte music archive from its browser
   `File`. Neither archive is uploaded, persisted, tracked, or staged;
-- a worker-owned OffscreenCanvas runs the existing D3D8-shaped renderer through
-  WebGL 2 and Emscripten fixed-function emulation. A Web-only Emscripten main
-  loop yields after each authored frame so implicit canvas swaps are visibly
-  presented. Main-loop callbacks remain at 60 Hz, but an instrumented dense
-  Stage 1 interval fell to 40 authored calculation frames per second while the
-  callback rate stayed at 60. The legacy immediate-mode renderer is therefore
-  the active playability blocker;
+- a worker-owned OffscreenCanvas runs the existing D3D8-shaped interface
+  through a direct WebGL 2 GLSL ES 3.0 shader, rotating VBOs, batched vertex
+  upload, cached render state, and shader blits. Emscripten legacy
+  fixed-function emulation is no longer enabled. The normal script builds
+  Release (about 1.4 MiB Wasm rather than the former 21 MiB Debug artifact),
+  and bounded gameplay samples keep authored calculations aligned with browser
+  callbacks near 60 Hz;
 - browser key events enter shared atomic state and are merged into the authored
   DirectInput-shaped polling path. Key-down edges are latched until the next
   authored poll, so a 20 ms Z tap is not lost between frames. The title
@@ -42,9 +42,18 @@ Web-port state on 2026-08-25:
   port 443;
 - `scripts/check-web-provenance.py` checks tracked source and staged Web
   artifacts for DATs, original executables, and common retail containers;
+- Wasm-specific references now preserve overlapping target ownership for ECL
+  time/state, player and gauge fields, effect/GUI data tables, enemy timeline
+  storage, and spell callback lifetime. A Stage 2 Normal endurance run observed
+  spell numbers 14, 18, 22, 26, and the conditional Last Spell 29, then returned
+  to title without the prior result-transition out-of-bounds trap. The two
+  Stage 2 darkness parameters were subsequently corrected against
+  `config/reccmp-globals.csv`: radius is at `0x004E3D24` and alpha at
+  `0x004E3D28`;
 - `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence. The
-  active bounded task is replacing legacy GL emulation with a direct WebGL 2
-  shader/VBO backend. An IDBFS save overlay remains later work and must never
+  corrected Stage 2 replay has completed with the same five-spell sequence and
+  no runtime trap. The active bounded task is a complete Lunatic-route browser
+  endurance run. An IDBFS save overlay remains later work and must never
   include retail archives.
 
 ## Active playable-port branch

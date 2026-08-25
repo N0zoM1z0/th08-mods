@@ -62,7 +62,11 @@ DIFFABLE_STATIC(ChainElem, g_GameManagerDrawChain);
 
 void FUN_00438046();
 i32 FUN_0043bbe1();
+#ifdef TH08_MODERN_WEB
+extern i32 &g_GuiMessageStageMode;
+#else
 extern i32 g_GuiMessageStageMode;
+#endif
 
 #ifdef TH08_MODERN_WEB
 DWORD WINAPI GameplaySetupThreadWeb(LPVOID parameter)
@@ -401,7 +405,11 @@ ChainCallbackResult GameManager::OnUpdate(GameManager *gameManager)
     {
         FUN_00438046();
         g_AnmManager->ReleaseSurface(8);
+#ifdef TH08_MODERN_PORT
+        g_Supervisor.loadingVmsHaveBeenSetup = 0;
+#else
         ABS_I32(0x17CEA54) = 0;
+#endif
         if (gameManager->unk3de28 == 1)
         {
             if (!g_GameManager.flags.isSpellPractice)
@@ -438,28 +446,55 @@ ChainCallbackResult GameManager::OnUpdate(GameManager *gameManager)
         g_SoundPlayer.QueueCommand(6, 0, "Pause");
         g_SoundPlayer.PlaySoundByIdx(SOUND_PAUSE, 0);
         g_Supervisor.UpdateGameTime();
+#ifdef TH08_MODERN_PORT
+        *reinterpret_cast<u16 *>(reinterpret_cast<u8 *>(&g_Rng) + 2) =
+            *reinterpret_cast<u16 *>(&g_Rng);
+#else
         *reinterpret_cast<u16 *>(0x164D522) = *reinterpret_cast<u16 *>(&g_Rng);
+#endif
         gameManager->hscr.numPauses++;
         g_GameManager.UpdateAntiTamper();
+#ifdef TH08_MODERN_PORT
+        *reinterpret_cast<u16 *>(&g_Rng) =
+            *reinterpret_cast<u16 *>(reinterpret_cast<u8 *>(&g_Rng) + 2);
+#else
         *reinterpret_cast<u16 *>(&g_Rng) = *reinterpret_cast<u16 *>(0x164D522);
+#endif
     }
 
+#ifdef TH08_MODERN_PORT
+    g_Supervisor.viewport.X = (DWORD)gameManager->arcadeRegionTopLeftPos.x;
+    g_Supervisor.viewport.Y = (DWORD)gameManager->arcadeRegionTopLeftPos.y;
+    g_Supervisor.viewport.Width = (DWORD)gameManager->arcadeRegionSize.x;
+    g_Supervisor.viewport.Height = (DWORD)gameManager->arcadeRegionSize.y;
+    g_Supervisor.viewport.MinZ = 0.0f;
+    g_Supervisor.viewport.MaxZ = 1.0f;
+#else
     ABS_I32(0x17CE820) = (i32)gameManager->arcadeRegionTopLeftPos.x;
     ABS_I32(0x17CE824) = (i32)gameManager->arcadeRegionTopLeftPos.y;
     ABS_I32(0x17CE828) = (i32)gameManager->arcadeRegionSize.x;
     ABS_I32(0x17CE82C) = (i32)gameManager->arcadeRegionSize.y;
     ABS_F32(0x17CE830) = 0.0f;
     ABS_F32(0x17CE834) = 1.0f;
+#endif
     anmManager = g_AnmManager;
     anmManager->cameraMode |= AnmCameraMode_Unset;
 
     if (g_GameManager.flags.isReplay && g_GameManager.replayMode == 1 && !g_Gui.IsDialogPresent())
     {
         gameManager->unk3de08++;
+#ifdef TH08_MODERN_PORT
+        const i16 replayTiming = *reinterpret_cast<i16 *>(&g_Supervisor.unk198);
+        if ((replayTiming < 20 && gameManager->unk3de08 % 3 != 0) ||
+            (replayTiming >= 20 && replayTiming < 30 && gameManager->unk3de08 % 2 != 0) ||
+            (replayTiming >= 30 && replayTiming < 40 && gameManager->unk3de08 % 3 == 0) ||
+            (replayTiming >= 40 && replayTiming < 50 && gameManager->unk3de08 % 6 == 0))
+#else
         if ((ABS_I16(0x17CE8F0) < 20 && gameManager->unk3de08 % 3 != 0) ||
             (ABS_I16(0x17CE8F0) >= 20 && ABS_I16(0x17CE8F0) < 30 && gameManager->unk3de08 % 2 != 0) ||
             (ABS_I16(0x17CE8F0) >= 30 && ABS_I16(0x17CE8F0) < 40 && gameManager->unk3de08 % 3 == 0) ||
             (ABS_I16(0x17CE8F0) >= 40 && ABS_I16(0x17CE8F0) < 50 && gameManager->unk3de08 % 6 == 0))
+#endif
             return CHAIN_CALLBACK_RESULT_BREAK;
     }
 
@@ -507,7 +542,12 @@ ChainCallbackResult GameManager::OnUpdate(GameManager *gameManager)
         if (gameManager->globals->rng7[antiTamperIdx] < 6543 || gameManager->globals->rng7[antiTamperIdx] > 106543)
             g_GameManager.antiTamperExpectedValue = -9999.0f;
 
+#ifdef TH08_MODERN_PORT
+    g_Supervisor.d3dDevice->Clear(0, NULL, D3DCLEAR_ZBUFFER,
+                                  g_Background.skyFog.color.d3dColor, 1.0f, 0);
+#else
     g_Supervisor.d3dDevice->Clear(0, NULL, D3DCLEAR_ZBUFFER, ABS_U32(0x4E4B24), 1.0f, 0);
+#endif
 
     if (gameManager->isInGameMenu == 1 || gameManager->isInGameMenu == 2 || gameManager->showRetryMenu)
         return CHAIN_CALLBACK_RESULT_BREAK;
@@ -553,16 +593,30 @@ ChainCallbackResult GameManager::OnUpdate(GameManager *gameManager)
 
     if (*reinterpret_cast<u8 *>(reinterpret_cast<u8 *>(g_GameManager.cfg) + 0x25))
     {
+#ifdef TH08_MODERN_PORT
+        const i32 activeBulletCount = *reinterpret_cast<i32 *>(
+            reinterpret_cast<u8 *>(&g_BulletManager) + 0x6BA538);
+#endif
         g_GameManager.unk2D = 0;
         gameManager->unk3de08++;
+#ifdef TH08_MODERN_PORT
+        if ((activeBulletCount >= 320 && gameManager->unk3de08 % 3 == 0) ||
+            (activeBulletCount < 320 && activeBulletCount >= 224 && gameManager->unk3de08 % 4 == 0) ||
+            (activeBulletCount < 224 && activeBulletCount >= 128 && gameManager->unk3de08 % 5 == 0))
+#else
         if ((ABS_I32(0x160F3C8) >= 320 && gameManager->unk3de08 % 3 == 0) ||
             (ABS_I32(0x160F3C8) < 320 && ABS_I32(0x160F3C8) >= 224 && gameManager->unk3de08 % 4 == 0) ||
             (ABS_I32(0x160F3C8) < 224 && ABS_I32(0x160F3C8) >= 128 && gameManager->unk3de08 % 5 == 0))
+#endif
         {
             g_GameManager.unk2D = 1;
             return CHAIN_CALLBACK_RESULT_BREAK;
         }
+#ifdef TH08_MODERN_PORT
+        if (activeBulletCount < 128)
+#else
         if (ABS_I32(0x160F3C8) < 128)
+#endif
             gameManager->unk3de08 = 0;
     }
 

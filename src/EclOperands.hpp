@@ -16,7 +16,11 @@ struct Vector3
     Vector3 operator-(const Vector3 &other) const;
     f32 Length() const;
 };
+#ifdef TH08_MODERN_WEB
+extern Vector3 &g_TargetPlayerPosition017D61AC;
+#else
 extern Vector3 g_TargetPlayerPosition017D61AC;
+#endif
 
 // Private byte overlay for target-observed Enemy offsets. The public Enemy
 // layout remains intentionally incomplete until its owning lane proves it.
@@ -49,6 +53,10 @@ struct EclCallParameterCopy
     f32 floats[4];
 };
 extern EclCallParameterCopy g_EclCallParameters;
+#ifdef TH08_MODERN_WEB
+extern EclOperands::EnemyOverlay *(&g_EclEnemyTableF54CC0)[92];
+#else
 extern EclOperands::EnemyOverlay *g_EclEnemyTableF54CC0[];
+#endif
 } // namespace EclRunLowProposal
 } // namespace th08

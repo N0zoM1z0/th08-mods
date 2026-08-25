@@ -21,7 +21,11 @@
 // cluster; it does not claim the original source filename.
 namespace th08
 {
+#ifdef TH08_MODERN_WEB
+extern AnmLoaded *&g_AsciiManagerDemoAnm0577EB4;
+#else
 DIFFABLE_EXTERN(AnmLoaded *, g_AsciiManagerDemoAnm0577EB4);
+#endif
 // FUNCTION: th08 0x40bc20
 i32 Player::IsHuman()
 {

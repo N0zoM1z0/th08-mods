@@ -30,8 +30,16 @@ void __fastcall ReisenFreezeBullets(EclOperands::EnemyOverlay *enemy, EclExInstr
 void __fastcall MokouResurrection(EclOperands::EnemyOverlay *enemy, EclExInstruction *instruction);
 }
 
+#ifdef TH08_MODERN_WEB
+extern AnmLoaded *&g_AsciiManagerDemoAnm0577EB4;
+#else
 DIFFABLE_EXTERN(AnmLoaded *, g_AsciiManagerDemoAnm0577EB4);
+#endif
+#ifdef TH08_MODERN_WEB
+extern i32 &g_EclCallbackPublishedEnemyField56;
+#else
 extern i32 g_EclCallbackPublishedEnemyField56;
+#endif
 
 void __fastcall FUN_004235a0();
 

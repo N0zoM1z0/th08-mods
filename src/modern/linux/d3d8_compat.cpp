@@ -2,8 +2,12 @@
 #include "Gui.hpp"
 
 #include <SDL.h>
+#ifdef TH08_MODERN_WEB
+#include <GLES3/gl3.h>
+#else
 #include <GL/gl.h>
 #include <GL/glext.h>
+#endif
 #ifdef TH08_MODERN_WEB
 #include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
@@ -12,6 +16,7 @@
 
 #include <math.h>
 #include <new>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
@@ -96,78 +101,64 @@ struct FramebufferApi
 };
 
 FramebufferApi g_framebufferApi;
+#ifndef TH08_MODERN_WEB
 FogCoordfFunction g_fogCoordf;
+#endif
 
 #ifdef TH08_MODERN_WEB
-struct RendererStateSnapshot
+struct WebVertex
 {
-    GLboolean alphaTest;
-    GLboolean blend;
-    GLboolean cullFace;
-    GLboolean depthTest;
-    GLboolean lighting;
-    GLboolean scissorTest;
-    GLboolean texture2d;
-    GLboolean depthWrite;
-    GLint texture;
-    GLint textureEnvironment;
-    GLint unpackAlignment;
-    GLfloat color[4];
+    GLfloat x, y, z;
+    GLfloat u, v;
+    GLfloat fogCoordinate;
+    GLubyte red, green, blue, alpha;
 };
 
-std::vector<RendererStateSnapshot> g_rendererStateStack;
-
-void RestoreCapability(GLenum capability, GLboolean enabled)
+struct WebDrawState
 {
-    if (enabled)
-        glEnable(capability);
-    else
-        glDisable(capability);
-}
+    GLuint texture;
+    bool textureEnabled;
+    bool blendEnabled;
+    DWORD sourceBlend, destinationBlend;
+    bool depthTestEnabled, depthWriteEnabled;
+    DWORD depthFunction;
+    bool scissorEnabled;
+    GLint scissorX, scissorY;
+    GLsizei scissorWidth, scissorHeight;
+    DWORD minFilter, magFilter, addressU, addressV;
+    bool rgbUsesTexture, alphaUsesTexture;
+    GLfloat alphaThreshold;
+    DWORD colorOperation, colorArgument1, colorArgument2;
+    DWORD alphaOperation, alphaArgument1, alphaArgument2;
+    DWORD textureFactor;
+    bool alphaTestEnabled;
+    DWORD alphaFunction, alphaReference;
+    bool fogEnabled;
+    DWORD fogColor;
+    GLfloat fogStart, fogEnd;
+    GLfloat viewportWidth, viewportHeight;
+};
+
+bool InitializeWebPipeline();
+void DestroyWebPipeline();
+bool DrawWebVertices(GLenum mode, const WebVertex *vertices, UINT count,
+                     const WebDrawState &state);
+bool QueueWebVertices(GLenum mode, const WebVertex *vertices, UINT count,
+                      const WebDrawState &state);
+void FlushWebDraws();
+bool DrawWebBlit(GLuint texture, UINT width, UINT height, bool flipVertical, bool linearFilter);
 #endif
 
 void PushRendererState()
 {
-#ifdef TH08_MODERN_WEB
-    RendererStateSnapshot state;
-    state.alphaTest = glIsEnabled(GL_ALPHA_TEST);
-    state.blend = glIsEnabled(GL_BLEND);
-    state.cullFace = glIsEnabled(GL_CULL_FACE);
-    state.depthTest = glIsEnabled(GL_DEPTH_TEST);
-    state.lighting = glIsEnabled(GL_LIGHTING);
-    state.scissorTest = glIsEnabled(GL_SCISSOR_TEST);
-    state.texture2d = glIsEnabled(GL_TEXTURE_2D);
-    glGetBooleanv(GL_DEPTH_WRITEMASK, &state.depthWrite);
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &state.texture);
-    glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &state.textureEnvironment);
-    glGetIntegerv(GL_UNPACK_ALIGNMENT, &state.unpackAlignment);
-    glGetFloatv(GL_CURRENT_COLOR, state.color);
-    g_rendererStateStack.push_back(state);
-#else
+#ifndef TH08_MODERN_WEB
     glPushAttrib(GL_ALL_ATTRIB_BITS);
 #endif
 }
 
 void PopRendererState()
 {
-#ifdef TH08_MODERN_WEB
-    if (g_rendererStateStack.empty())
-        return;
-    const RendererStateSnapshot state = g_rendererStateStack.back();
-    g_rendererStateStack.pop_back();
-    RestoreCapability(GL_ALPHA_TEST, state.alphaTest);
-    RestoreCapability(GL_BLEND, state.blend);
-    RestoreCapability(GL_CULL_FACE, state.cullFace);
-    RestoreCapability(GL_DEPTH_TEST, state.depthTest);
-    RestoreCapability(GL_LIGHTING, state.lighting);
-    RestoreCapability(GL_SCISSOR_TEST, state.scissorTest);
-    RestoreCapability(GL_TEXTURE_2D, state.texture2d);
-    glDepthMask(state.depthWrite);
-    glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(state.texture));
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, state.textureEnvironment);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, state.unpackAlignment);
-    glColor4fv(state.color);
-#else
+#ifndef TH08_MODERN_WEB
     glPopAttrib();
 #endif
 }
@@ -308,6 +299,9 @@ class LinuxSurface : public IDirect3DSurface8
     void ReadBackbuffer()
     {
         if (!backbuffer || width == 0 || height == 0) return;
+#ifdef TH08_MODERN_WEB
+        FlushWebDraws();
+#endif
         std::vector<BYTE> rgba(width * height * 4);
         glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, &rgba[0]);
         const UINT bytes = BytesPerPixel(format);
@@ -328,16 +322,23 @@ class LinuxSurface : public IDirect3DSurface8
 
         GLuint name = 0;
         PushRendererState();
+#ifndef TH08_MODERN_WEB
         glDisable(GL_ALPHA_TEST); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST); glDisable(GL_SCISSOR_TEST);
         glDepthMask(GL_FALSE);
         glEnable(GL_TEXTURE_2D);
+#endif
         glGenTextures(1, &name); glBindTexture(GL_TEXTURE_2D, name);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+#ifdef TH08_MODERN_WEB
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, &rgba[0]);
+        DrawWebBlit(name, width, height, false, false);
+#else
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, &rgba[0]);
         glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity(); glOrtho(0.0, width, height, 0.0, -1.0, 1.0);
         glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
@@ -349,6 +350,7 @@ class LinuxSurface : public IDirect3DSurface8
         glTexCoord2f(1.0f, 1.0f); glVertex2f(static_cast<float>(width), static_cast<float>(height));
         glEnd();
         glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix(); glMatrixMode(GL_MODELVIEW);
+#endif
         glDeleteTextures(1, &name);
         PopRendererState();
         dirty = false;
@@ -371,7 +373,13 @@ class LinuxTexture : public IDirect3DTexture8
     ~LinuxTexture()
     {
         surface->owner = NULL; surface->Release();
-        if (glName != 0) glDeleteTextures(1, &glName);
+        if (glName != 0)
+        {
+#ifdef TH08_MODERN_WEB
+            FlushWebDraws();
+#endif
+            glDeleteTextures(1, &glName);
+        }
     }
     ULONG AddRef() { return ++refs; }
     ULONG Release() { ULONG value = --refs; if (value == 0) delete this; return value; }
@@ -391,6 +399,9 @@ class LinuxTexture : public IDirect3DTexture8
     void Upload()
     {
         if (uploaded && !surface->dirty) return;
+#ifdef TH08_MODERN_WEB
+        FlushWebDraws();
+#endif
         if (glName == 0) glGenTextures(1, &glName);
         glBindTexture(GL_TEXTURE_2D, glName);
         std::vector<BYTE> rgba(surface->width * surface->height * 4);
@@ -400,7 +411,13 @@ class LinuxTexture : public IDirect3DTexture8
                 DecodePixel(&surface->pixels[y * surface->pitch + x * bytes], surface->format,
                             &rgba[(y * surface->width + x) * 4]);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->width, surface->height, 0,
+        glTexImage2D(GL_TEXTURE_2D, 0,
+#ifdef TH08_MODERN_WEB
+                     GL_RGBA8,
+#else
+                     GL_RGBA,
+#endif
+                     surface->width, surface->height, 0,
                      GL_RGBA, GL_UNSIGNED_BYTE, rgba.empty() ? NULL : &rgba[0]);
         uploaded = true; surface->dirty = false;
     }
@@ -494,6 +511,7 @@ bool TextureOperationUsesTexture(DWORD operation, DWORD argument1, DWORD argumen
            (argument2 & D3DTA_SELECTMASK) == D3DTA_TEXTURE;
 }
 
+#ifndef TH08_MODERN_WEB
 GLenum TextureArgumentSource(DWORD argument)
 {
     switch (argument & D3DTA_SELECTMASK)
@@ -516,6 +534,382 @@ void ConfigureTextureComponent(GLenum combineParameter, GLenum source0Parameter,
     glTexEnvi(GL_TEXTURE_ENV, source1Parameter, TextureArgumentSource(argument2));
     glTexEnvi(GL_TEXTURE_ENV, operand1Parameter, operand);
 }
+#else
+struct WebPipeline
+{
+    WebPipeline()
+        : program(0), bufferIndex(0),
+          viewportLocation(-1), textureLocation(-1), textureMaskLocation(-1),
+          alphaThresholdLocation(-1), fogColorLocation(-1)
+    {
+        for (int index = 0; index < 3; ++index)
+        {
+            vertexBuffers[index] = 0;
+            vertexArrays[index] = 0;
+            bufferCapacities[index] = 0;
+        }
+    }
+
+    GLuint program, vertexBuffers[3], vertexArrays[3];
+    GLsizeiptr bufferCapacities[3];
+    UINT bufferIndex;
+    GLint viewportLocation, textureLocation, textureMaskLocation;
+    GLint alphaThresholdLocation, fogColorLocation;
+};
+
+WebPipeline g_webPipeline;
+
+struct WebDrawCommand
+{
+    GLenum mode;
+    GLint first;
+    GLsizei count;
+    WebDrawState state;
+};
+
+std::vector<WebVertex> g_webQueuedVertices;
+std::vector<WebDrawCommand> g_webQueuedCommands;
+double g_webGameFlushMilliseconds = 0.0;
+double g_webBlitMilliseconds = 0.0;
+unsigned long g_webMeasuredFrames = 0;
+unsigned long g_webMeasuredCommands = 0;
+unsigned long g_webMeasuredVertices = 0;
+bool g_webMeasurementComplete = false;
+
+GLuint CompileWebShader(GLenum type, const char *source)
+{
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
+    GLint compiled = GL_FALSE;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    if (compiled == GL_TRUE)
+        return shader;
+
+    GLint length = 0;
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+    std::vector<char> log(length > 1 ? length : 2, 0);
+    glGetShaderInfoLog(shader, static_cast<GLsizei>(log.size()), NULL, &log[0]);
+    fprintf(stderr, "th08-web: WebGL2 shader compilation failed: %s\n", &log[0]);
+    glDeleteShader(shader);
+    return 0;
+}
+
+bool InitializeWebPipeline()
+{
+    if (g_webPipeline.program != 0)
+        return true;
+
+    static const char *vertexSource =
+        "#version 300 es\n"
+        "precision highp float;\n"
+        "layout(location=0) in vec3 aPosition;\n"
+        "layout(location=1) in vec2 aUv;\n"
+        "layout(location=2) in vec4 aColor;\n"
+        "layout(location=3) in float aFogFactor;\n"
+        "uniform vec2 uViewport;\n"
+        "out vec2 vUv;\n"
+        "out vec4 vColor;\n"
+        "out float vFogFactor;\n"
+        "void main() {\n"
+        "  vec2 clip = vec2(aPosition.x * 2.0 / uViewport.x - 1.0,"
+        "                   1.0 - aPosition.y * 2.0 / uViewport.y);\n"
+        "  gl_Position = vec4(clip, aPosition.z, 1.0);\n"
+        "  gl_PointSize = 1.0;\n"
+        "  vUv = aUv; vColor = aColor; vFogFactor = aFogFactor;\n"
+        "}\n";
+    static const char *fragmentSource =
+        "#version 300 es\n"
+        "precision mediump float;\n"
+        "uniform sampler2D uTexture;\n"
+        "uniform vec4 uTextureMask;\n"
+        "uniform float uAlphaThreshold;\n"
+        "uniform vec4 uFogColor;\n"
+        "in vec2 vUv;\n"
+        "in vec4 vColor;\n"
+        "in float vFogFactor;\n"
+        "out vec4 outColor;\n"
+        "void main() {\n"
+        "  vec4 textureColor = texture(uTexture, vUv);\n"
+        "  vec4 result = mix(vColor, textureColor * vColor, uTextureMask);\n"
+        "  if (result.a < uAlphaThreshold) discard;\n"
+        "  result.rgb = mix(uFogColor.rgb, result.rgb, vFogFactor);\n"
+        "  outColor = result;\n"
+        "}\n";
+
+    GLuint vertexShader = CompileWebShader(GL_VERTEX_SHADER, vertexSource);
+    GLuint fragmentShader = CompileWebShader(GL_FRAGMENT_SHADER, fragmentSource);
+    if (vertexShader == 0 || fragmentShader == 0)
+    {
+        if (vertexShader != 0) glDeleteShader(vertexShader);
+        if (fragmentShader != 0) glDeleteShader(fragmentShader);
+        return false;
+    }
+
+    g_webPipeline.program = glCreateProgram();
+    glAttachShader(g_webPipeline.program, vertexShader);
+    glAttachShader(g_webPipeline.program, fragmentShader);
+    glLinkProgram(g_webPipeline.program);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    GLint linked = GL_FALSE;
+    glGetProgramiv(g_webPipeline.program, GL_LINK_STATUS, &linked);
+    if (linked != GL_TRUE)
+    {
+        GLint length = 0;
+        glGetProgramiv(g_webPipeline.program, GL_INFO_LOG_LENGTH, &length);
+        std::vector<char> log(length > 1 ? length : 2, 0);
+        glGetProgramInfoLog(g_webPipeline.program, static_cast<GLsizei>(log.size()), NULL, &log[0]);
+        fprintf(stderr, "th08-web: WebGL2 program link failed: %s\n", &log[0]);
+        DestroyWebPipeline();
+        return false;
+    }
+
+    g_webPipeline.viewportLocation = glGetUniformLocation(g_webPipeline.program, "uViewport");
+    g_webPipeline.textureLocation = glGetUniformLocation(g_webPipeline.program, "uTexture");
+    g_webPipeline.textureMaskLocation = glGetUniformLocation(g_webPipeline.program, "uTextureMask");
+    g_webPipeline.alphaThresholdLocation = glGetUniformLocation(g_webPipeline.program, "uAlphaThreshold");
+    g_webPipeline.fogColorLocation = glGetUniformLocation(g_webPipeline.program, "uFogColor");
+
+    glGenVertexArrays(3, g_webPipeline.vertexArrays);
+    glGenBuffers(3, g_webPipeline.vertexBuffers);
+    for (int index = 0; index < 3; ++index)
+    {
+        glBindVertexArray(g_webPipeline.vertexArrays[index]);
+        glBindBuffer(GL_ARRAY_BUFFER, g_webPipeline.vertexBuffers[index]);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(WebVertex),
+                              reinterpret_cast<const void *>(offsetof(WebVertex, x)));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(WebVertex),
+                              reinterpret_cast<const void *>(offsetof(WebVertex, u)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(WebVertex),
+                              reinterpret_cast<const void *>(offsetof(WebVertex, red)));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(WebVertex),
+                              reinterpret_cast<const void *>(offsetof(WebVertex, fogCoordinate)));
+    }
+    glUseProgram(g_webPipeline.program);
+    glUniform1i(g_webPipeline.textureLocation, 0);
+    fprintf(stderr, "th08-web: renderer: direct WebGL2 shader/VBO pipeline ready\n");
+    return true;
+}
+
+void DestroyWebPipeline()
+{
+    FlushWebDraws();
+    glDeleteBuffers(3, g_webPipeline.vertexBuffers);
+    glDeleteVertexArrays(3, g_webPipeline.vertexArrays);
+    if (g_webPipeline.program != 0)
+        glDeleteProgram(g_webPipeline.program);
+    g_webPipeline = WebPipeline();
+}
+
+void SetWebColorUniform(GLint location, DWORD color)
+{
+    glUniform4f(location, ((color >> 16) & 255) / 255.0f,
+                ((color >> 8) & 255) / 255.0f, (color & 255) / 255.0f,
+                ((color >> 24) & 255) / 255.0f);
+}
+
+bool BindWebVertexData(const WebVertex *vertices, UINT count)
+{
+    if (!InitializeWebPipeline() || vertices == NULL || count == 0)
+        return false;
+    const UINT index = g_webPipeline.bufferIndex++ % 3;
+    const GLsizeiptr byteCount = static_cast<GLsizeiptr>(count * sizeof(WebVertex));
+    glBindVertexArray(g_webPipeline.vertexArrays[index]);
+    glBindBuffer(GL_ARRAY_BUFFER, g_webPipeline.vertexBuffers[index]);
+    if (byteCount > g_webPipeline.bufferCapacities[index])
+    {
+        GLsizeiptr capacity = g_webPipeline.bufferCapacities[index] != 0
+                                 ? g_webPipeline.bufferCapacities[index] : 4096;
+        while (capacity < byteCount)
+            capacity *= 2;
+        glBufferData(GL_ARRAY_BUFFER, capacity, NULL, GL_DYNAMIC_DRAW);
+        g_webPipeline.bufferCapacities[index] = capacity;
+    }
+    glBufferSubData(GL_ARRAY_BUFFER, 0, byteCount, vertices);
+    return true;
+}
+
+void ApplyWebDrawState(const WebDrawState &state, WebDrawState *applied, bool *valid)
+{
+    if (!*valid || state.blendEnabled != applied->blendEnabled)
+    {
+        if (state.blendEnabled) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+    }
+    if (state.blendEnabled &&
+        (!*valid || !applied->blendEnabled || state.sourceBlend != applied->sourceBlend ||
+         state.destinationBlend != applied->destinationBlend))
+        glBlendFunc(BlendFunction(state.sourceBlend), BlendFunction(state.destinationBlend));
+
+    if (!*valid || state.depthTestEnabled != applied->depthTestEnabled)
+    {
+        if (state.depthTestEnabled) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+    }
+    if (state.depthTestEnabled &&
+        (!*valid || !applied->depthTestEnabled || state.depthFunction != applied->depthFunction))
+        glDepthFunc(CompareFunction(state.depthFunction));
+    if (!*valid || state.depthWriteEnabled != applied->depthWriteEnabled)
+        glDepthMask(state.depthWriteEnabled ? GL_TRUE : GL_FALSE);
+
+    if (!*valid || state.scissorEnabled != applied->scissorEnabled)
+    {
+        if (state.scissorEnabled) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+    }
+    if (state.scissorEnabled &&
+        (!*valid || !applied->scissorEnabled || state.scissorX != applied->scissorX ||
+         state.scissorY != applied->scissorY || state.scissorWidth != applied->scissorWidth ||
+         state.scissorHeight != applied->scissorHeight))
+        glScissor(state.scissorX, state.scissorY, state.scissorWidth, state.scissorHeight);
+
+    if (!*valid || state.viewportWidth != applied->viewportWidth ||
+        state.viewportHeight != applied->viewportHeight)
+        glUniform2f(g_webPipeline.viewportLocation, state.viewportWidth, state.viewportHeight);
+    if (!*valid || state.rgbUsesTexture != applied->rgbUsesTexture ||
+        state.alphaUsesTexture != applied->alphaUsesTexture)
+        glUniform4f(g_webPipeline.textureMaskLocation,
+                    state.rgbUsesTexture ? 1.0f : 0.0f,
+                    state.rgbUsesTexture ? 1.0f : 0.0f,
+                    state.rgbUsesTexture ? 1.0f : 0.0f,
+                    state.alphaUsesTexture ? 1.0f : 0.0f);
+    if (!*valid || state.alphaThreshold != applied->alphaThreshold)
+        glUniform1f(g_webPipeline.alphaThresholdLocation, state.alphaThreshold);
+    if (!*valid || state.fogColor != applied->fogColor)
+        SetWebColorUniform(g_webPipeline.fogColorLocation, state.fogColor);
+
+    if (!*valid || state.textureEnabled != applied->textureEnabled || state.texture != applied->texture)
+        glBindTexture(GL_TEXTURE_2D, state.textureEnabled ? state.texture : 0);
+    if (state.textureEnabled &&
+        (!*valid || !applied->textureEnabled || state.texture != applied->texture ||
+         state.minFilter != applied->minFilter || state.magFilter != applied->magFilter ||
+         state.addressU != applied->addressU || state.addressV != applied->addressV))
+    {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                        state.minFilter == D3DTEXF_LINEAR ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+                        state.magFilter == D3DTEXF_LINEAR ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
+                        state.addressU == D3DTADDRESS_CLAMP ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
+                        state.addressV == D3DTADDRESS_CLAMP ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+    }
+    *applied = state;
+    *valid = true;
+}
+
+void FlushWebDraws()
+{
+    if (g_webQueuedCommands.empty())
+        return;
+    const double started = emscripten_get_now();
+    const size_t commandCount = g_webQueuedCommands.size();
+    const size_t vertexCount = g_webQueuedVertices.size();
+    if (!BindWebVertexData(&g_webQueuedVertices[0], static_cast<UINT>(g_webQueuedVertices.size())))
+    {
+        g_webQueuedVertices.clear();
+        g_webQueuedCommands.clear();
+        return;
+    }
+    glUseProgram(g_webPipeline.program);
+    glActiveTexture(GL_TEXTURE0);
+    glDisable(GL_CULL_FACE);
+    WebDrawState applied;
+    memset(&applied, 0, sizeof(applied));
+    bool valid = false;
+    for (size_t index = 0; index < g_webQueuedCommands.size(); ++index)
+    {
+        const WebDrawCommand &command = g_webQueuedCommands[index];
+        ApplyWebDrawState(command.state, &applied, &valid);
+        glDrawArrays(command.mode, command.first, command.count);
+    }
+    g_webQueuedVertices.clear();
+    g_webQueuedCommands.clear();
+    if (!g_webMeasurementComplete)
+    {
+        g_webGameFlushMilliseconds += emscripten_get_now() - started;
+        g_webMeasuredCommands += static_cast<unsigned long>(commandCount);
+        g_webMeasuredVertices += static_cast<unsigned long>(vertexCount);
+    }
+}
+
+bool QueueWebVertices(GLenum mode, const WebVertex *vertices, UINT count,
+                      const WebDrawState &state)
+{
+    if (vertices == NULL || count == 0)
+        return false;
+    WebDrawCommand command;
+    command.mode = mode;
+    command.first = static_cast<GLint>(g_webQueuedVertices.size());
+    command.count = static_cast<GLsizei>(count);
+    command.state = state;
+    g_webQueuedVertices.insert(g_webQueuedVertices.end(), vertices, vertices + count);
+    g_webQueuedCommands.push_back(command);
+    return true;
+}
+
+bool DrawWebVertices(GLenum mode, const WebVertex *vertices, UINT count,
+                     const WebDrawState &state)
+{
+    FlushWebDraws();
+    const double started = emscripten_get_now();
+    if (!BindWebVertexData(vertices, count))
+        return false;
+    glUseProgram(g_webPipeline.program);
+    glActiveTexture(GL_TEXTURE0);
+    glDisable(GL_CULL_FACE);
+    WebDrawState applied;
+    memset(&applied, 0, sizeof(applied));
+    bool valid = false;
+    ApplyWebDrawState(state, &applied, &valid);
+    glDrawArrays(mode, 0, count);
+    if (!g_webMeasurementComplete)
+        g_webBlitMilliseconds += emscripten_get_now() - started;
+    return true;
+}
+
+bool DrawWebBlit(GLuint texture, UINT width, UINT height, bool flipVertical, bool linearFilter)
+{
+    const GLfloat top = flipVertical ? 1.0f : 0.0f;
+    const GLfloat bottom = flipVertical ? 0.0f : 1.0f;
+    WebVertex vertices[4] = {
+        {0.0f, 0.0f, 0.0f, 0.0f, top, 1.0f, 255, 255, 255, 255},
+        {static_cast<GLfloat>(width), 0.0f, 0.0f, 1.0f, top, 1.0f, 255, 255, 255, 255},
+        {0.0f, static_cast<GLfloat>(height), 0.0f, 0.0f, bottom, 1.0f, 255, 255, 255, 255},
+        {static_cast<GLfloat>(width), static_cast<GLfloat>(height), 0.0f, 1.0f, bottom, 1.0f,
+         255, 255, 255, 255}
+    };
+    WebDrawState state;
+    memset(&state, 0, sizeof(state));
+    state.texture = texture;
+    state.textureEnabled = true;
+    state.rgbUsesTexture = true;
+    state.alphaUsesTexture = true;
+    state.alphaThreshold = -1.0f;
+    state.depthWriteEnabled = false;
+    state.scissorEnabled = false;
+    state.minFilter = linearFilter ? D3DTEXF_LINEAR : D3DTEXF_POINT;
+    state.magFilter = linearFilter ? D3DTEXF_LINEAR : D3DTEXF_POINT;
+    state.addressU = D3DTADDRESS_CLAMP;
+    state.addressV = D3DTADDRESS_CLAMP;
+    state.colorOperation = D3DTOP_SELECTARG1;
+    state.colorArgument1 = D3DTA_TEXTURE;
+    state.alphaOperation = D3DTOP_SELECTARG1;
+    state.alphaArgument1 = D3DTA_TEXTURE;
+    state.textureFactor = 0xffffffffu;
+    state.alphaFunction = D3DCMP_ALWAYS;
+    state.viewportWidth = static_cast<GLfloat>(width);
+    state.viewportHeight = static_cast<GLfloat>(height);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    glDepthMask(GL_FALSE);
+    return DrawWebVertices(GL_TRIANGLE_STRIP, vertices, 4, state);
+}
+#endif
 
 class LinuxDevice : public IDirect3DDevice8
 {
@@ -562,11 +956,17 @@ class LinuxDevice : public IDirect3DDevice8
         SDL_GL_MakeCurrent(window, context);
 #endif
         TH08_WEB_RENDER_STAGE("GL context current");
+#ifndef TH08_MODERN_WEB
         g_fogCoordf = reinterpret_cast<FogCoordfFunction>(SDL_GL_GetProcAddress("glFogCoordf"));
         if (g_fogCoordf == NULL)
             g_fogCoordf = reinterpret_cast<FogCoordfFunction>(SDL_GL_GetProcAddress("glFogCoordfEXT"));
-#ifndef TH08_MODERN_WEB
         SDL_GL_SetSwapInterval(parameters.FullScreen_PresentationInterval == D3DPRESENT_INTERVAL_IMMEDIATE ? 0 : 1);
+#else
+        if (!InitializeWebPipeline())
+        {
+            TH08_WEB_RENDER_STAGE("direct WebGL2 pipeline failed");
+            return;
+        }
 #endif
         TH08_WEB_RENDER_STAGE("resetting render target");
         framebufferReady = ResetInternal(parameters);
@@ -582,7 +982,10 @@ class LinuxDevice : public IDirect3DDevice8
         textureStates[D3DTSS_ALPHAARG1] = D3DTA_TEXTURE; textureStates[D3DTSS_ALPHAARG2] = D3DTA_DIFFUSE;
         textureStates[D3DTSS_ADDRESSU] = D3DTADDRESS_WRAP; textureStates[D3DTSS_ADDRESSV] = D3DTADDRESS_WRAP;
         textureStates[D3DTSS_MINFILTER] = D3DTEXF_POINT; textureStates[D3DTSS_MAGFILTER] = D3DTEXF_POINT;
-        glDisable(GL_CULL_FACE); glDisable(GL_LIGHTING);
+        glDisable(GL_CULL_FACE);
+#ifndef TH08_MODERN_WEB
+        glDisable(GL_LIGHTING);
+#endif
     }
     ~LinuxDevice()
     {
@@ -597,6 +1000,7 @@ class LinuxDevice : public IDirect3DDevice8
         if (backbuffer != NULL) backbuffer->Release();
         DestroyRenderTarget();
 #ifdef TH08_MODERN_WEB
+        DestroyWebPipeline();
         if (webContext > 0)
             emscripten_webgl_destroy_context(webContext);
 #else
@@ -616,6 +1020,9 @@ class LinuxDevice : public IDirect3DDevice8
     HRESULT Present(const RECT *, const RECT *, HWND, const RGNDATA *)
     {
         backbuffer->FlushBackbuffer();
+#ifdef TH08_MODERN_WEB
+        FlushWebDraws();
+#endif
         presentCount++;
 
         int drawableWidth, drawableHeight;
@@ -625,6 +1032,22 @@ class LinuxDevice : public IDirect3DDevice8
         glViewport(0, 0, drawableWidth, drawableHeight);
 
         PushRendererState();
+#ifdef TH08_MODERN_WEB
+        glBindTexture(GL_TEXTURE_2D, renderColorTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        DrawWebBlit(renderColorTexture, drawableWidth, drawableHeight, true, true);
+        if (!g_webMeasurementComplete && ++g_webMeasuredFrames == 600)
+        {
+            fprintf(stderr,
+                    "th08-web: renderer: 600-frame CPU submission: %.3f ms game + %.3f ms blit per frame; %.1f draws and %.1f vertices\n",
+                    g_webGameFlushMilliseconds / g_webMeasuredFrames,
+                    g_webBlitMilliseconds / g_webMeasuredFrames,
+                    static_cast<double>(g_webMeasuredCommands) / g_webMeasuredFrames,
+                    static_cast<double>(g_webMeasuredVertices) / g_webMeasuredFrames);
+            g_webMeasurementComplete = true;
+        }
+#else
         glDisable(GL_ALPHA_TEST); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST); glDisable(GL_LIGHTING); glDisable(GL_SCISSOR_TEST);
         glDepthMask(GL_FALSE);
@@ -644,6 +1067,7 @@ class LinuxDevice : public IDirect3DDevice8
                                             static_cast<float>(drawableHeight));
         glEnd();
         glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix(); glMatrixMode(GL_MODELVIEW);
+#endif
         PopRendererState();
 
         glFlush();
@@ -720,6 +1144,9 @@ class LinuxDevice : public IDirect3DDevice8
     HRESULT EndScene() { return S_OK; }
     HRESULT Clear(DWORD, const D3DRECT *, DWORD flags, D3DCOLOR color, float depth, DWORD)
     {
+#ifdef TH08_MODERN_WEB
+        FlushWebDraws();
+#endif
         if ((flags & D3DCLEAR_TARGET) && getenv("TH08_LINUX_RENDER_TRACE") != NULL)
         {
             FILE *trace = fopen("modern-render.txt", "ab");
@@ -742,7 +1169,15 @@ class LinuxDevice : public IDirect3DDevice8
                          (color & 255) / 255.0f, ((color >> 24) & 255) / 255.0f);
             mask |= GL_COLOR_BUFFER_BIT;
         }
-        if (flags & D3DCLEAR_ZBUFFER) { glClearDepth(depth); mask |= GL_DEPTH_BUFFER_BIT; }
+        if (flags & D3DCLEAR_ZBUFFER)
+        {
+#ifdef TH08_MODERN_WEB
+            glClearDepthf(depth);
+#else
+            glClearDepth(depth);
+#endif
+            mask |= GL_DEPTH_BUFFER_BIT;
+        }
         if (flags & D3DCLEAR_STENCIL) mask |= GL_STENCIL_BUFFER_BIT;
         const int targetWidth = backbuffer != NULL ? backbuffer->width : viewport.Width;
         const int targetHeight = backbuffer != NULL ? backbuffer->height : viewport.Height;
@@ -829,6 +1264,9 @@ class LinuxDevice : public IDirect3DDevice8
     }
     void DestroyRenderTarget()
     {
+#ifdef TH08_MODERN_WEB
+        FlushWebDraws();
+#endif
         if (dialogueSnapshotTexture != 0)
             glDeleteTextures(1, &dialogueSnapshotTexture);
         if (renderDepthBuffer != 0 && g_framebufferApi.deleteRenderbuffers != NULL)
@@ -853,17 +1291,29 @@ class LinuxDevice : public IDirect3DDevice8
         glBindTexture(GL_TEXTURE_2D, renderColorTexture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0,
+#ifdef TH08_MODERN_WEB
+                     GL_RGBA8,
+#else
+                     GL_RGBA,
+#endif
+                     width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
         glGenTextures(1, &dialogueSnapshotTexture);
         glBindTexture(GL_TEXTURE_2D, dialogueSnapshotTexture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0,
+#ifdef TH08_MODERN_WEB
+                     GL_RGBA8,
+#else
+                     GL_RGBA,
+#endif
+                     width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
         g_framebufferApi.genRenderbuffers(1, &renderDepthBuffer);
         g_framebufferApi.bindRenderbuffer(GL_RENDERBUFFER, renderDepthBuffer);
@@ -891,6 +1341,9 @@ class LinuxDevice : public IDirect3DDevice8
     {
         if (dialogueSnapshotTexture == 0 || backbuffer == NULL)
             return;
+#ifdef TH08_MODERN_WEB
+        FlushWebDraws();
+#endif
         glBindTexture(GL_TEXTURE_2D, dialogueSnapshotTexture);
         glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, backbuffer->width, backbuffer->height);
         dialogueSnapshotReady = true;
@@ -900,6 +1353,9 @@ class LinuxDevice : public IDirect3DDevice8
         const UINT width = backbuffer->width;
         const UINT height = backbuffer->height;
         PushRendererState();
+#ifdef TH08_MODERN_WEB
+        DrawWebBlit(dialogueSnapshotTexture, width, height, true, true);
+#else
         glDisable(GL_ALPHA_TEST); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST); glDisable(GL_LIGHTING); glDisable(GL_SCISSOR_TEST);
         glDepthMask(GL_FALSE);
@@ -916,6 +1372,7 @@ class LinuxDevice : public IDirect3DDevice8
         glTexCoord2f(1.0f, 0.0f); glVertex2f(static_cast<float>(width), static_cast<float>(height));
         glEnd();
         glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix(); glMatrixMode(GL_MODELVIEW);
+#endif
         PopRendererState();
     }
     bool ResetInternal(const D3DPRESENT_PARAMETERS &parameters)
@@ -932,7 +1389,11 @@ class LinuxDevice : public IDirect3DDevice8
         viewport.MinZ = 0.0f; viewport.MaxZ = 1.0f;
         glViewport(0, 0, width, height);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+#ifdef TH08_MODERN_WEB
+        glClearDepthf(1.0f);
+#else
         glClearDepth(1.0);
+#endif
         glDepthMask(GL_TRUE);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         return true;
@@ -966,6 +1427,7 @@ class LinuxDevice : public IDirect3DDevice8
         *yOut = viewport.Y + (1.0f - vector[1] * reciprocal) * viewport.Height * 0.5f;
         *zOut = viewport.MinZ + vector[2] * reciprocal * (viewport.MaxZ - viewport.MinZ);
     }
+#ifndef TH08_MODERN_WEB
     void PrepareState()
     {
         const UINT width = backbuffer != NULL ? backbuffer->width : viewport.Width;
@@ -1072,9 +1534,132 @@ class LinuxDevice : public IDirect3DDevice8
         else if (alphaOp == D3DTOP_SELECTARG1 && alphaArg1 == D3DTA_DIFFUSE) alpha = diffuse & 0xff000000u;
         return alpha | rgb;
     }
+#else
+    D3DCOLOR WebArgumentColor(DWORD argument, D3DCOLOR diffuse) const
+    {
+        switch (argument & D3DTA_SELECTMASK)
+        {
+        case D3DTA_TEXTURE: return 0xffffffffu;
+        case D3DTA_TFACTOR: return renderStates[D3DRS_TEXTUREFACTOR];
+        default: return diffuse;
+        }
+    }
+
+    D3DCOLOR ModulateWebColors(D3DCOLOR left, D3DCOLOR right) const
+    {
+        const DWORD alpha = (((left >> 24) & 255) * ((right >> 24) & 255) / 255) << 24;
+        const DWORD red = (((left >> 16) & 255) * ((right >> 16) & 255) / 255) << 16;
+        const DWORD green = (((left >> 8) & 255) * ((right >> 8) & 255) / 255) << 8;
+        const DWORD blue = (left & 255) * (right & 255) / 255;
+        return alpha | red | green | blue;
+    }
+
+    D3DCOLOR WebVertexCoefficient(D3DCOLOR diffuse) const
+    {
+        const DWORD colorOperation = textureStates[D3DTSS_COLOROP];
+        const DWORD colorArgument1 = textureStates[D3DTSS_COLORARG1];
+        const DWORD colorArgument2 = textureStates[D3DTSS_COLORARG2];
+        const DWORD alphaOperation = textureStates[D3DTSS_ALPHAOP];
+        const DWORD alphaArgument1 = textureStates[D3DTSS_ALPHAARG1];
+        const DWORD alphaArgument2 = textureStates[D3DTSS_ALPHAARG2];
+        D3DCOLOR color;
+        if (colorOperation == D3DTOP_SELECTARG1)
+            color = WebArgumentColor(colorArgument1, diffuse);
+        else
+            color = ModulateWebColors(WebArgumentColor(colorArgument1, diffuse),
+                                      WebArgumentColor(colorArgument2, diffuse));
+        D3DCOLOR alpha;
+        if (alphaOperation == D3DTOP_SELECTARG1)
+            alpha = WebArgumentColor(alphaArgument1, diffuse);
+        else
+            alpha = ModulateWebColors(WebArgumentColor(alphaArgument1, diffuse),
+                                      WebArgumentColor(alphaArgument2, diffuse));
+        return (color & 0x00ffffffu) | (alpha & 0xff000000u);
+    }
+
+    GLfloat WebFogFactor(GLfloat coordinate) const
+    {
+        if (!renderStates[D3DRS_FOGENABLE] ||
+            renderStates[D3DRS_FOGVERTEXMODE] != D3DFOG_LINEAR)
+            return 1.0f;
+        GLfloat start, end;
+        memcpy(&start, &renderStates[D3DRS_FOGSTART], sizeof(start));
+        memcpy(&end, &renderStates[D3DRS_FOGEND], sizeof(end));
+        const GLfloat span = end - start;
+        if (fabsf(span) <= 1.0e-8f)
+            return coordinate <= start ? 1.0f : 0.0f;
+        const GLfloat factor = (end - coordinate) / span;
+        if (factor < 0.0f) return 0.0f;
+        if (factor > 1.0f) return 1.0f;
+        return factor;
+    }
+
+    void PrepareWebState(WebDrawState *state)
+    {
+        const UINT width = backbuffer != NULL ? backbuffer->width : viewport.Width;
+        const UINT height = backbuffer != NULL ? backbuffer->height : viewport.Height;
+        const bool colorUsesTexture = TextureOperationUsesTexture(
+            textureStates[D3DTSS_COLOROP], textureStates[D3DTSS_COLORARG1],
+            textureStates[D3DTSS_COLORARG2]);
+        const bool alphaUsesTexture = TextureOperationUsesTexture(
+            textureStates[D3DTSS_ALPHAOP], textureStates[D3DTSS_ALPHAARG1],
+            textureStates[D3DTSS_ALPHAARG2]);
+        const bool useTexture = texture != NULL && (colorUsesTexture || alphaUsesTexture);
+        if (useTexture)
+            texture->Upload();
+
+        memset(state, 0, sizeof(*state));
+        state->texture = useTexture ? texture->glName : 0;
+        state->textureEnabled = useTexture;
+        state->blendEnabled = renderStates[D3DRS_ALPHABLENDENABLE] != 0;
+        state->sourceBlend = renderStates[D3DRS_SRCBLEND];
+        state->destinationBlend = renderStates[D3DRS_DESTBLEND];
+        state->depthTestEnabled = renderStates[D3DRS_ZENABLE] != 0;
+        state->depthWriteEnabled = renderStates[D3DRS_ZWRITEENABLE] != 0;
+        state->depthFunction = renderStates[D3DRS_ZFUNC];
+        state->scissorEnabled = true;
+        state->scissorX = static_cast<GLint>(viewport.X);
+        state->scissorY = static_cast<GLint>(height - viewport.Y - viewport.Height);
+        state->scissorWidth = static_cast<GLsizei>(viewport.Width);
+        state->scissorHeight = static_cast<GLsizei>(viewport.Height);
+        state->minFilter = textureStates[D3DTSS_MINFILTER];
+        state->magFilter = textureStates[D3DTSS_MAGFILTER];
+        state->addressU = textureStates[D3DTSS_ADDRESSU];
+        state->addressV = textureStates[D3DTSS_ADDRESSV];
+        state->rgbUsesTexture = useTexture && colorUsesTexture;
+        state->alphaUsesTexture = useTexture && alphaUsesTexture;
+        state->colorOperation = textureStates[D3DTSS_COLOROP];
+        state->colorArgument1 = textureStates[D3DTSS_COLORARG1];
+        state->colorArgument2 = textureStates[D3DTSS_COLORARG2];
+        state->alphaOperation = textureStates[D3DTSS_ALPHAOP];
+        state->alphaArgument1 = textureStates[D3DTSS_ALPHAARG1];
+        state->alphaArgument2 = textureStates[D3DTSS_ALPHAARG2];
+        state->textureFactor = renderStates[D3DRS_TEXTUREFACTOR];
+        state->alphaTestEnabled = renderStates[D3DRS_ALPHATESTENABLE] != 0;
+        state->alphaFunction = renderStates[D3DRS_ALPHAFUNC];
+        state->alphaReference = renderStates[D3DRS_ALPHAREF];
+        state->alphaThreshold = -1.0f;
+        if (state->alphaTestEnabled)
+        {
+            if (state->alphaFunction == D3DCMP_GREATEREQUAL)
+                state->alphaThreshold = (state->alphaReference & 255) / 255.0f;
+            else if (state->alphaFunction == D3DCMP_NEVER)
+                state->alphaThreshold = 2.0f;
+        }
+        state->fogEnabled = renderStates[D3DRS_FOGENABLE] != 0 &&
+                            renderStates[D3DRS_FOGVERTEXMODE] == D3DFOG_LINEAR;
+        state->fogColor = renderStates[D3DRS_FOGCOLOR];
+        memcpy(&state->fogStart, &renderStates[D3DRS_FOGSTART], sizeof(state->fogStart));
+        memcpy(&state->fogEnd, &renderStates[D3DRS_FOGEND], sizeof(state->fogEnd));
+        state->viewportWidth = static_cast<GLfloat>(width);
+        state->viewportHeight = static_cast<GLfloat>(height);
+    }
+#endif
     HRESULT Draw(D3DPRIMITIVETYPE type, UINT primitiveCount, const BYTE *data, UINT stride)
     {
         UINT count = VertexCount(type, primitiveCount);
+        if (count == 0)
+            return S_OK;
         bool transformed = (fvf & D3DFVF_POSITION_MASK) == D3DFVF_XYZRHW;
         UINT offset = transformed ? 16 : 12;
         if (fvf & D3DFVF_NORMAL) offset += 12;
@@ -1083,31 +1668,61 @@ class LinuxDevice : public IDirect3DDevice8
         if (hasDiffuse) offset += 4;
         if (fvf & D3DFVF_SPECULAR) offset += 4;
         bool hasTexture = (fvf & D3DFVF_TEXCOUNT_MASK) != 0; UINT textureOffset = offset;
+#ifdef TH08_MODERN_WEB
+        std::vector<WebVertex> vertices(count);
+#else
         PrepareState(); glBegin(PrimitiveMode(type));
+#endif
         for (UINT index = 0; index < count; ++index)
         {
             const BYTE *vertex = data + index * stride; float x, y, z, fogCoordinate;
             TransformPosition(reinterpret_cast<const float *>(vertex), transformed, &x, &y, &z,
                               &fogCoordinate);
             D3DCOLOR color = hasDiffuse ? *reinterpret_cast<const D3DCOLOR *>(vertex + colorOffset) : 0xffffffffu;
+#ifndef TH08_MODERN_WEB
             color = EffectiveColor(color);
+#endif
+            float u = 0.0f, v = 0.0f;
             if (hasTexture)
             {
                 const float *uv = reinterpret_cast<const float *>(vertex + textureOffset);
-                float u = uv[0], v = uv[1];
+                u = uv[0]; v = uv[1];
                 if (!transformed)
                 {
                     u = uv[0] * textureTransform._11 + uv[1] * textureTransform._21 + textureTransform._31;
                     v = uv[0] * textureTransform._12 + uv[1] * textureTransform._22 + textureTransform._32;
                 }
+#ifndef TH08_MODERN_WEB
                 glTexCoord2f(u, v);
+#endif
             }
+#ifdef TH08_MODERN_WEB
+            color = WebVertexCoefficient(color);
+            WebVertex &output = vertices[index];
+            // TransformPosition returns D3D's [0, 1] post-transform depth.
+            // The desktop path applies an OpenGL projection that negates the
+            // submitted 1-2z value; the direct shader has no such matrix, so
+            // map near/far to WebGL clip space here instead.
+            output.x = x; output.y = y; output.z = 2.0f * z - 1.0f;
+            output.u = u; output.v = v; output.fogCoordinate = WebFogFactor(fogCoordinate);
+            output.red = static_cast<GLubyte>((color >> 16) & 255);
+            output.green = static_cast<GLubyte>((color >> 8) & 255);
+            output.blue = static_cast<GLubyte>(color & 255);
+            output.alpha = static_cast<GLubyte>((color >> 24) & 255);
+#else
             glColor4ub((color >> 16) & 255, (color >> 8) & 255, color & 255, (color >> 24) & 255);
             if (g_fogCoordf != NULL)
                 g_fogCoordf(fogCoordinate);
             glVertex3f(x, y, 1.0f - 2.0f * z);
+#endif
         }
+#ifdef TH08_MODERN_WEB
+        WebDrawState state;
+        PrepareWebState(&state);
+        return QueueWebVertices(PrimitiveMode(type), &vertices[0], count, state) ? S_OK : E_FAIL;
+#else
         glEnd(); return S_OK;
+#endif
     }
     ULONG refs;
     SDL_Window *window;

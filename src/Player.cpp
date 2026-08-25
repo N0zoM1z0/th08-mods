@@ -23,9 +23,23 @@ namespace th08
 // far before the main Player implementation that begins at 0x00449CA0. Its
 // production definitions live in PlayerBomb.cpp.
 DIFFABLE_STATIC(Player, g_Player);
+#ifdef TH08_MODERN_WEB
+// These target globals are field aliases inside g_GameManager in the retail
+// image. Keep one owner when the Wasm linker cannot place symbols absolutely.
+i32 &g_PlayerNormalBombCount = g_GameManager.unk3DBA0;
+i32 &g_PlayerDeathbombCount = g_GameManager.unk3DBA4;
+i16 *g_PlayerGaugeBounds = &g_GameManager.youkaiGaugeHumanLimit;
+#else
 DIFFABLE_STATIC(i32, g_PlayerNormalBombCount);
 DIFFABLE_STATIC(i32, g_PlayerDeathbombCount);
 DIFFABLE_STATIC_ARRAY(i16, 6, g_PlayerGaugeBounds);
+#endif
+
+#ifdef TH08_MODERN_PORT
+#define TH08_PLAYER_TIME_SCALE g_EclGameTimeScale
+#else
+#define TH08_PLAYER_TIME_SCALE (*reinterpret_cast<f32 *>(0x17CE8E0))
+#endif
 
 DIFFABLE_STATIC_ARRAY_ASSIGN(const char *, 12, g_PlayerAnmFilenames) = {
     "player00.anm", "player01.anm", "player02.anm", "player03.anm",
@@ -3178,9 +3192,9 @@ void Player::FUN_00451150()
         }
 
         reinterpret_cast<Float3 *>(slot + 0x2A4)->operator float *()[0] +=
-            *reinterpret_cast<f32 *>(0x17CE8E0) * *reinterpret_cast<f32 *>(slot + 0x43C);
+            TH08_PLAYER_TIME_SCALE * *reinterpret_cast<f32 *>(slot + 0x43C);
         reinterpret_cast<Float3 *>(slot + 0x2A4)->operator float *()[1] +=
-            *reinterpret_cast<f32 *>(0x17CE8E0) * *reinterpret_cast<f32 *>(slot + 0x440);
+            TH08_PLAYER_TIME_SCALE * *reinterpret_cast<f32 *>(slot + 0x440);
 
         if (*reinterpret_cast<i16 *>(slot + 0x464) != 4 && *reinterpret_cast<i16 *>(slot + 0x464) != 5)
         {
@@ -3274,7 +3288,11 @@ void Player::FUN_00451400()
 // FUNCTION: th08 0x451500
 i32 Player::FUN_00451500()
 {
+#ifdef TH08_MODERN_PORT
+    if (g_GameManager.unk3ddc0 < 20)
+#else
     if (*reinterpret_cast<i32 *>(0x164D2C8) < 20)
+#endif
     {
         return 0;
     }
@@ -3291,7 +3309,11 @@ i32 Player::FUN_00451500()
 
     if (reinterpret_cast<ZunTimer *>(reinterpret_cast<u8 *>(this) + 0xE2AC4)->FUN_0040d3d0())
     {
+#ifdef TH08_MODERN_PORT
+        if (g_Player.bombState.frameStop == 0 ||
+#else
         if (*reinterpret_cast<i32 *>(0x17D6ED4) == 0 ||
+#endif
             (g_GameManager.shotType != 1 && g_GameManager.shotType != 7 &&
              g_GameManager.shotType != 6))
         {
@@ -3306,7 +3328,11 @@ i32 Player::FUN_00451500()
         *reinterpret_cast<ZunTimer *>(reinterpret_cast<u8 *>(this) + 0xE2AC4) = -1;
     }
 
+#ifdef TH08_MODERN_PORT
+    if ((g_GuiMessageInputCurrent & TH_BUTTON_SHOOT) != 0)
+#else
     if ((*reinterpret_cast<u16 *>(0x164D52C) & 1) != 0)
+#endif
     {
         if ((i32)*reinterpret_cast<ZunTimer *>(reinterpret_cast<u8 *>(this) + 0xE2AC4) < 0)
         {
@@ -3324,6 +3350,8 @@ i32 Player::FUN_00451500()
 
     return 0;
 }
+
+#undef TH08_PLAYER_TIME_SCALE
 
 // FUNCTION: th08 0x451640
 void Player::FUN_00451640()

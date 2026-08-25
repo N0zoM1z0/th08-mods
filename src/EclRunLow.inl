@@ -93,7 +93,11 @@ inline LowResult MakeLowResult(LowControl control,
 }
 
 // Target pointer table at 0x00F54CC0, indexed by the ECL enemy selector.
+#ifdef TH08_MODERN_WEB
+extern EclOperands::EnemyOverlay *(&g_EclEnemyTableF54CC0)[92];
+#else
 extern EclOperands::EnemyOverlay *g_EclEnemyTableF54CC0[];
+#endif
 
 // Observed helper ABIs for opcodes 90..92.  Both constructors receive the
 // parent in ECX and the current instruction in EDX; the list-tail lookup uses

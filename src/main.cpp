@@ -3,14 +3,24 @@
 #include "th_pch.h"
 
 #include "AnmManager.hpp"
+#ifdef TH08_MODERN_WEB
+#include "AsciiManager.hpp"
+#endif
 #include "Background.hpp"
 #include "EclManager.hpp"
+#ifdef TH08_MODERN_WEB
+#include "EclOperands.hpp"
+#include "EnemyManager.hpp"
+#endif
 #include "GameManager.hpp"
 #include "Global.hpp"
 #include "Player.hpp"
 #include "ResultScreen.hpp"
 #include "ScreenEffect.hpp"
 #include "SoundPlayer.hpp"
+#ifdef TH08_MODERN_WEB
+#include "Spellcard.hpp"
+#endif
 #include "Supervisor.hpp" // Official name: mother.hpp
 #include "ZunBool.hpp"
 #include "ZunColor.hpp"
@@ -138,11 +148,89 @@ EMSCRIPTEN_KEEPALIVE u32 th08_web_get_player_state()
            (g_GameManager.flags.unk2 ? 0x20000000u : 0);
 }
 
+EMSCRIPTEN_KEEPALIVE u32 th08_web_get_focus_effect_snapshot()
+{
+    const AnmVm *effect = *reinterpret_cast<AnmVm *const *>(
+        reinterpret_cast<const u8 *>(&g_Player) + 0xBE834);
+    u32 snapshot = static_cast<u32>(g_Player.optionModeFlag);
+    if (effect != NULL)
+    {
+        const u8 *bytes = reinterpret_cast<const u8 *>(effect);
+        snapshot |= 0x100u;
+        snapshot |= static_cast<u32>(bytes[0x350]) << 16;
+        snapshot |= static_cast<u32>(bytes[0x351]) << 24;
+    }
+    return snapshot;
+}
+
 EMSCRIPTEN_KEEPALIVE double th08_web_get_player_move_speed()
 {
     if (g_Player.primaryShtFile == NULL)
         return 0.0;
     return *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(g_Player.primaryShtFile) + 0x24);
+}
+
+EMSCRIPTEN_KEEPALIVE u32 th08_web_get_player_shot_snapshot()
+{
+    u32 active = 0;
+    u32 hit = 0;
+    for (u32 index = 0; index < 128; ++index)
+    {
+        if (g_Player.shots[index].state == 1)
+            active++;
+        else if (g_Player.shots[index].state == 2)
+            hit++;
+    }
+    return (active & 0xffff) | ((hit & 0xffff) << 16);
+}
+
+EMSCRIPTEN_KEEPALIVE double th08_web_get_score()
+{
+    return g_GameManager.globals != NULL ? g_GameManager.globals->score : 0.0;
+}
+
+EMSCRIPTEN_KEEPALIVE double th08_web_get_display_score()
+{
+    return g_GameManager.globals != NULL ? g_GameManager.globals->displayScore : 0.0;
+}
+
+EMSCRIPTEN_KEEPALIVE double th08_web_get_youkai_gauge()
+{
+    return g_GameManager.globals != NULL ? g_GameManager.globals->youkaiGauge : 0.0;
+}
+
+EMSCRIPTEN_KEEPALIVE u32 th08_web_get_runtime_alias_snapshot()
+{
+    u32 snapshot = 0;
+    if (&g_EclCallbackPublishedEnemyField24 == &g_AsciiManager.unk_16f08)
+        snapshot |= 1u << 0;
+    if (&g_EclCallbackPublishedEnemyField56 ==
+        reinterpret_cast<i32 *>(&g_AsciiManager.unk_16f04))
+        snapshot |= 1u << 1;
+    if (&EclRunLowProposal::g_EclEnemyTableF54CC0 ==
+        reinterpret_cast<EclOperands::EnemyOverlay *(*)[92]>(
+            reinterpret_cast<u8 *>(&g_EnemyManager) + 0x9DCDA0))
+        snapshot |= 1u << 2;
+    if (&g_SpellcardCalcChain ==
+        reinterpret_cast<ChainElem **>(&g_Spellcard.lifetimeObject))
+        snapshot |= 1u << 3;
+    return snapshot;
+}
+
+EMSCRIPTEN_KEEPALIVE u32 th08_web_get_spell_snapshot()
+{
+    return (g_Spellcard.flags & 0xffffu) |
+           ((static_cast<u32>(g_Spellcard.spellCardNumber + 1) & 0xffffu) << 16);
+}
+
+EMSCRIPTEN_KEEPALIVE u32 th08_web_get_route_snapshot()
+{
+    u32 flags;
+    memcpy(&flags, &g_GameManager.flags, sizeof(flags));
+    return (static_cast<u32>(g_GameManager.currentStage) & 0xfu) |
+           ((static_cast<u32>(g_GameManager.currentStage2) & 0xfu) << 4) |
+           ((static_cast<u32>(g_GameManager.difficulty) & 0xfu) << 8) |
+           ((flags & 0xffffu) << 16);
 }
 }
 

@@ -91,11 +91,23 @@ close operations retain their synchronous authored-facing behavior.
 ### Rendering and frame pacing
 
 The existing `IDirect3D8`/`IDirect3DDevice8` compatibility surface remains the
-portability seam. The current implementation creates a WebGL 2 context directly
-on the transferred `OffscreenCanvas` and uses Emscripten's legacy fixed-function
-emulation for the reconstructed D3D8 call stream. The context uses implicit
-swap control: returning from each Emscripten main-loop callback lets the browser
-compositor present the completed frame and provides the browser-side pacing.
+portability seam. The Web backend creates a WebGL 2 context directly on the
+transferred `OffscreenCanvas` and translates the reconstructed D3D8 call stream
+into an explicit GLSL ES 3.0 shader, vertex array, and rotating vertex buffers.
+The CPU converts the small D3D flexible-vertex-format family used by TH08,
+queues compatible draw commands, uploads the frame's vertices once, and applies
+cached blend, depth, sampler, scissor, alpha-test, fog, and texture-stage state.
+Backbuffer and dialogue-snapshot copies use a separate shader blit. No legacy
+immediate-mode or fixed-function GL emulation remains on the Web hot path.
+
+The context uses implicit swap control: returning from each Emscripten
+main-loop callback lets the browser compositor present the completed frame and
+provides browser-side pacing. A short active-gameplay sample recorded 297
+browser callbacks and 297 authored calculation frames in five seconds. The
+renderer separately measured approximately 0.08--0.15 ms of CPU game
+submission and 0.01--0.03 ms of blit work per frame in representative scenes.
+Those bounded observations demonstrate that the previous renderer bottleneck
+is gone; they are not a substitute for full-route browser endurance testing.
 
 An earlier blocking-loop experiment rendered correctly into the WebGL default
 framebuffer but remained black on screen. In Emscripten 6, the native
@@ -103,17 +115,11 @@ OffscreenCanvas `emscripten_webgl_commit_frame()` path is a no-op because modern
 browsers present implicitly. Moving the outer loop to yielding callbacks fixed
 the actual display boundary without changing authored frame behavior.
 
-Legacy GL emulation is suitable for bring-up, not the final renderer. The
-production follow-up is a small explicit WebGL 2 shader and state-cache backend
-behind the same D3D8-shaped interface. This avoids changing gameplay code while
-removing dependence on incomplete fixed-function emulation.
-
-Instrumentation separates browser main-loop callbacks from authored
-calculation frames. In a dense Stage 1 sample, callbacks held at 60 Hz while
-calculation fell from 60 to about 40 FPS. That rules out a slow browser refresh
-rate and identifies the immediate-mode compatibility renderer as the active
-frame-pacing bottleneck. The displayed in-game FPS counter alone can miss this
-distinction.
+Instrumentation continues to separate browser main-loop callbacks from
+authored calculation frames. This distinction caught the earlier legacy
+renderer regression, where callbacks held at 60 Hz while calculation fell to
+about 40 FPS, and remains more reliable than the displayed in-game counter
+alone.
 
 ### Input and audio
 
@@ -141,6 +147,16 @@ Normal Wasm globals start at 32 MiB so existing low raw-address views remain
 available. The pthread build currently uses a fixed 256 MiB initial shared
 memory and a 4 MiB stack. The music archive is not part of that memory budget.
 
+The original PE also gives several named globals overlapping identities inside
+larger manager objects. A native Linux linker script can preserve those
+addresses, but Wasm globals are relocatable. Web-only references therefore bind
+ECL state, player/gauge fields, effect and GUI tables, and callback lifetimes to
+their real aggregate owners. This is correctness-critical: split callback
+storage previously left old spell jobs alive across stage reloads, producing
+missing effects, unstable scores, and an eventual out-of-bounds trap during a
+result transition. Runtime diagnostics verify the most failure-prone aliases
+before endurance tests.
+
 ## Build and run
 
 Docker is the only Emscripten prerequisite. The build image is pinned by tag
@@ -158,6 +174,10 @@ launcher. The generated static artifact consists of `th08-web.html`,
 `th08-web.js`, `th08-web.wasm`, and the project-owned `th08-web-icon.png` copied
 from the Linux port. CMake metadata stays in `build/web-game`; only the
 allowlisted files are staged in `build/web-dist`.
+
+The normal script builds `Release`; the staged JavaScript and Wasm are
+approximately 232 KiB and 1.4 MiB respectively. The old Debug Wasm was about
+21 MiB and is not the public build path.
 
 For another device, place the same server behind HTTPS and preserve the COOP,
 COEP, CORP, and no-store headers. Static hosts that cannot provide
@@ -178,11 +198,13 @@ All Web builds use
 - A separate data probe read the first and last bytes of both browser-local
   files. Browser resource inspection showed only HTML, JavaScript, Worker, and
   Wasm requests; neither DAT appeared as a network resource.
-- Browser screenshots after the yielding-loop correction show the full title,
-  menus, and Stage 1 on the worker-owned OffscreenCanvas. A separate packed
-  counter measurement showed 60 main-loop callbacks but only 40 authored
-  calculations per second in a dense Stage 1 interval; 60 FPS is therefore not
-  yet a sustained playability claim.
+- Browser screenshots show the full title, menus, Japanese dialogue, the Music
+  Room, and gameplay on the worker-owned OffscreenCanvas. After the direct
+  WebGL 2 renderer landed, bounded samples held authored calculation frames in
+  lockstep with browser callbacks near 60 Hz. Stage 2 Normal registered
+  spell-card numbers 14, 18, 22, 26, and 29 when its documented Last Spell
+  time-orb requirement was met, and returned to the title without the former
+  Wasm out-of-bounds trap.
 
 Run the bounded probes with:
 
@@ -197,16 +219,15 @@ python3 scripts/check-web-provenance.py
 ## Remaining work
 
 The port has crossed the full-link, title/menu, input, audio-device, BGM-range,
-and initial-gameplay setup gates. It is an engineering preview, not a release.
-The next work is:
+direct-renderer, and initial-gameplay gates. It is an engineering preview, not
+a release. The next work is:
 
-1. replace legacy fixed-function emulation with an explicit WebGL 2
-   shader/VBO renderer and sustain 60 authored calculations per second in
-   dense Stage 1 scenes;
+1. complete deterministic Lunatic-route, result/save, restart, and Firefox
+   endurance coverage for spell, callback, and resource-transition behavior;
 2. add an IDBFS save overlay for cfg, score, replay, and backup files, with an
    explicit guarantee that the retail archives cannot enter it;
-3. run deterministic stage/replay, pause/focus, audio-underrun, and stage
-   transition regressions in current Chromium and Firefox;
+3. run replay, pause/focus, audio-underrun, and repeated stage-reload
+   regressions in current Chromium and Firefox;
 4. measure and tune the fixed shared-memory ceiling, then produce an
    allowlisted static release artifact and clean-profile deployment test;
 5. add gamepad mapping and user-facing diagnostics for unsupported browsers.
