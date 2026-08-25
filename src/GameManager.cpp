@@ -1,6 +1,11 @@
 #include "th_pch.h"
 
 #include "GameManager.hpp"
+
+#ifdef TH08_MODERN_WEB
+#include <emscripten.h>
+#include <stdio.h>
+#endif
 #include "AnmManager.hpp"
 #include "AsciiManager.hpp"
 #include "Background.hpp"
@@ -58,6 +63,14 @@ DIFFABLE_STATIC(ChainElem, g_GameManagerDrawChain);
 void FUN_00438046();
 i32 FUN_0043bbe1();
 extern i32 g_GuiMessageStageMode;
+
+#ifdef TH08_MODERN_WEB
+DWORD WINAPI GameplaySetupThreadWeb(LPVOID parameter)
+{
+    GameManager::GameplaySetupThread(parameter);
+    return 0;
+}
+#endif
 
 // FUNCTION: th08 0x439829
 ZunBool GameManager::IsStageClearedWithoutRetries(i32 stage, i32 character, i32 difficulty)
@@ -655,7 +668,11 @@ ZunResult GameManager::AddedCallback(GameManager *gameManager)
     {
         gameManager->flags.unk5_6 = 1;
     }
+#ifdef TH08_MODERN_WEB
+    g_Supervisor.ThreadStart(GameplaySetupThreadWeb, NULL);
+#else
     g_Supervisor.ThreadStart((LPTHREAD_START_ROUTINE)GameManager::GameplaySetupThread, NULL);
+#endif
     return ZUN_SUCCESS;
 }
 
@@ -1068,6 +1085,14 @@ void __fastcall GameManager::GameplaySetupThread(void *unused)
     GM_U32(gameManager, 0x3DBAC) &= ~0x200U;
     g_Supervisor.unk16c = 0;
     g_ScreenEffectCounter = 2;
+#ifdef TH08_MODERN_WEB
+    fprintf(stderr, "th08-web: gameplay: stage setup ready\n");
+    MAIN_THREAD_ASYNC_EM_ASM({
+        const status = document.querySelector('#status');
+        if (status)
+            status.textContent = 'TH08 gameplay is running from local retail data.';
+    });
+#endif
     goto thread_done;
 
 setup_error:
@@ -1078,6 +1103,14 @@ setup_error:
     g_Supervisor.unk290 = FALSE;
     g_Supervisor.unk16c = 0;
     g_ScreenEffectCounter = 2;
+#ifdef TH08_MODERN_WEB
+    fprintf(stderr, "th08-web: gameplay: stage setup failed\n");
+    MAIN_THREAD_ASYNC_EM_ASM({
+        const status = document.querySelector('#status');
+        if (status)
+            status.textContent = 'TH08 gameplay setup failed. See the runtime log.';
+    });
+#endif
 
 thread_done:
     (void)unused;

@@ -18,4 +18,4 @@ docker run --rm \
     --workdir /src \
     --user "$(id -u):$(id -g)" \
     "${image}" \
-    cmake --build /src/build/web-probe --parallel 1
+    cmake --build /src/build/web-probe --target th08-web-authored-compile --parallel 1

@@ -1149,7 +1149,12 @@ ChainCallbackResult EffectManager::OnDraw(EffectManager *effectManager)
     {
         if (*reinterpret_cast<void **>(effect + 0x34C) != NULL)
         {
+#ifdef TH08_MODERN_WEB
+            reinterpret_cast<i32 (__fastcall *)(Effect *)>(*reinterpret_cast<void **>(effect + 0x34C))(
+                reinterpret_cast<Effect *>(effect));
+#else
             reinterpret_cast<void (__fastcall *)(void *)>(*reinterpret_cast<void **>(effect + 0x34C))(effect);
+#endif
         }
         else
         {
@@ -1177,7 +1182,12 @@ ChainCallbackResult EffectManager::OnDraw(EffectManager *effectManager)
     {
         if (*reinterpret_cast<void **>(effect + 0x34C) != NULL)
         {
+#ifdef TH08_MODERN_WEB
+            reinterpret_cast<i32 (__fastcall *)(Effect *)>(*reinterpret_cast<void **>(effect + 0x34C))(
+                reinterpret_cast<Effect *>(effect));
+#else
             reinterpret_cast<void (__fastcall *)(void *)>(*reinterpret_cast<void **>(effect + 0x34C))(effect);
+#endif
         }
         else
         {
@@ -1205,7 +1215,12 @@ i32 EffectManager::DrawUnkTypeEffects()
     {
         if (*reinterpret_cast<void **>(effect + 0x34c) != NULL)
         {
+#ifdef TH08_MODERN_WEB
+            reinterpret_cast<i32 (__fastcall *)(Effect *)>(*reinterpret_cast<void **>(effect + 0x34c))(
+                reinterpret_cast<Effect *>(effect));
+#else
             reinterpret_cast<void (__fastcall *)(void *)>(*reinterpret_cast<void **>(effect + 0x34c))(effect);
+#endif
         }
         else
         {

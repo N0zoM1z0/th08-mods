@@ -96,12 +96,77 @@ if(EMSCRIPTEN)
         "${TH08_GENERATED_DIR}"
     )
     target_compile_options(th08-web-authored-compile PRIVATE
-        -O0
+        -O2
         -fms-extensions
         -Wno-address-of-temporary
         -Wno-write-strings
         -Wno-ignored-pragmas
         "-include${CMAKE_SOURCE_DIR}/src/modern/web/web_compat.hpp"
+    )
+
+    add_executable(th08-web
+        $<TARGET_OBJECTS:th08-web-authored-compile>
+        src/modern/linux/d3d8_compat.cpp
+        src/modern/linux/d3dx8_compat.cpp
+        src/modern/linux/linux_compat.cpp
+        src/modern/linux/linux_runtime.cpp
+    )
+    add_dependencies(th08-web th08-modern-generated)
+    target_compile_features(th08-web PRIVATE cxx_std_98)
+    target_compile_definitions(th08-web PRIVATE
+        TH08_MODERN_PORT
+        TH08_MODERN_LINUX
+        TH08_MODERN_WEB
+        WIN32_LEAN_AND_MEAN
+    )
+    target_include_directories(th08-web BEFORE PRIVATE
+        "${CMAKE_SOURCE_DIR}/src/modern/linux/include"
+        "${CMAKE_SOURCE_DIR}/src"
+        "${TH08_GENERATED_DIR}"
+    )
+    target_compile_options(th08-web PRIVATE
+        -O2
+        -fms-extensions
+        -pthread
+        -Wno-address-of-temporary
+        -Wno-write-strings
+        -Wno-ignored-pragmas
+        "-include${CMAKE_SOURCE_DIR}/src/modern/web/web_compat.hpp"
+        --use-port=sdl2
+        --use-port=sdl2_image:formats=png,jpg
+        --use-port=sdl2_ttf
+    )
+    target_link_options(th08-web PRIVATE
+        -pthread
+        --use-port=sdl2
+        --use-port=sdl2_image:formats=png,jpg
+        --use-port=sdl2_ttf
+        "--shell-file=${CMAKE_SOURCE_DIR}/src/modern/web/shell.html"
+        -sINVOKE_RUN=0
+        -sEXPORTED_RUNTIME_METHODS=FS,callMain,HEAPU8
+        -sFORCE_FILESYSTEM
+        -sPROXY_TO_PTHREAD
+        -sOFFSCREENCANVAS_SUPPORT
+        -sLEGACY_GL_EMULATION
+        -sGL_FFP_ONLY
+        -sMIN_WEBGL_VERSION=2
+        -sMAX_WEBGL_VERSION=2
+        -sGLOBAL_BASE=33554432
+        -sINITIAL_MEMORY=268435456
+        -sSTACK_SIZE=4194304
+        -sPTHREAD_POOL_SIZE=3
+        -sALLOW_BLOCKING_ON_MAIN_THREAD=0
+        -sEXIT_RUNTIME=0
+    )
+    set_target_properties(th08-web PROPERTIES
+        OUTPUT_NAME "th08-web"
+        SUFFIX ".html"
+    )
+    add_custom_command(TARGET th08-web POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/resources/modern-icon.png"
+            "$<TARGET_FILE_DIR:th08-web>/th08-web-icon.png"
+        VERBATIM
     )
     return()
 endif()

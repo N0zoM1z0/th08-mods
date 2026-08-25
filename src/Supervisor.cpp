@@ -46,6 +46,14 @@ DIFFABLE_STATIC(DWORD, g_SupervisorFpsLastTime);
 DIFFABLE_STATIC(u32, g_SupervisorFpsTimeInitialized);
 DIFFABLE_STATIC(u32, g_SupervisorFpsFrameCount);
 
+#ifdef TH08_MODERN_WEB
+DWORD WINAPI SupervisorStartupThreadWeb(LPVOID parameter)
+{
+    Supervisor::StartupThread(static_cast<Supervisor *>(parameter));
+    return 0;
+}
+#endif
+
 // FUNCTION: th08 0x438a29
 ZunBool Supervisor::IsMinimumGraphicsMode()
 {
@@ -579,7 +587,11 @@ int Supervisor::AddedCallback(Supervisor *s)
     g_Supervisor.SetupLoadingVms(&position);
 
     g_Supervisor.unk294 = 1;
+#ifdef TH08_MODERN_WEB
+    g_Supervisor.ThreadStart(SupervisorStartupThreadWeb, s);
+#else
     g_Supervisor.ThreadStart((LPTHREAD_START_ROUTINE)Supervisor::StartupThread, s);
+#endif
 
     return ZUN_SUCCESS;
 }
@@ -1472,7 +1484,15 @@ ZunResult Supervisor::LoadConfig(char *configFile)
     {
         g_GameErrorContext.Log(TH_ERR_NO_DEPTH_TESTING);
     }
+#ifdef TH08_MODERN_WEB
+    // Browser presentation is paced by the compositor rather than a blocking
+    // Direct3D swap interval. Skip the original fullscreen refresh-rate probe,
+    // which otherwise interprets explicit OffscreenCanvas swaps as a failure.
+    this->cfg.windowed = true;
+    this->disableVsync = true;
+#else
     this->disableVsync = false;
+#endif
     this->cfg.opts.force60Fps = false;
 
     if (this->cfg.opts.disableColorCompositing != false)

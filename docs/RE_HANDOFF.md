@@ -11,33 +11,41 @@ come from the ledgers, not this prose.
 lane and does not alter the exact VC7 evidence product or its authored/library
 ledgers.
 
-Web-port state on 2026-08-24:
+Web-port state on 2026-08-25:
 
-- the digest-pinned Emscripten 6.0.8 compiler builds all 44 shared
-  production-authored game/PBG translation units as wasm32 objects;
-- a browser Worker mounts user-selected `th08.dat` (46,838,025 bytes) and
-  `thbgm.dat` (449,961,024 bytes) read-only through WORKERFS. C++ range reads
-  reach both file ends while the Wasm heap remains 16,908,288 bytes, and the
-  local server receives no request containing either DAT;
-- a target-address probe places normal Wasm globals above 32 MiB and safely
-  reads/writes a representative low target-owned address. A generated Web
-  binding layer is still required because wasm-ld cannot reproduce the ELF
-  absolute-symbol aliases from `th08-layout.ld`;
-- the Linux D3D8 compatibility backend, with Web-only draw/read-buffer handling
-  and isolated probe stubs, creates a WebGL 2 device and presents a 640x480
-  frame. Emscripten legacy GL is only a bring-up path; explicit WebGL 2 shaders
-  remain production work;
-- the recommended MVP keeps the authored blocking/threaded shape using
-  pthreads, `PROXY_TO_PTHREAD`, WORKERFS, and a cross-origin-isolated static
-  host. The browser shell stays thin and contains no gameplay implementation;
-- retail provenance is a hard boundary: no DAT, original executable, or
-  extracted retail asset may be tracked or deployed. The runtime accepts the
-  two local `File` objects only, and `scripts/check-web-provenance.py` enforces
-  the minimum tracked-file denylist in CI;
-- `docs/WEB_ARCHITECTURE.md` records the decision, reuse ledger, evidence,
-  prototype debt, and milestone gates. The next bounded task is the full-link
-  gate: generate target-global bindings, link platform adapters, and enter the
-  title startup from locally mounted data.
+- the digest-pinned Emscripten 6.0.8 compiler builds all 44 shared authored
+  game/PBG translation units and links them into a pthread-enabled WebAssembly
+  game with the existing Linux compatibility backends;
+- the English launcher accepts only user-selected `th08.dat` and `thbgm.dat`.
+  It copies the 46,838,025-byte game archive once into volatile Wasm session
+  memory and range-reads the 449,961,024-byte music archive from its browser
+  `File`. Neither archive is uploaded, persisted, tracked, or staged;
+- a worker-owned OffscreenCanvas runs the existing D3D8-shaped renderer through
+  WebGL 2 and Emscripten fixed-function emulation. A Web-only Emscripten main
+  loop yields after each authored frame so implicit canvas swaps are visibly
+  presented. Main-loop callbacks remain at 60 Hz, but an instrumented dense
+  Stage 1 interval fell to 40 authored calculation frames per second while the
+  callback rate stayed at 60. The legacy immediate-mode renderer is therefore
+  the active playability blocker;
+- browser key events enter shared atomic state and are merged into the authored
+  DirectInput-shaped polling path. Key-down edges are latched until the next
+  authored poll, so a 20 ms Z tap is not lost between frames. The title
+  accepted Start, difficulty, and character/team choices, after which authored
+  stage setup completed without a Wasm indirect-call trap;
+- SDL/Web Audio lifecycle calls are proxied to the main runtime thread, while
+  the authored DirectSound-shaped mixer and BGM stream remain in C++;
+- the project-owned Linux icon is copied into the allowlisted Web distribution
+  and used as the launcher mark and favicon;
+- `scripts/serve-web.py` supplies COOP/COEP/CORP and redirects `/` to the game.
+  Localhost works directly; remote browsers require HTTPS. The temporary
+  tailnet preview uses HTTPS port 8443 without changing the existing service on
+  port 443;
+- `scripts/check-web-provenance.py` checks tracked source and staged Web
+  artifacts for DATs, original executables, and common retail containers;
+- `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence. The
+  active bounded task is replacing legacy GL emulation with a direct WebGL 2
+  shader/VBO backend. An IDBFS save overlay remains later work and must never
+  include retail archives.
 
 ## Active playable-port branch
 

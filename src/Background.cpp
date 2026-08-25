@@ -776,7 +776,13 @@ ChainCallbackResult Background::OnDrawHighPrio(Background *background)
         if (*reinterpret_cast<AnmVm **>(reinterpret_cast<u8 *>(background) + 0xAE8) != NULL)
         {
             effect = *reinterpret_cast<AnmVm **>(reinterpret_cast<u8 *>(background) + 0xAE8);
+#ifdef TH08_MODERN_WEB
+            reinterpret_cast<i32 (__fastcall *)(AnmVm *)>(
+                *reinterpret_cast<void **>(reinterpret_cast<u8 *>(effect) + 0x34C))(
+                effect);
+#else
             (*reinterpret_cast<void (__fastcall **)(AnmVm *)>(reinterpret_cast<u8 *>(effect) + 0x34C))(effect);
+#endif
         }
     }
 

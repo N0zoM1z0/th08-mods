@@ -4,6 +4,11 @@
 #include <SDL.h>
 #include <GL/gl.h>
 #include <GL/glext.h>
+#ifdef TH08_MODERN_WEB
+#include <emscripten/emscripten.h>
+#include <emscripten/html5.h>
+#include <emscripten/threading.h>
+#endif
 
 #include <math.h>
 #include <new>
@@ -13,6 +18,12 @@
 
 namespace
 {
+#ifdef TH08_MODERN_WEB
+#define TH08_WEB_RENDER_STAGE(stage) fprintf(stderr, "th08-web: renderer: %s\n", stage)
+#else
+#define TH08_WEB_RENDER_STAGE(stage) ((void)0)
+#endif
+
 class LinuxTexture;
 
 typedef void (APIENTRY *GenFramebuffersFunction)(GLsizei, GLuint *);
@@ -86,6 +97,80 @@ struct FramebufferApi
 
 FramebufferApi g_framebufferApi;
 FogCoordfFunction g_fogCoordf;
+
+#ifdef TH08_MODERN_WEB
+struct RendererStateSnapshot
+{
+    GLboolean alphaTest;
+    GLboolean blend;
+    GLboolean cullFace;
+    GLboolean depthTest;
+    GLboolean lighting;
+    GLboolean scissorTest;
+    GLboolean texture2d;
+    GLboolean depthWrite;
+    GLint texture;
+    GLint textureEnvironment;
+    GLint unpackAlignment;
+    GLfloat color[4];
+};
+
+std::vector<RendererStateSnapshot> g_rendererStateStack;
+
+void RestoreCapability(GLenum capability, GLboolean enabled)
+{
+    if (enabled)
+        glEnable(capability);
+    else
+        glDisable(capability);
+}
+#endif
+
+void PushRendererState()
+{
+#ifdef TH08_MODERN_WEB
+    RendererStateSnapshot state;
+    state.alphaTest = glIsEnabled(GL_ALPHA_TEST);
+    state.blend = glIsEnabled(GL_BLEND);
+    state.cullFace = glIsEnabled(GL_CULL_FACE);
+    state.depthTest = glIsEnabled(GL_DEPTH_TEST);
+    state.lighting = glIsEnabled(GL_LIGHTING);
+    state.scissorTest = glIsEnabled(GL_SCISSOR_TEST);
+    state.texture2d = glIsEnabled(GL_TEXTURE_2D);
+    glGetBooleanv(GL_DEPTH_WRITEMASK, &state.depthWrite);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &state.texture);
+    glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &state.textureEnvironment);
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &state.unpackAlignment);
+    glGetFloatv(GL_CURRENT_COLOR, state.color);
+    g_rendererStateStack.push_back(state);
+#else
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+#endif
+}
+
+void PopRendererState()
+{
+#ifdef TH08_MODERN_WEB
+    if (g_rendererStateStack.empty())
+        return;
+    const RendererStateSnapshot state = g_rendererStateStack.back();
+    g_rendererStateStack.pop_back();
+    RestoreCapability(GL_ALPHA_TEST, state.alphaTest);
+    RestoreCapability(GL_BLEND, state.blend);
+    RestoreCapability(GL_CULL_FACE, state.cullFace);
+    RestoreCapability(GL_DEPTH_TEST, state.depthTest);
+    RestoreCapability(GL_LIGHTING, state.lighting);
+    RestoreCapability(GL_SCISSOR_TEST, state.scissorTest);
+    RestoreCapability(GL_TEXTURE_2D, state.texture2d);
+    glDepthMask(state.depthWrite);
+    glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(state.texture));
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, state.textureEnvironment);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, state.unpackAlignment);
+    glColor4fv(state.color);
+#else
+    glPopAttrib();
+#endif
+}
 
 void SelectDrawBuffer(GLenum buffer)
 {
@@ -242,7 +327,7 @@ class LinuxSurface : public IDirect3DSurface8
                 DecodePixel(&pixels[y * pitch + x * bytes], format, &rgba[(y * width + x) * 4]);
 
         GLuint name = 0;
-        glPushAttrib(GL_ALL_ATTRIB_BITS);
+        PushRendererState();
         glDisable(GL_ALPHA_TEST); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST); glDisable(GL_SCISSOR_TEST);
         glDepthMask(GL_FALSE);
@@ -265,7 +350,7 @@ class LinuxSurface : public IDirect3DSurface8
         glEnd();
         glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix(); glMatrixMode(GL_MODELVIEW);
         glDeleteTextures(1, &name);
-        glPopAttrib();
+        PopRendererState();
         dirty = false;
     }
     ULONG refs;
@@ -437,20 +522,55 @@ class LinuxDevice : public IDirect3DDevice8
   public:
     LinuxDevice(SDL_Window *window_, const D3DPRESENT_PARAMETERS &parameters)
         : refs(1), window(window_), context(NULL), backbuffer(NULL), texture(NULL), vertexBuffer(NULL),
+#ifdef TH08_MODERN_WEB
+          webContext(0),
+#endif
           fvf(0), streamStride(0), renderFramebuffer(0), renderColorTexture(0), renderDepthBuffer(0),
           dialogueSnapshotTexture(0), framebufferReady(false), dialogueSnapshotReady(false),
           wasDialogPresent(false), presentCount(0)
     {
         memset(renderStates, 0, sizeof(renderStates)); memset(textureStates, 0, sizeof(textureStates));
         Identity(&world); Identity(&view); Identity(&projection); Identity(&textureTransform);
+        TH08_WEB_RENDER_STAGE("creating GL context");
+#ifdef TH08_MODERN_WEB
+        EmscriptenWebGLContextAttributes attributes;
+        emscripten_webgl_init_context_attributes(&attributes);
+        attributes.alpha = EM_FALSE;
+        attributes.depth = EM_TRUE;
+        attributes.stencil = EM_FALSE;
+        attributes.antialias = EM_FALSE;
+        attributes.majorVersion = 2;
+        attributes.minorVersion = 0;
+        attributes.enableExtensionsByDefault = EM_TRUE;
+        attributes.explicitSwapControl = EM_FALSE;
+        attributes.proxyContextToMainThread = EMSCRIPTEN_WEBGL_CONTEXT_PROXY_DISALLOW;
+        webContext = emscripten_webgl_create_context("#canvas", &attributes);
+        if (webContext > 0 && emscripten_webgl_make_context_current(webContext) == EMSCRIPTEN_RESULT_SUCCESS)
+        {
+            context = reinterpret_cast<SDL_GLContext>(static_cast<intptr_t>(webContext));
+            EM_ASM({
+                Browser.useWebGL = true;
+                Browser.moduleContextCreatedCallbacks.forEach((callback) => callback());
+            });
+        }
+#else
         context = SDL_GL_CreateContext(window);
+#endif
+        TH08_WEB_RENDER_STAGE(context != NULL ? "GL context created" : "GL context creation failed");
         if (context == NULL) return;
+#ifndef TH08_MODERN_WEB
         SDL_GL_MakeCurrent(window, context);
+#endif
+        TH08_WEB_RENDER_STAGE("GL context current");
         g_fogCoordf = reinterpret_cast<FogCoordfFunction>(SDL_GL_GetProcAddress("glFogCoordf"));
         if (g_fogCoordf == NULL)
             g_fogCoordf = reinterpret_cast<FogCoordfFunction>(SDL_GL_GetProcAddress("glFogCoordfEXT"));
+#ifndef TH08_MODERN_WEB
         SDL_GL_SetSwapInterval(parameters.FullScreen_PresentationInterval == D3DPRESENT_INTERVAL_IMMEDIATE ? 0 : 1);
+#endif
+        TH08_WEB_RENDER_STAGE("resetting render target");
         framebufferReady = ResetInternal(parameters);
+        TH08_WEB_RENDER_STAGE(framebufferReady ? "render target ready" : "render target failed");
         renderStates[D3DRS_TEXTUREFACTOR] = 0xffffffffu;
         renderStates[D3DRS_SRCBLEND] = D3DBLEND_SRCALPHA;
         renderStates[D3DRS_DESTBLEND] = D3DBLEND_INVSRCALPHA;
@@ -466,12 +586,22 @@ class LinuxDevice : public IDirect3DDevice8
     }
     ~LinuxDevice()
     {
+#ifdef TH08_MODERN_WEB
+        if (webContext > 0)
+            emscripten_webgl_make_context_current(webContext);
+#else
         if (context != NULL) SDL_GL_MakeCurrent(window, context);
+#endif
         if (texture != NULL) texture->Release();
         if (vertexBuffer != NULL) vertexBuffer->Release();
         if (backbuffer != NULL) backbuffer->Release();
         DestroyRenderTarget();
+#ifdef TH08_MODERN_WEB
+        if (webContext > 0)
+            emscripten_webgl_destroy_context(webContext);
+#else
         if (context != NULL) SDL_GL_DeleteContext(context);
+#endif
     }
     bool Ready() const { return context != NULL && backbuffer != NULL && framebufferReady; }
     ULONG AddRef() { return ++refs; }
@@ -494,7 +624,7 @@ class LinuxDevice : public IDirect3DDevice8
         SelectDrawBuffer(GL_BACK);
         glViewport(0, 0, drawableWidth, drawableHeight);
 
-        glPushAttrib(GL_ALL_ATTRIB_BITS);
+        PushRendererState();
         glDisable(GL_ALPHA_TEST); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST); glDisable(GL_LIGHTING); glDisable(GL_SCISSOR_TEST);
         glDepthMask(GL_FALSE);
@@ -514,10 +644,12 @@ class LinuxDevice : public IDirect3DDevice8
                                             static_cast<float>(drawableHeight));
         glEnd();
         glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix(); glMatrixMode(GL_MODELVIEW);
-        glPopAttrib();
+        PopRendererState();
 
         glFlush();
+#ifndef TH08_MODERN_WEB
         SDL_GL_SwapWindow(window);
+#endif
 
         g_framebufferApi.bindFramebuffer(GL_FRAMEBUFFER, renderFramebuffer);
         SelectDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -767,7 +899,7 @@ class LinuxDevice : public IDirect3DDevice8
     {
         const UINT width = backbuffer->width;
         const UINT height = backbuffer->height;
-        glPushAttrib(GL_ALL_ATTRIB_BITS);
+        PushRendererState();
         glDisable(GL_ALPHA_TEST); glDisable(GL_BLEND); glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST); glDisable(GL_LIGHTING); glDisable(GL_SCISSOR_TEST);
         glDepthMask(GL_FALSE);
@@ -784,7 +916,7 @@ class LinuxDevice : public IDirect3DDevice8
         glTexCoord2f(1.0f, 0.0f); glVertex2f(static_cast<float>(width), static_cast<float>(height));
         glEnd();
         glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix(); glMatrixMode(GL_MODELVIEW);
-        glPopAttrib();
+        PopRendererState();
     }
     bool ResetInternal(const D3DPRESENT_PARAMETERS &parameters)
     {
@@ -983,6 +1115,9 @@ class LinuxDevice : public IDirect3DDevice8
     LinuxSurface *backbuffer;
     LinuxTexture *texture;
     LinuxVertexBuffer *vertexBuffer;
+#ifdef TH08_MODERN_WEB
+    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE webContext;
+#endif
     DWORD fvf;
     UINT streamStride;
     GLuint renderFramebuffer, renderColorTexture, renderDepthBuffer, dialogueSnapshotTexture;

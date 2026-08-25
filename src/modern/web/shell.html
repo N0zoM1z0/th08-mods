@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TH08 Web — Imperishable Night</title>
+    <link rel="icon" type="image/png" href="th08-web-icon.png">
+    <style>
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background: #080910; color: #f5f1ff; }
+      main { display: grid; grid-template-columns: minmax(19rem, 25rem) minmax(640px, 1fr); gap: 2rem; align-items: start; max-width: 1180px; margin: 0 auto; padding: 2rem; }
+      section { padding: 1.5rem; border: 1px solid #37334a; border-radius: 1rem; background: #12131d; box-shadow: 0 1rem 3rem #0008; }
+      h1 { margin: 0 0 .35rem; font-size: 1.55rem; }
+      h2 { margin: 0; color: #b8a6ff; font-size: .9rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+      .identity { display: flex; gap: .85rem; align-items: center; }
+      .identity img { width: 3.5rem; height: 3.5rem; border-radius: .75rem; }
+      p { color: #cbc5dc; line-height: 1.55; }
+      label { display: block; margin: 1rem 0; font-weight: 650; }
+      input { display: block; width: 100%; margin-top: .45rem; color: #ded8ef; }
+      button { width: 100%; padding: .8rem 1rem; border: 0; border-radius: .55rem; background: #a98cff; color: #100b1d; font-weight: 800; cursor: pointer; }
+      button:disabled { cursor: not-allowed; opacity: .45; }
+      #status { min-height: 2.8rem; margin: 1rem 0 0; padding: .8rem; border-radius: .5rem; background: #0a0b12; color: #ddd5f5; }
+      #log { max-height: 13rem; overflow: auto; margin: 1rem 0 0; padding: .8rem; border-radius: .5rem; background: #08090e; color: #aaa3bc; font: .75rem/1.45 ui-monospace, monospace; white-space: pre-wrap; }
+      .game { display: flex; justify-content: center; padding: 1.25rem; overflow: hidden; }
+      canvas { width: 640px; height: 480px; max-width: 100%; border: 1px solid #302a44; background: #000; image-rendering: auto; outline: none; }
+      .policy { font-size: .92rem; }
+      .controls { font-size: .86rem; }
+      code { color: #d6c8ff; }
+      @media (max-width: 1060px) { main { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <div class="identity">
+          <img src="th08-web-icon.png" alt="TH08 Web icon">
+          <div>
+            <h2>Source-built browser port</h2>
+            <h1>Imperishable Night</h1>
+          </div>
+        </div>
+        <p class="policy">Select <code>th08.dat</code> and <code>thbgm.dat</code> from a legally obtained TH08 installation. The game archive is copied only into volatile session memory, while the music archive is range-read from its browser <code>File</code> object. Neither file is uploaded, bundled, or persisted by this page.</p>
+        <p class="controls"><strong>Keyboard:</strong> arrow keys move, <code>Z</code> confirms/fires, <code>X</code> cancels/bombs, <code>Shift</code> focuses, and <code>Esc</code> pauses.</p>
+        <label>Game data
+          <input id="game-data" type="file" accept=".dat,application/octet-stream">
+        </label>
+        <label>Background music data
+          <input id="bgm-data" type="file" accept=".dat,application/octet-stream">
+        </label>
+        <button id="start" disabled>Start TH08</button>
+        <div id="status" role="status" aria-live="polite">Loading the WebAssembly runtime…</div>
+        <pre id="log" aria-label="Runtime log"></pre>
+      </section>
+      <section class="game">
+        <canvas id="canvas" width="640" height="480" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+      </section>
+    </main>
+    <script>
+      const gameInput = document.querySelector("#game-data");
+      const bgmInput = document.querySelector("#bgm-data");
+      const startButton = document.querySelector("#start");
+      const statusElement = document.querySelector("#status");
+      const logElement = document.querySelector("#log");
+      const canvas = document.querySelector("#canvas");
+      let runtimeReady = false;
+      let started = false;
+
+      function appendLog(line) {
+        logElement.textContent += `${line}\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+      }
+
+      function selectedFiles() {
+        return [gameInput.files[0], bgmInput.files[0]];
+      }
+
+      function selectionIsValid() {
+        const [game, bgm] = selectedFiles();
+        return game?.name.toLowerCase() === "th08.dat" &&
+          bgm?.name.toLowerCase() === "thbgm.dat";
+      }
+
+      function updateStartState() {
+        startButton.disabled = started || !runtimeReady || !crossOriginIsolated || !selectionIsValid();
+        if (!crossOriginIsolated) {
+          statusElement.textContent = "This build requires cross-origin isolation. Serve it with the repository development server or equivalent COOP/COEP headers.";
+        } else if (!selectionIsValid() && runtimeReady) {
+          statusElement.textContent = "Select files named th08.dat and thbgm.dat to continue.";
+        } else if (!started && runtimeReady) {
+          const [game, bgm] = selectedFiles();
+          statusElement.textContent = `Ready: ${game.name} (${game.size.toLocaleString()} bytes), ${bgm.name} (${bgm.size.toLocaleString()} bytes).`;
+        }
+      }
+
+      gameInput.addEventListener("change", updateStartState);
+      bgmInput.addEventListener("change", updateStartState);
+
+      const gameKeyCodes = new Map([
+        ["ArrowUp", 0x26], ["ArrowDown", 0x28], ["ArrowLeft", 0x25], ["ArrowRight", 0x27],
+        ["Numpad1", 0x61], ["Numpad2", 0x62], ["Numpad3", 0x63], ["Numpad4", 0x64],
+        ["Numpad6", 0x66], ["Numpad7", 0x67], ["Numpad8", 0x68], ["Numpad9", 0x69],
+        ["Home", 0x24], ["KeyP", 0x50], ["KeyD", 0x44], ["KeyZ", 0x5a], ["KeyX", 0x58],
+        ["ShiftLeft", 0x10], ["ShiftRight", 0x10], ["Escape", 0x1b],
+        ["ControlLeft", 0x11], ["ControlRight", 0x11], ["KeyQ", 0x51], ["KeyS", 0x53],
+        ["KeyR", 0x52], ["Enter", 0x0d], ["NumpadEnter", 0x0d],
+      ]);
+
+      function updateGameKey(event, pressed) {
+        const virtualKey = gameKeyCodes.get(event.code);
+        if (!started || virtualKey === undefined) return;
+        event.preventDefault();
+        Module._th08_web_set_key_state(virtualKey, pressed ? 1 : 0);
+      }
+
+      window.addEventListener("keydown", (event) => updateGameKey(event, true));
+      window.addEventListener("keyup", (event) => updateGameKey(event, false));
+      window.addEventListener("blur", () => {
+        if (runtimeReady) Module._th08_web_clear_key_state();
+      });
+      canvas.addEventListener("pointerdown", () => canvas.focus());
+
+      var Module = {
+        noInitialRun: true,
+        canvas,
+        print: appendLog,
+        printErr: appendLog,
+        setStatus: (line) => {
+          if (line) statusElement.textContent = line;
+        },
+        onAbort: (reason) => {
+          statusElement.textContent = `The game aborted: ${reason}`;
+        },
+        onRuntimeInitialized: () => {
+          runtimeReady = true;
+          updateStartState();
+        },
+      };
+
+      startButton.addEventListener("click", async () => {
+        if (!selectionIsValid() || started) return;
+        const [game, bgm] = selectedFiles();
+        started = true;
+        updateStartState();
+        try {
+          statusElement.textContent = "Loading the local game archive into session memory…";
+          const gameBytes = new Uint8Array(await game.arrayBuffer());
+          const gameDataPointer = Module._th08_web_allocate_game_data(gameBytes.byteLength);
+          if (!gameDataPointer) {
+            throw new Error("Unable to allocate session memory for th08.dat.");
+          }
+          Module.HEAPU8.set(gameBytes, gameDataPointer);
+          Module.th08RetailFiles = [game, bgm];
+          Module._th08_web_set_retail_file_sizes(game.size, bgm.size);
+          try { Module.FS.mkdir("/game"); } catch (error) {
+            if (error?.errno !== 20) throw error;
+          }
+          Module.FS.chdir("/game");
+          Module.FS.writeFile("th08.dat", new Uint8Array(0));
+          Module.FS.writeFile("thbgm.dat", new Uint8Array(0));
+          canvas.focus();
+          statusElement.textContent = "Starting TH08 from local retail data…";
+          Module.callMain([]);
+        } catch (error) {
+          console.error(error);
+          statusElement.textContent = `Unable to start TH08: ${error.message}`;
+          started = false;
+          updateStartState();
+        }
+      });
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>

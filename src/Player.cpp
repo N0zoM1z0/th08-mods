@@ -605,7 +605,11 @@ void Player::Die()
 #pragma var_order(oldDirection, verticalSpeed, horizontalSpeed, focus, option, optionIndex, option2, optionExitIndex, route3Index, historyInitIndex, optionUpdateIndex, gaugeDelta, historyIndex, this)
 i32 Player::FUN_0044aec0()
 {
+#ifdef TH08_MODERN_WEB
+    typedef i32 (__fastcall *OptionUpdateCallback)(Player *, u8 *);
+#else
     typedef void (__fastcall *OptionUpdateCallback)(Player *, u8 *);
+#endif
 
     i32 oldDirection;
     f32 verticalSpeed;
@@ -1536,9 +1540,16 @@ ChainCallbackResult Player::OnDrawHighPrio(Player *player)
     {
         if (*reinterpret_cast<u32 *>(reinterpret_cast<u8 *>(player) + i * 0x2F4 + 0x6FC) != 0)
         {
+#ifdef TH08_MODERN_WEB
+            reinterpret_cast<PlayerOptionCallback>(
+                *reinterpret_cast<u32 *>(reinterpret_cast<u8 *>(player) + i * 0x2F4 + 0x6FC))(
+                player, reinterpret_cast<PlayerOptionState *>(reinterpret_cast<u8 *>(player) +
+                                                               i * 0x2F4 + 0x40C));
+#else
             reinterpret_cast<void (__fastcall *)(Player *, u8 *)>(
                 *reinterpret_cast<u32 *>(reinterpret_cast<u8 *>(player) + i * 0x2F4 + 0x6FC))(
                 player, reinterpret_cast<u8 *>(player) + i * 0x2F4 + 0x40C);
+#endif
         }
     }
 
@@ -3220,7 +3231,12 @@ void Player::FUN_004512f0()
         g_AnmManager->Draw2D(reinterpret_cast<AnmVm *>(slot));
         if (*reinterpret_cast<u32 *>(slot + 0x478) != 0)
         {
+#ifdef TH08_MODERN_WEB
+            reinterpret_cast<PlayerShotRenderCallback>(*reinterpret_cast<u32 *>(slot + 0x478))(
+                this, reinterpret_cast<PlayerShot *>(slot));
+#else
             reinterpret_cast<void (__fastcall *)(Player *, u8 *)>(*reinterpret_cast<u32 *>(slot + 0x478))(this, slot);
+#endif
         }
     }
 }

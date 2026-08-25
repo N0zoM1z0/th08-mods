@@ -1,6 +1,6 @@
-# 東方永夜抄 ～ Imperishable Night
+# Touhou Eiyashou — Imperishable Night
 
-<h3 align="center">🌙「永夜已明」Authored reconstruction complete — Linux playable ✓ · Web port feasibility proven, full game in progress 💫</h3>
+<h3 align="center">Authored reconstruction complete — Linux playable — source-built Web preview running</h3>
 
 <p align="center">
   <img
@@ -18,20 +18,31 @@
 | Platform | Guide | Status |
 | --- | --- | --- |
 | Linux | **[Download, install, and play](docs/PLAY_LINUX.md)** | **Playable** |
-| Web | [Architecture and reproducible probes](docs/WEB_ARCHITECTURE.md) | In progress |
+| Web | [Build, run, architecture, and evidence](docs/WEB_ARCHITECTURE.md) | Playable engineering preview |
 | Windows | [Native Windows guide](docs/PLAY_WINDOWS.md) | In progress |
 | macOS | [Native macOS guide](docs/PLAY_MACOS.md) | In progress |
 
-The Web edition now has reproducible Emscripten probes for compiling all shared
-authored sources, mounting both user-selected local DAT files without upload or
-whole-file heap copies, preserving a low target-address arena, and presenting
-a frame with the current renderer through WebGL 2. It is not a playable game
-yet; the next milestone is a full link and title-screen startup.
+The Web edition now links and runs the reconstructed C++ game in a browser.
+The title, menus, keyboard input, Web Audio device, local BGM range reads, and
+initial gameplay setup have been exercised with retail data supplied through
+the local file picker. The browser glue contains no gameplay reimplementation.
 
 The Web build will never ship `th08.dat`, `thbgm.dat`, the original executable,
 or extracted retail assets. Users must select the two DAT files from their own
 legally obtained installation. See the [Web architecture and provenance
 boundary](docs/WEB_ARCHITECTURE.md) for the design and observed evidence.
+
+Build and launch the preview with Docker and Python 3:
+
+```bash
+scripts/build-web-game.sh
+python3 scripts/check-web-provenance.py --artifact build/web-dist
+scripts/serve-web.py --port 8000
+```
+
+Then open `http://127.0.0.1:8000/` and select your legally obtained
+`th08.dat` and `thbgm.dat`. A remote browser requires HTTPS in addition to the
+cross-origin-isolation headers supplied by the development server.
 
 This project reconstructs the source code of the original Japanese
 `東方永夜抄 ～ Imperishable Night` version 1.00d executable. All 1,107 authored

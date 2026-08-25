@@ -1960,6 +1960,9 @@ void AsciiManager::DrawPercentage(Float3 *position, i32 percentage, D3DCOLOR col
 }
 
 // FUNCTION: th08 0x4068e0
+#ifdef TH08_MODERN_WEB
+__attribute__((used))
+#endif
 inline void AnmVmBase::Initialize()
 {
     memset(this, 0, sizeof(AnmVmBase));

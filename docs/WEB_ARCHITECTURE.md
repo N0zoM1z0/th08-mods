@@ -1,118 +1,190 @@
-# Web port architecture and feasibility evidence
+# Web port architecture and status
 
-## Decision
+## Outcome
 
-Build the browser edition from the reconstructed C++ with Emscripten targeting
-32-bit WebAssembly. JavaScript is a thin browser bootstrap only: local file
-selection, worker/canvas startup, persistence synchronization, and browser
-error reporting. Gameplay, archive parsing, simulation, and game state remain
-the authored C++ implementation.
+TH08 Web is built from the reconstructed C++ game sources with Emscripten and
+runs in a desktop browser. JavaScript is limited to the browser boundary: the
+launcher, local file selection, keyboard events, Blob range reads, canvas
+startup, and status reporting. Gameplay, archive parsing, simulation,
+rendering calls, and game state remain in the authored C++ implementation.
 
-This is not a TypeScript reimplementation and it is not an x86 emulator. The
-VC7 exact build remains the evidence product; the Web build is a separate
-modern port from the same authored sources and makes no binary-exact claim.
+This is neither a TypeScript reimplementation nor an x86 emulator. The exact
+VC7 build remains the reconstruction evidence product. The Web build is a
+separate modern port from the same sources and makes no binary-exact claim.
 
-The first playable milestone should use the smallest compatibility path:
+The current flow is:
 
 ```text
-browser shell
-  local File picker + canvas + user audio gesture
-                    |
-                    v
-Web Worker / wasm32 authored game
-  PBG and game logic unchanged
-  Win32/D3D8/DirectSound/GDI-shaped platform interfaces
-                    |
-         +----------+-----------+
-         |          |           |
-     WORKERFS    WebGL 2    Web Audio/SDL
-   retail, read  renderer      audio
-         |
-   user-owned th08.dat + thbgm.dat
-
-IDBFS is a separate writable mount for cfg, score, replay, and backup files.
-No retail data travels to the server or enters a deployment artifact.
+browser page (main thread)
+  file picker + keyboard + Web Audio
+           |               ^
+           | local File    | small synchronous proxies
+           v               |
+pthread worker running wasm32 authored game
+  PBG/archive logic + simulation + D3D8-shaped renderer
+           |                  |
+           |                  v
+           |            OffscreenCanvas / WebGL 2
+           |
+           +-- th08.dat: one volatile 46.8 MB session-memory copy
+           +-- thbgm.dat: byte-range reads from the browser Blob
 ```
 
 ## Provenance boundary
 
-The repository and every deployable artifact contain only project source,
+The repository and deployable Web artifact contain only project source,
 HTML/JavaScript glue, WebAssembly, and clearly licensed project-owned assets.
-They must never contain `th08.dat`, `thbgm.dat`, the original executables, or
+They must never contain `th08.dat`, `thbgm.dat`, an original executable, or
 files extracted from the retail archives.
 
-At runtime the user selects exactly `th08.dat` and `thbgm.dat` from a legally
-obtained local installation. The browser passes those `File` objects to a Web
-Worker. Emscripten WORKERFS mounts them read-only and services range reads
-without copying the whole files into the Wasm heap. There is no upload API and
-no server component.
+At runtime, the user selects `th08.dat` and `thbgm.dat` from a legally obtained
+local installation. The launcher does not contain an upload API. It keeps the
+two browser `File` objects in the page, copies `th08.dat` into volatile Wasm
+memory, and services `thbgm.dat` reads from Blob slices. Empty MEMFS directory
+entries provide only the filenames expected by original path and `stat` code;
+they contain no retail bytes. Reloading or closing the page discards the
+session.
 
-Keep writes out of the retail mount. Mount IDBFS at `/save`, populate it before
-startup, and make it the current working directory. Present the two read-only
-archives there through virtual links to `/retail`, or resolve those two names
-in the Web filesystem adapter if cross-mount links prove unreliable. Persist
-configuration, score, replays, and backups using `FS.syncfs()` at explicit
-checkpoints (or IDBFS `autoPersist`). Never persist either retail archive.
+The different strategies are intentional. Game archive reads are synchronous,
+frequent, and small enough for a one-time memory copy. The roughly 450 MB music
+archive must not consume the fixed Wasm heap, so the compatibility layer sends
+range requests to the browser main thread and atomically waits in the game
+worker. Neither archive is fetched over HTTP, uploaded, bundled, or written to
+browser persistence.
 
-`scripts/check-web-provenance.py` rejects tracked DAT files, original
-executables, and common retail archive containers. This is a minimum automatic
-gate, not a substitute for source/asset review. A release job must stage a new
-allowlisted directory rather than publish an arbitrary repository or build
-directory.
+`scripts/check-web-provenance.py` rejects forbidden payloads from both tracked
+source and a staged artifact directory. It is a minimum automated gate, not a
+license detector. Release automation must publish an allowlisted build
+directory, never the repository or a data directory.
 
-## Feasibility probes
+## Runtime design
 
-All probes use the digest-pinned `emscripten/emsdk:6.0.8` container. They are
-small decision experiments, not claims that the game is playable in a browser.
+### Threads and browser isolation
 
-### Authored-source compiler gate
+The port preserves the authored frame body and Win32-shaped startup/BGM
+threads. Emscripten `PROXY_TO_PTHREAD` moves `main()` off the browser UI thread,
+and a three-thread pool supports the existing startup jobs. The outer blocking
+loop is Web-only adapted into one authored frame per `emscripten_set_main_loop`
+callback so the worker yields to the browser after every frame. This requires
+`SharedArrayBuffer` and therefore a secure, cross-origin-isolated page.
 
-`scripts/build-web-probe.sh` compiles all 44 shared production-authored game
-and PBG translation units as wasm32 objects. On 2026-08-24 it completed 44/44.
-Only a Web forced-include boundary and compiler compatibility flags were
-needed; no gameplay source was replaced.
+`scripts/serve-web.py` supplies the required COOP and COEP headers. Localhost is
+a valid development secure context. A remote machine should use HTTPS; the raw
+LAN or Tailscale HTTP address can display the launcher but cannot start this
+pthread build in a conforming browser.
 
-### Local retail-file gate
+### Data bridge
 
-`scripts/build-web-data-probe.sh` builds a browser worker probe. With the two
-local retail files selected, C++ `fopen`/`fseek` read both their first and last
-bytes through WORKERFS. The observed sizes were 46,838,025 and 449,961,024
-bytes while the Wasm heap remained 16,908,288 bytes. The local HTTP server saw
-requests only for HTML, JavaScript, Worker, and Wasm files: neither DAT was
-uploaded or fetched over HTTP.
+The C++ Win32 file compatibility layer recognizes only the two retail archive
+basenames as browser-owned files. `CreateFile`, `ReadFile`, seeking, size, and
+close operations retain their synchronous authored-facing behavior.
 
-This disproves the risky assumption that the roughly 450 MiB music archive
-must be embedded in a download or copied wholesale into linear memory.
+- `th08.dat` is allocated with `malloc`, filled through the exported Wasm heap,
+  and read with ordinary memory copies.
+- `thbgm.dat` stays a browser `File`. Reads use `File.slice().arrayBuffer()` on
+  the main runtime thread, copy only the requested range into Wasm memory, and
+  wake the blocked worker through an atomic word.
+- All configuration, score, replay, and backup writes currently use volatile
+  MEMFS. Persistence is a separate milestone and must never include retail
+  data.
 
-### Target-address arena gate
+### Rendering and frame pacing
 
-`scripts/build-web-layout-probe.sh` places ordinary WebAssembly data at or
-above 32 MiB with `GLOBAL_BASE`, writes a representative target-owned slot at
-`0x004c6c3c`, and verifies that the regions do not overlap. This proves that
-raw 32-bit target-address accesses can remain valid in a reserved low-memory
-arena.
+The existing `IDirect3D8`/`IDirect3DDevice8` compatibility surface remains the
+portability seam. The current implementation creates a WebGL 2 context directly
+on the transferred `OffscreenCanvas` and uses Emscripten's legacy fixed-function
+emulation for the reconstructed D3D8 call stream. The context uses implicit
+swap control: returning from each Emscripten main-loop callback lets the browser
+compositor present the completed frame and provides the browser-side pacing.
 
-It does **not** solve symbol identity by itself. The Linux port uses ELF linker
-aliases from `th08-layout.ld`; wasm-ld has no equivalent arbitrary absolute
-symbol layout. Before a full Web link, generate a Web binding layer that makes
-every identity-sensitive global and raw-address view resolve to one object in
-the low arena. Do not duplicate objects or hand-maintain a second address map.
+An earlier blocking-loop experiment rendered correctly into the WebGL default
+framebuffer but remained black on screen. In Emscripten 6, the native
+OffscreenCanvas `emscripten_webgl_commit_frame()` path is a no-op because modern
+browsers present implicitly. Moving the outer loop to yielding callbacks fixed
+the actual display boundary without changing authored frame behavior.
 
-### Renderer gate
+Legacy GL emulation is suitable for bring-up, not the final renderer. The
+production follow-up is a small explicit WebGL 2 shader and state-cache backend
+behind the same D3D8-shaped interface. This avoids changing gameplay code while
+removing dependence on incomplete fixed-function emulation.
 
-`scripts/build-web-renderer-probe.sh` builds the existing D3D8 compatibility
-backend with Emscripten's legacy fixed-function support and presents a 640x480
-frame through WebGL 2. Browser verification reached
-`renderer-probe=ok` and showed the expected frame.
+Instrumentation separates browser main-loop callbacks from authored
+calculation frames. In a dense Stage 1 sample, callbacks held at 60 Hz while
+calculation fell from 60 to about 40 FPS. That rules out a slow browser refresh
+rate and identifies the immediate-mode compatibility renderer as the active
+frame-pacing bottleneck. The displayed in-game FPS counter alone can miss this
+distinction.
 
-This is the fastest title-screen bring-up route, but it is deliberate
-prototype debt. WebGL has no desktop attribute stack, and Emscripten warns
-that legacy GL emulation is limited. Keep the `IDirect3D8`/`IDirect3DDevice8`
-surface used by authored code, then replace the backend internals with explicit
-WebGL 2 / GLES2 shaders and state tracking. WebGPU adds a larger semantic and
-tooling gap and is not justified for the first port.
+### Input and audio
 
-Run the probes with:
+Browser keyboard events are translated to the Win32 virtual-key set used by
+the compatibility layer and stored in shared atomic state. Each authored input
+poll merges that state with SDL's keyboard state. A key-down edge remains
+latched until one authored poll consumes it, preventing short Z/X taps from
+falling entirely between 60 Hz polls. Blur clears held and pending keys to avoid
+stuck movement or firing.
+
+SDL's Web Audio device must be opened, paused, and closed on the main browser
+runtime thread. Small synchronous proxies preserve the DirectSound-shaped C++
+interface, while mixing remains in the shared Linux audio implementation. BGM
+streaming reads `thbgm.dat` through the Blob range bridge.
+
+### Wasm ABI adaptations
+
+WebAssembly validates indirect call signatures more strictly than native x86.
+The port uses Web-only typed adapters for Win32 thread entry points and callback
+tables whose reconstructed x86 calls intentionally ignore a non-void return.
+The VC7/native branches remain unchanged. These are ABI boundary adaptations,
+not gameplay replacements.
+
+Normal Wasm globals start at 32 MiB so existing low raw-address views remain
+available. The pthread build currently uses a fixed 256 MiB initial shared
+memory and a 4 MiB stack. The music archive is not part of that memory budget.
+
+## Build and run
+
+Docker is the only Emscripten prerequisite. The build image is pinned by tag
+and digest:
+
+```bash
+scripts/build-web-game.sh
+python3 scripts/check-web-provenance.py --artifact build/web-dist
+scripts/serve-web.py --bind 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000/`, select local files named exactly `th08.dat` and
+`thbgm.dat`, and choose **Start TH08**. Keyboard controls are listed in the
+launcher. The generated static artifact consists of `th08-web.html`,
+`th08-web.js`, `th08-web.wasm`, and the project-owned `th08-web-icon.png` copied
+from the Linux port. CMake metadata stays in `build/web-game`; only the
+allowlisted files are staged in `build/web-dist`.
+
+For another device, place the same server behind HTTPS and preserve the COOP,
+COEP, CORP, and no-store headers. Static hosts that cannot provide
+cross-origin isolation cannot run this pthread build.
+
+## Reproducible evidence
+
+All Web builds use
+`emscripten/emsdk:6.0.8@sha256:f174124ff798a3ead1abef247d9a849c270b642d552fea500a42565ff210f765`.
+
+- The authored compiler gate builds all 44 shared game/PBG translation units
+  as wasm32 objects.
+- The full target links the authored objects with the existing Linux platform
+  adapters and the Web-specific browser boundaries.
+- With user-selected retail archives of 46,838,025 and 449,961,024 bytes, the
+  title loaded, rendered, and accepted keyboard input through difficulty and
+  character/team selection. Stage setup then completed without a Wasm trap.
+- A separate data probe read the first and last bytes of both browser-local
+  files. Browser resource inspection showed only HTML, JavaScript, Worker, and
+  Wasm requests; neither DAT appeared as a network resource.
+- Browser screenshots after the yielding-loop correction show the full title,
+  menus, and Stage 1 on the worker-owned OffscreenCanvas. A separate packed
+  counter measurement showed 60 main-loop callbacks but only 40 authored
+  calculations per second in a dense Stage 1 interval; 60 FPS is therefore not
+  yet a sustained playability claim.
+
+Run the bounded probes with:
 
 ```bash
 scripts/build-web-probe.sh
@@ -122,102 +194,26 @@ scripts/build-web-renderer-probe.sh
 python3 scripts/check-web-provenance.py
 ```
 
-Serve `build/web-data-mount` or `build/web-renderer-probe` from localhost for
-manual browser checks. Generated files and local data remain under ignored
-paths.
+## Remaining work
 
-## MVP platform choices
+The port has crossed the full-link, title/menu, input, audio-device, BGM-range,
+and initial-gameplay setup gates. It is an engineering preview, not a release.
+The next work is:
 
-### Threads and event loop
-
-The current game has a blocking main loop plus Win32-style startup and BGM
-threads. For the shortest route to a playable title, compile with pthreads,
-move `main()` off the browser UI thread with `PROXY_TO_PTHREAD`, and enable the
-OffscreenCanvas/proxied WebGL path. This also places synchronous WORKERFS
-access in a worker, where it is supported.
-
-That build requires `SharedArrayBuffer`, so the static host must send
-cross-origin isolation headers (`Cross-Origin-Opener-Policy: same-origin` and
-`Cross-Origin-Embedder-Policy: require-corp`) for every entry point and asset.
-There is still no application backend and no retail-data upload. A development
-server and deployment smoke test must fail clearly when `crossOriginIsolated`
-is false.
-
-After the full game works, evaluate whether broader hosting compatibility is
-worth the larger refactor: split the blocking loop into one
-`GameWindow::Tick()` scheduled by `emscripten_set_main_loop_arg`, and replace
-startup/BGM threads with cooperative state machines or worker messages. Since
-WORKERFS itself is worker-only, a threadless design still needs a dedicated
-worker/OffscreenCanvas arrangement or a separate Blob-range streaming adapter.
-Do not pay this complexity before the pthread MVP has exposed real browser
-compatibility costs.
-
-### Rendering
-
-Use the current D3D8 compatibility interface as the seam. The order is:
-
-1. legacy GL emulation for title-screen and gameplay bring-up;
-2. inventory the actually used D3D8 render states, texture combiners, vertex
-   formats, FBO copies, and dynamic text surfaces;
-3. replace legacy calls with a small shader/state-cache WebGL 2 backend;
-4. retain replay-visible viewport, blending, fog, and half-pixel behavior.
-
-### Audio, input, and text
-
-- Route keyboard/gamepad through SDL2 initially and preserve the authored
-  DirectInput-shaped interface. Prevent browser scrolling/default shortcuts
-  while the canvas owns focus.
-- Reuse the Linux SDL audio boundary for sound effects and streamed BGM. Audio
-  startup must follow a click/key gesture. The BGM thread and WORKERFS range
-  behavior must be exercised before claiming the title milestone complete.
-- Replace Fontconfig discovery with one explicitly licensed Japanese font or a
-  browser text rasterizer behind the GDI-shaped interface. Never extract or
-  redistribute a font or glyph asset from the retail game.
-
-### Memory and addresses
-
-Keep wasm32: reconstructed layouts and pointers are 32-bit. Reserve the low
-target-address arena and place normal Wasm static data above it. Pthread builds
-also need a fixed maximum shared memory size, selected from measurements of
-title, stage, archive cache, audio buffers, and save data rather than from the
-combined retail archive sizes. WORKERFS means the two DAT sizes do not dictate
-the heap size.
-
-## Reuse ledger
-
-| Disposition | Components |
-| --- | --- |
-| Reuse unchanged | 44 authored game/PBG translation units, PBG formats and decompression, simulation and replay logic, 32-bit layouts, D3DX math compatibility |
-| Adapt behind existing interfaces | Win32 runtime, target-global identity, D3D8 renderer, SDL input/audio, GDI text, paths and persistence |
-| New thin browser code | local file picker, Worker/Canvas bootstrap, isolation checks, IDBFS synchronization, error/status UI |
-| Explicitly excluded | TypeScript gameplay rewrite, x86 emulation, bundled/preloaded retail DATs, extracted retail assets, WebGPU-first renderer |
-
-## Milestones and acceptance checks
-
-1. **Compiler gate — complete:** all authored shared sources compile as wasm32.
-2. **Data gate — complete:** both local DATs support zero-upload range reads
-   without whole-file heap copies.
-3. **Renderer gate — complete:** the current adapter presents a WebGL 2 frame.
-4. **Full-link gate:** resolve platform symbols and global identity, initialize
-   from selected data, and enter a browser-safe loop without aborts.
-5. **Title gate:** title/menu render, input works, Japanese text is legible,
-   SFX and streamed BGM play, and cfg/score survive reload.
-6. **Gameplay gate:** deterministic stage/replay smoke plus stage transitions,
-   pause, focus loss, resizing, save failure, and audio underrun tests.
-7. **Release gate:** clean-browser test of the staged static artifact, required
-   isolation headers, no network request containing retail bytes, provenance
-   checker pass, and an explicit user-data/license notice.
-
-Current prototype debt is intentionally visible: no full executable link,
-generated target-global binding layer, browser main-loop integration, IDBFS
-save overlay, production WebGL shader backend, Japanese font path, or full BGM
-stream exists yet. The next coherent target is the full-link gate, not a
-parallel rewrite of game systems.
+1. replace legacy fixed-function emulation with an explicit WebGL 2
+   shader/VBO renderer and sustain 60 authored calculations per second in
+   dense Stage 1 scenes;
+2. add an IDBFS save overlay for cfg, score, replay, and backup files, with an
+   explicit guarantee that the retail archives cannot enter it;
+3. run deterministic stage/replay, pause/focus, audio-underrun, and stage
+   transition regressions in current Chromium and Firefox;
+4. measure and tune the fixed shared-memory ceiling, then produce an
+   allowlisted static release artifact and clean-profile deployment test;
+5. add gamepad mapping and user-facing diagnostics for unsupported browsers.
 
 ## Primary references
 
-- [Emscripten: Building Projects](https://emscripten.org/docs/compiling/Building-Projects.html)
-- [Emscripten: File System API](https://emscripten.org/docs/api_reference/Filesystem-API.html)
-- [Emscripten: Pthreads support](https://emscripten.org/docs/porting/pthreads.html)
-- [Emscripten: OpenGL support](https://emscripten.org/docs/porting/multimedia_and_graphics/OpenGL-support.html)
-- [Emscripten: compiler settings](https://emscripten.org/docs/tools_reference/settings_reference.html)
+- [Emscripten pthreads support](https://emscripten.org/docs/porting/pthreads.html)
+- [Emscripten file system API](https://emscripten.org/docs/api_reference/Filesystem-API.html)
+- [Emscripten OpenGL support](https://emscripten.org/docs/porting/multimedia_and_graphics/OpenGL-support.html)
+- [Emscripten compiler settings](https://emscripten.org/docs/tools_reference/settings_reference.html)

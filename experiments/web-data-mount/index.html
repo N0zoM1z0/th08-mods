@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>TH08 Web 本地数据挂载探针</title>
+    <title>TH08 Web local-data mount probe</title>
     <style>
       :root { color-scheme: dark; font-family: system-ui, sans-serif; }
       body { max-width: 720px; margin: 4rem auto; padding: 0 1.5rem; background: #11131a; color: #f4f1ff; }
@@ -18,12 +18,12 @@
   </head>
   <body>
     <main>
-      <h1>TH08 Web 本地数据挂载探针</h1>
-      <p class="policy">请选择你合法持有的 <code>th08.dat</code> 与 <code>thbgm.dat</code>。文件只作为浏览器本地 <code>File</code> 对象交给 Web Worker；页面不会上传、打包或保存这两个 retail 文件。</p>
-      <label>游戏数据 <input id="game-data" type="file" accept=".dat"></label>
-      <label>音乐数据 <input id="bgm-data" type="file" accept=".dat"></label>
-      <button id="inspect" disabled>本地挂载并读取</button>
-      <pre id="result" aria-live="polite">等待选择两个 DAT 文件。</pre>
+      <h1>TH08 Web local-data mount probe</h1>
+      <p class="policy">Select <code>th08.dat</code> and <code>thbgm.dat</code> from a legally obtained copy. The files are passed to a Web Worker as local browser <code>File</code> objects; this page never uploads, bundles, or stores either retail file.</p>
+      <label>Game data <input id="game-data" type="file" accept=".dat"></label>
+      <label>Background music data <input id="bgm-data" type="file" accept=".dat"></label>
+      <button id="inspect" disabled>Mount and inspect locally</button>
+      <pre id="result" aria-live="polite">Waiting for both DAT files.</pre>
     </main>
     <script>
       const gameInput = document.querySelector("#game-data");
@@ -40,31 +40,31 @@
         const valid = game?.name.toLowerCase() === "th08.dat" && bgm?.name.toLowerCase() === "thbgm.dat";
         button.disabled = !valid;
         result.textContent = valid
-          ? `已选择 ${game.name} (${game.size} bytes) 与 ${bgm.name} (${bgm.size} bytes)。\n尚未读取。`
-          : "请选择文件名分别为 th08.dat 与 thbgm.dat 的两个本地文件。";
+          ? `Selected ${game.name} (${game.size} bytes) and ${bgm.name} (${bgm.size} bytes).\nNot read yet.`
+          : "Select local files named th08.dat and thbgm.dat.";
       }
 
       gameInput.addEventListener("change", validateSelection);
       bgmInput.addEventListener("change", validateSelection);
       button.addEventListener("click", () => {
         button.disabled = true;
-        result.textContent = "正在 Web Worker 中挂载 WORKERFS…\n";
+        result.textContent = "Mounting WORKERFS inside a Web Worker…\n";
         const worker = new Worker("worker.js");
         worker.onmessage = (event) => {
           if (event.data.type === "log") result.textContent += `${event.data.line}\n`;
           if (event.data.type === "done") {
-            result.textContent += event.data.status === 0 ? "本地随机读取成功；未发生网络上传。" : "读取失败。";
+            result.textContent += event.data.status === 0 ? "Local range reads succeeded; no network upload occurred." : "Read failed.";
             worker.terminate();
             button.disabled = false;
           }
           if (event.data.type === "error") {
-            result.textContent += `错误：${event.data.message}`;
+            result.textContent += `Error: ${event.data.message}`;
             worker.terminate();
             button.disabled = false;
           }
         };
         worker.onerror = (error) => {
-          result.textContent += `Worker 错误：${error.message}`;
+          result.textContent += `Worker error: ${error.message}`;
           worker.terminate();
           button.disabled = false;
         };

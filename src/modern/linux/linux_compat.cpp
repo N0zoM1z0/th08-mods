@@ -5,13 +5,22 @@
 #include <SDL_ttf.h>
 #include <dinput.h>
 #include <dsound.h>
+#ifdef TH08_MODERN_WEB
+#include <emscripten.h>
+#include <emscripten/atomic.h>
+#include <emscripten/threading_legacy.h>
+#endif
 
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
+#ifndef TH08_MODERN_WEB
 #include <fontconfig/fontconfig.h>
+#endif
 #include <glob.h>
+#ifndef TH08_MODERN_WEB
 #include <iconv.h>
+#endif
 #include <limits.h>
 #include <math.h>
 #include <map>
@@ -27,7 +36,7 @@
 
 namespace
 {
-enum HandleKind { HANDLE_FILE, HANDLE_THREAD, HANDLE_EVENT, HANDLE_MUTEX, HANDLE_FIND };
+enum HandleKind { HANDLE_FILE, HANDLE_THREAD, HANDLE_EVENT, HANDLE_MUTEX, HANDLE_FIND, HANDLE_WEB_FILE };
 
 struct LinuxHandle
 {
@@ -42,6 +51,165 @@ struct FileHandle : LinuxHandle
     ~FileHandle() { if (fd >= 0) close(fd); }
     int fd;
 };
+
+#ifdef TH08_MODERN_WEB
+struct WebFileHandle : LinuxHandle
+{
+    WebFileHandle(int index_, DWORD size_)
+        : LinuxHandle(HANDLE_WEB_FILE), index(index_), size(size_), position(0), cacheOffset(0),
+          cacheSize(0), blobFetches(0), cacheHits(0), bytesFetched(0) {}
+    ~WebFileHandle()
+    {
+        if (index == 1 && blobFetches != 0)
+        {
+            fprintf(stderr,
+                    "th08-web: thbgm.dat read cache: %lu Blob fetches, %lu cache hits, %lu bytes fetched\n",
+                    static_cast<unsigned long>(blobFetches), static_cast<unsigned long>(cacheHits),
+                    static_cast<unsigned long>(bytesFetched));
+        }
+    }
+    int index;
+    DWORD size;
+    DWORD position;
+    DWORD cacheOffset;
+    DWORD cacheSize;
+    DWORD blobFetches;
+    DWORD cacheHits;
+    DWORD bytesFetched;
+    std::vector<BYTE> cache;
+};
+
+DWORD g_retailFileSizes[2];
+BYTE *g_retailFileData[2];
+bool g_retailReadLogged[2];
+uint32_t g_webVirtualKeys[256];
+uint32_t g_webVirtualKeyPresses[256];
+
+int RetailFileIndex(const char *path)
+{
+    if (path == NULL)
+        return -1;
+    const char *basename = path;
+    for (const char *cursor = path; *cursor != '\0'; ++cursor)
+        if (*cursor == '/' || *cursor == '\\')
+            basename = cursor + 1;
+    if (strcmp(basename, "th08.dat") == 0)
+        return 0;
+    if (strcmp(basename, "thbgm.dat") == 0)
+        return 1;
+    return -1;
+}
+
+bool ReadRetailFile(WebFileHandle *handle, void *destination, DWORD size, DWORD *bytesRead)
+{
+    if (handle->position >= handle->size || size == 0)
+    {
+        if (bytesRead != NULL)
+            *bytesRead = 0;
+        return true;
+    }
+
+    const DWORD available = handle->size - handle->position;
+    const DWORD requested = size < available ? size : available;
+    if (g_retailFileData[handle->index] != NULL)
+    {
+        memcpy(destination, g_retailFileData[handle->index] + handle->position, requested);
+        handle->position += requested;
+        if (bytesRead != NULL)
+            *bytesRead = requested;
+        if (!g_retailReadLogged[handle->index])
+        {
+            fprintf(stderr, "th08-web: local %s session-memory reads are active\n",
+                    handle->index == 0 ? "th08.dat" : "thbgm.dat");
+            g_retailReadLogged[handle->index] = true;
+        }
+        return true;
+    }
+
+    if (handle->cacheSize != 0 && handle->position >= handle->cacheOffset)
+    {
+        const DWORD cachePosition = handle->position - handle->cacheOffset;
+        if (cachePosition <= handle->cacheSize && requested <= handle->cacheSize - cachePosition)
+        {
+            memcpy(destination, &handle->cache[cachePosition], requested);
+            handle->position += requested;
+            handle->cacheHits++;
+            if (bytesRead != NULL)
+                *bytesRead = requested;
+            return true;
+        }
+    }
+
+    // BGM streaming is sequential, but the authored DirectSound-shaped code
+    // asks for relatively small pieces. Read ahead so one browser Blob promise
+    // serves many synchronous Win32-compatible ReadFile calls.
+    const DWORD readAheadSize = 1024 * 1024;
+    // Avoid turning one-off metadata reads into a full 1 MiB fetch. Enable
+    // read-ahead only after this handle demonstrates sequential use.
+    const bool useReadAhead = handle->index == 1 && handle->blobFetches != 0 && requested < readAheadSize;
+    DWORD fetchSize = useReadAhead ? readAheadSize : requested;
+    if (fetchSize > available)
+        fetchSize = available;
+    if (useReadAhead && handle->cache.size() < fetchSize)
+        handle->cache.resize(fetchSize);
+    void *fetchDestination = useReadAhead ? static_cast<void *>(&handle->cache[0]) : destination;
+
+    volatile uint32_t status = 0;
+    MAIN_THREAD_ASYNC_EM_ASM({
+        const files = Module['th08RetailFiles'];
+        const file = files && files[$0];
+        const statusIndex = $4 >>> 2;
+        const finish = (value) => {
+            Atomics.store(HEAP32, statusIndex, value);
+            Atomics.notify(HEAP32, statusIndex, 1);
+        };
+        if (!file) {
+            finish(-1);
+            return;
+        }
+        file.slice($1, $1 + $3).arrayBuffer().then((buffer) => {
+            const bytes = new Uint8Array(buffer);
+            HEAPU8.set(bytes, $2);
+            finish(bytes.length + 1);
+        }).catch((error) => {
+            console.error('Unable to read the selected TH08 data file:', error);
+            finish(-1);
+        });
+    }, handle->index, handle->position, fetchDestination, fetchSize, &status);
+
+    uint32_t *statusAddress = const_cast<uint32_t *>(&status);
+    emscripten_atomic_wait_u32(statusAddress, 0, 30000000000LL);
+    const uint32_t result = emscripten_atomic_load_u32(statusAddress);
+    if (result == 0 || result == 0xffffffffU)
+    {
+        if (bytesRead != NULL)
+            *bytesRead = 0;
+        return false;
+    }
+
+    const DWORD count = result - 1;
+    handle->blobFetches++;
+    handle->bytesFetched += count;
+    DWORD delivered = count;
+    if (useReadAhead)
+    {
+        handle->cacheOffset = handle->position;
+        handle->cacheSize = count;
+        delivered = requested < count ? requested : count;
+        memcpy(destination, &handle->cache[0], delivered);
+    }
+    handle->position += delivered;
+    if (!g_retailReadLogged[handle->index])
+    {
+        fprintf(stderr, "th08-web: local %s Blob range reads are active\n",
+                handle->index == 0 ? "th08.dat" : "thbgm.dat");
+        g_retailReadLogged[handle->index] = true;
+    }
+    if (bytesRead != NULL)
+        *bytesRead = delivered;
+    return true;
+}
+#endif
 
 struct ThreadHandle : LinuxHandle
 {
@@ -109,10 +277,13 @@ struct GdiBitmap : GdiObject
 
 struct GdiFont : GdiObject
 {
-    GdiFont() : font(NULL) { kind = FONT; }
-    explicit GdiFont(TTF_Font *font_) : font(font_) { kind = FONT; }
+    GdiFont() : font(NULL), height(16), weight(FW_NORMAL) { kind = FONT; }
+    GdiFont(TTF_Font *font_, int height_, int weight_)
+        : font(font_), height(height_ > 0 ? height_ : 16), weight(weight_) { kind = FONT; }
     ~GdiFont() { if (font != NULL) TTF_CloseFont(font); }
     TTF_Font *font;
+    int height;
+    int weight;
 };
 
 struct GdiDc
@@ -132,6 +303,10 @@ pthread_mutex_t g_messageMutex = PTHREAD_MUTEX_INITIALIZER;
 
 std::string ExecutableSiblingPath(const char *filename)
 {
+#ifdef TH08_MODERN_WEB
+    (void)filename;
+    return std::string();
+#else
     char path[PATH_MAX + 1];
     ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
     if (count <= 0 || count > PATH_MAX)
@@ -142,6 +317,7 @@ std::string ExecutableSiblingPath(const char *filename)
         return std::string();
     separator[1] = '\0';
     return std::string(path) + filename;
+#endif
 }
 
 void SetApplicationIcon(SDL_Window *window)
@@ -166,6 +342,11 @@ DWORD CurrentThreadIdImpl()
 std::string ConvertCp932ToUtf8(const char *text, size_t length)
 {
     if (text == NULL || length == 0) return std::string();
+#ifdef TH08_MODERN_WEB
+    // The first full-link milestone has no bundled font or encoding table.
+    // Keep the bytes intact; the Web text backend will replace this fallback.
+    return std::string(text, length);
+#else
     iconv_t converter = iconv_open("UTF-8", "CP932");
     if (converter == reinterpret_cast<iconv_t>(-1)) return std::string(text, length);
 
@@ -181,10 +362,16 @@ std::string ConvertCp932ToUtf8(const char *text, size_t length)
     }
     iconv_close(converter);
     return std::string(&output[0], destination - &output[0]);
+#endif
 }
 
 const char *ResolveJapaneseFont()
 {
+#ifdef TH08_MODERN_WEB
+    // Retail assets never provide the Web font. A later milestone will mount
+    // an explicitly licensed Japanese font at a stable virtual path.
+    return NULL;
+#else
     static std::string path;
     static bool resolved;
     if (resolved) return path.empty() ? NULL : path.c_str();
@@ -214,6 +401,7 @@ const char *ResolveJapaneseFont()
         path = reinterpret_cast<const char *>(file);
     FcPatternDestroy(match);
     return path.empty() ? NULL : path.c_str();
+#endif
 }
 
 void PutGdiTextPixel(GdiBitmap *bitmap, int x, int y, COLORREF color, BYTE coverage)
@@ -330,15 +518,235 @@ void FillKeyboard(BYTE *state, bool directInput)
         MAP_KEY('Q', SDL_SCANCODE_Q); MAP_KEY('S', SDL_SCANCODE_S); MAP_KEY('R', SDL_SCANCODE_R);
         MAP_KEY(VK_RETURN, SDL_SCANCODE_RETURN);
     }
+#ifdef TH08_MODERN_WEB
+#define MAP_WEB_KEY(output, virtualKey) \
+    do { \
+        const bool held = emscripten_atomic_load_u32(&g_webVirtualKeys[(virtualKey)]) != 0; \
+        const bool pressed = emscripten_atomic_exchange_u32(&g_webVirtualKeyPresses[(virtualKey)], 0) != 0; \
+        if (held || pressed) state[(output)] = 0x80; \
+    } while (0)
+    if (directInput)
+    {
+        MAP_WEB_KEY(DIK_UP, VK_UP); MAP_WEB_KEY(DIK_DOWN, VK_DOWN);
+        MAP_WEB_KEY(DIK_LEFT, VK_LEFT); MAP_WEB_KEY(DIK_RIGHT, VK_RIGHT);
+        MAP_WEB_KEY(DIK_NUMPAD1, VK_NUMPAD1); MAP_WEB_KEY(DIK_NUMPAD2, VK_NUMPAD2);
+        MAP_WEB_KEY(DIK_NUMPAD3, VK_NUMPAD3); MAP_WEB_KEY(DIK_NUMPAD4, VK_NUMPAD4);
+        MAP_WEB_KEY(DIK_NUMPAD6, VK_NUMPAD6); MAP_WEB_KEY(DIK_NUMPAD7, VK_NUMPAD7);
+        MAP_WEB_KEY(DIK_NUMPAD8, VK_NUMPAD8); MAP_WEB_KEY(DIK_NUMPAD9, VK_NUMPAD9);
+        MAP_WEB_KEY(DIK_HOME, VK_HOME); MAP_WEB_KEY(DIK_P, 'P'); MAP_WEB_KEY(DIK_D, 'D');
+        MAP_WEB_KEY(DIK_Z, 'Z'); MAP_WEB_KEY(DIK_X, 'X');
+        MAP_WEB_KEY(DIK_LSHIFT, VK_SHIFT); MAP_WEB_KEY(DIK_RSHIFT, VK_SHIFT);
+        MAP_WEB_KEY(DIK_ESCAPE, VK_ESCAPE);
+        MAP_WEB_KEY(DIK_LCONTROL, VK_CONTROL); MAP_WEB_KEY(DIK_RCONTROL, VK_CONTROL);
+        MAP_WEB_KEY(DIK_Q, 'Q'); MAP_WEB_KEY(DIK_S, 'S'); MAP_WEB_KEY(DIK_R, 'R');
+        MAP_WEB_KEY(DIK_RETURN, VK_RETURN);
+    }
+    else
+    {
+        const int virtualKeys[] = {
+            VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_NUMPAD1, VK_NUMPAD2, VK_NUMPAD3,
+            VK_NUMPAD4, VK_NUMPAD6, VK_NUMPAD7, VK_NUMPAD8, VK_NUMPAD9, VK_HOME,
+            'P', 'D', 'Z', 'X', VK_SHIFT, VK_ESCAPE, VK_CONTROL, 'Q', 'S', 'R', VK_RETURN
+        };
+        for (unsigned int index = 0; index < sizeof(virtualKeys) / sizeof(virtualKeys[0]); ++index)
+            MAP_WEB_KEY(virtualKeys[index], virtualKeys[index]);
+    }
+#undef MAP_WEB_KEY
+#endif
 #undef MAP_KEY
 }
+
+#ifdef TH08_MODERN_WEB
+bool RenderWebText(GdiDc *dc, int x, int y, const char *text, int length)
+{
+    if (dc == NULL || dc->bitmap == NULL || dc->font == NULL)
+        return false;
+
+    volatile uint32_t status = 0;
+    MAIN_THREAD_ASYNC_EM_ASM({
+        const statusIndex = $12 >>> 2;
+        const finish = (value) => {
+            Atomics.store(HEAP32, statusIndex, value);
+            Atomics.notify(HEAP32, statusIndex, 1);
+        };
+        try {
+            if (typeof TextDecoder === 'undefined') {
+                finish(-1);
+                return;
+            }
+
+            const bytes = HEAPU8.subarray($0, $0 + $1);
+            if (!Module.th08WebShiftJisDecoder)
+                Module.th08WebShiftJisDecoder = new TextDecoder('shift_jis');
+            const value = Module.th08WebShiftJisDecoder.decode(bytes);
+            if (!value) {
+                finish(1);
+                return;
+            }
+
+            let canvas = Module.th08WebTextCanvas;
+            if (!canvas) {
+                canvas = document.createElement('canvas');
+                Module.th08WebTextCanvas = canvas;
+            }
+            let context = canvas.getContext('2d', {willReadFrequently: true});
+            if (!context) {
+                finish(-1);
+                return;
+            }
+
+            const fontHeight = Math.max(1, $10 | 0);
+            const fontWeight = ($11 | 0) >= 600 ? 600 : 400;
+            const font = fontWeight + ' ' + fontHeight + 'px sans-serif';
+            context.font = font;
+            const measuredWidth = Math.ceil(context.measureText(value).width) + 4;
+            const remainingWidth = ($4 | 0) - ($2 | 0);
+            const remainingHeight = ($5 | 0) - ($3 | 0);
+            if (remainingWidth <= 0 || remainingHeight <= 0) {
+                finish(1);
+                return;
+            }
+            const drawWidth = Math.max(1, Math.min(measuredWidth, remainingWidth));
+            const drawHeight = Math.max(1, Math.min(fontHeight + 8, remainingHeight));
+
+            if (canvas.width !== drawWidth || canvas.height !== drawHeight) {
+                canvas.width = drawWidth;
+                canvas.height = drawHeight;
+                context = canvas.getContext('2d', {willReadFrequently: true});
+            }
+            context.clearRect(0, 0, drawWidth, drawHeight);
+            context.font = font;
+            context.textBaseline = 'top';
+            context.fillStyle = '#fff';
+            context.fillText(value, 0, 0);
+
+            const alpha = context.getImageData(0, 0, drawWidth, drawHeight).data;
+            const destination = $6 | 0;
+            const pitch = $7 | 0;
+            const bits = $8 | 0;
+            const color = $9 >>> 0;
+            const red = color & 255;
+            const green = (color >>> 8) & 255;
+            const blue = (color >>> 16) & 255;
+            let paintedPixels = 0;
+            for (let row = 0; row < drawHeight; ++row) {
+                const outputY = ($3 | 0) + row;
+                if (outputY < 0 || outputY >= ($5 | 0))
+                    continue;
+                for (let column = 0; column < drawWidth; ++column) {
+                    const outputX = ($2 | 0) + column;
+                    if (outputX < 0 || outputX >= ($4 | 0))
+                        continue;
+                    const coverage = alpha[(row * drawWidth + column) * 4 + 3];
+                    if (coverage === 0)
+                        continue;
+                    paintedPixels++;
+                    const inverse = 255 - coverage;
+                    const pixel = destination + outputY * pitch + outputX * (bits >>> 3);
+                    if (bits === 32) {
+                        HEAPU8[pixel] = (HEAPU8[pixel] * inverse + blue * coverage) / 255;
+                        HEAPU8[pixel + 1] = (HEAPU8[pixel + 1] * inverse + green * coverage) / 255;
+                        HEAPU8[pixel + 2] = (HEAPU8[pixel + 2] * inverse + red * coverage) / 255;
+                        HEAPU8[pixel + 3] = 0;
+                    } else if (bits === 16) {
+                        const wordIndex = pixel >>> 1;
+                        const packed = HEAPU16[wordIndex];
+                        let oldRed = ((packed >>> 10) & 31) * 255 / 31;
+                        let oldGreen = ((packed >>> 5) & 31) * 255 / 31;
+                        let oldBlue = (packed & 31) * 255 / 31;
+                        oldRed = (oldRed * inverse + red * coverage) / 255;
+                        oldGreen = (oldGreen * inverse + green * coverage) / 255;
+                        oldBlue = (oldBlue * inverse + blue * coverage) / 255;
+                        HEAPU16[wordIndex] = ((oldRed >>> 3) << 10) |
+                            ((oldGreen >>> 3) << 5) | (oldBlue >>> 3);
+                    }
+                }
+            }
+            finish(Math.min(paintedPixels, 0x7ffffffe) + 1);
+        } catch (error) {
+            if (!Module.th08WebTextErrorLogged) {
+                console.error('TH08 Web text rendering failed:', error);
+                Module.th08WebTextErrorLogged = true;
+            }
+            finish(-1);
+        }
+    }, text, length, x, y, dc->bitmap->width, dc->bitmap->height,
+       &dc->bitmap->pixels[0], dc->bitmap->pitch, dc->bitmap->bits, dc->color,
+       dc->font->height, dc->font->weight, &status);
+
+    uint32_t *statusAddress = const_cast<uint32_t *>(&status);
+    emscripten_atomic_wait_u32(statusAddress, 0, 30000000000LL);
+    const uint32_t result = emscripten_atomic_load_u32(statusAddress);
+    static unsigned int loggedRenders;
+    if (loggedRenders < 3 && result != 0 && result != 0xffffffffU)
+    {
+        fprintf(stderr, "th08-web: browser text rasterized %lu covered pixels\n",
+                static_cast<unsigned long>(result - 1));
+        loggedRenders++;
+    }
+    return result != 0 && result != 0xffffffffU;
+}
+#endif
 } // namespace
 
 extern "C" SDL_Window *th08_linux_get_window() { return g_window; }
 
 extern "C" {
+#ifdef TH08_MODERN_WEB
+EMSCRIPTEN_KEEPALIVE void th08_web_set_retail_file_sizes(DWORD gameDataSize, DWORD bgmDataSize)
+{
+    g_retailFileSizes[0] = gameDataSize;
+    g_retailFileSizes[1] = bgmDataSize;
+    fprintf(stderr, "th08-web: registered local retail data (%lu and %lu bytes)\n",
+            static_cast<unsigned long>(gameDataSize), static_cast<unsigned long>(bgmDataSize));
+}
+
+EMSCRIPTEN_KEEPALIVE void *th08_web_allocate_game_data(DWORD gameDataSize)
+{
+    BYTE *data = static_cast<BYTE *>(malloc(gameDataSize));
+    if (data != NULL)
+    {
+        g_retailFileData[0] = data;
+        g_retailFileSizes[0] = gameDataSize;
+    }
+    return data;
+}
+
+EMSCRIPTEN_KEEPALIVE void th08_web_set_key_state(DWORD virtualKey, BOOL pressed)
+{
+    if (virtualKey < 256)
+    {
+        if (pressed != FALSE && emscripten_atomic_load_u32(&g_webVirtualKeys[virtualKey]) == 0)
+            emscripten_atomic_store_u32(&g_webVirtualKeyPresses[virtualKey], 1);
+        emscripten_atomic_store_u32(&g_webVirtualKeys[virtualKey], pressed != FALSE ? 1 : 0);
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE DWORD th08_web_get_key_state(DWORD virtualKey)
+{
+    return virtualKey < 256 ? emscripten_atomic_load_u32(&g_webVirtualKeys[virtualKey]) : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE void th08_web_clear_key_state()
+{
+    for (unsigned int virtualKey = 0; virtualKey < 256; ++virtualKey)
+    {
+        emscripten_atomic_store_u32(&g_webVirtualKeys[virtualKey], 0);
+        emscripten_atomic_store_u32(&g_webVirtualKeyPresses[virtualKey], 0);
+    }
+}
+#endif
+
 HANDLE CreateFileA(LPCSTR path, DWORD access, DWORD, LPVOID, DWORD disposition, DWORD, HANDLE)
 {
+#ifdef TH08_MODERN_WEB
+    const int retailIndex = RetailFileIndex(path);
+    if (retailIndex >= 0 && disposition == OPEN_EXISTING &&
+        (access & (GENERIC_WRITE | FILE_APPEND_DATA)) == 0 && g_retailFileSizes[retailIndex] != 0)
+    {
+        return new WebFileHandle(retailIndex, g_retailFileSizes[retailIndex]);
+    }
+#endif
     int flags = (access & (GENERIC_WRITE | FILE_APPEND_DATA)) ? O_WRONLY : O_RDONLY;
     if ((access & GENERIC_READ) && (access & GENERIC_WRITE)) flags = O_RDWR;
     if (access & FILE_APPEND_DATA) flags |= O_APPEND;
@@ -361,6 +769,11 @@ HANDLE CreateFileW(LPCWSTR path, DWORD access, DWORD share, LPVOID security, DWO
 BOOL ReadFile(HANDLE raw, LPVOID data, DWORD size, LPDWORD readSize, LPVOID)
 {
     if (raw == INVALID_HANDLE_VALUE || raw == NULL) return FALSE;
+#ifdef TH08_MODERN_WEB
+    LinuxHandle *handle = static_cast<LinuxHandle *>(raw);
+    if (handle->kind == HANDLE_WEB_FILE)
+        return ReadRetailFile(static_cast<WebFileHandle *>(handle), data, size, readSize) ? TRUE : FALSE;
+#endif
     ssize_t result = read(static_cast<FileHandle *>(raw)->fd, data, size);
     if (readSize != NULL) *readSize = result < 0 ? 0 : static_cast<DWORD>(result);
     return result >= 0;
@@ -369,6 +782,13 @@ BOOL ReadFile(HANDLE raw, LPVOID data, DWORD size, LPDWORD readSize, LPVOID)
 BOOL WriteFile(HANDLE raw, LPCVOID data, DWORD size, LPDWORD written, LPVOID)
 {
     if (raw == INVALID_HANDLE_VALUE || raw == NULL) return FALSE;
+#ifdef TH08_MODERN_WEB
+    if (static_cast<LinuxHandle *>(raw)->kind == HANDLE_WEB_FILE)
+    {
+        if (written != NULL) *written = 0;
+        return FALSE;
+    }
+#endif
     ssize_t result = write(static_cast<FileHandle *>(raw)->fd, data, size);
     if (written != NULL) *written = result < 0 ? 0 : static_cast<DWORD>(result);
     return result >= 0;
@@ -376,6 +796,20 @@ BOOL WriteFile(HANDLE raw, LPCVOID data, DWORD size, LPDWORD written, LPVOID)
 
 DWORD SetFilePointer(HANDLE raw, LONG offset, LONG *, DWORD origin)
 {
+#ifdef TH08_MODERN_WEB
+    LinuxHandle *handle = static_cast<LinuxHandle *>(raw);
+    if (handle->kind == HANDLE_WEB_FILE)
+    {
+        WebFileHandle *file = static_cast<WebFileHandle *>(handle);
+        int64_t next = origin == FILE_BEGIN ? offset :
+                       origin == FILE_CURRENT ? static_cast<int64_t>(file->position) + offset :
+                       static_cast<int64_t>(file->size) + offset;
+        if (next < 0 || next > file->size)
+            return static_cast<DWORD>(-1);
+        file->position = static_cast<DWORD>(next);
+        return file->position;
+    }
+#endif
     int whence = origin == FILE_BEGIN ? SEEK_SET : origin == FILE_CURRENT ? SEEK_CUR : SEEK_END;
     off_t result = lseek(static_cast<FileHandle *>(raw)->fd, offset, whence);
     return result < 0 ? static_cast<DWORD>(-1) : static_cast<DWORD>(result);
@@ -383,6 +817,14 @@ DWORD SetFilePointer(HANDLE raw, LONG offset, LONG *, DWORD origin)
 
 DWORD GetFileSize(HANDLE raw, LPDWORD high)
 {
+#ifdef TH08_MODERN_WEB
+    LinuxHandle *handle = static_cast<LinuxHandle *>(raw);
+    if (handle->kind == HANDLE_WEB_FILE)
+    {
+        if (high != NULL) *high = 0;
+        return static_cast<WebFileHandle *>(handle)->size;
+    }
+#endif
     struct stat info;
     if (fstat(static_cast<FileHandle *>(raw)->fd, &info) != 0) return static_cast<DWORD>(-1);
     if (high != NULL) *high = static_cast<DWORD>(static_cast<unsigned long long>(info.st_size) >> 32);
@@ -403,7 +845,14 @@ BOOL CloseHandle(HANDLE raw)
     return TRUE;
 }
 
-BOOL FlushFileBuffers(HANDLE raw) { return fsync(static_cast<FileHandle *>(raw)->fd) == 0; }
+BOOL FlushFileBuffers(HANDLE raw)
+{
+#ifdef TH08_MODERN_WEB
+    if (static_cast<LinuxHandle *>(raw)->kind == HANDLE_WEB_FILE)
+        return TRUE;
+#endif
+    return fsync(static_cast<FileHandle *>(raw)->fd) == 0;
+}
 BOOL DeleteFileA(LPCSTR path) { return unlink(path) == 0; }
 
 DWORD GetFileAttributesW(LPCWSTR path)
@@ -544,15 +993,31 @@ BOOL RegisterClassA(const WNDCLASSA *value) { g_windowProcedure = value->lpfnWnd
 
 HWND CreateWindowExA(DWORD, LPCSTR, LPCSTR title, DWORD style, int, int, int width, int height, HWND, HANDLE, HINSTANCE, LPVOID)
 {
+#ifdef TH08_MODERN_WEB
+    fprintf(stderr, "th08-web: creating the SDL/WebGL game window\n");
+#endif
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0)
     { fprintf(stderr, "th08-modern: SDL_Init failed: %s\n", SDL_GetError()); return NULL; }
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+#ifdef TH08_MODERN_WEB
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+#endif
     Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
+#ifdef TH08_MODERN_WEB
+    // Browser fullscreen requires an explicit user action and hides the local
+    // data provenance UI. Keep the game embedded at its native resolution.
+    width = 640;
+    height = 480;
+#else
     if (style == WS_OVERLAPPEDWINDOW) flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     else { width = 640; height = 480; }
+#endif
     g_window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, flags);
     if (g_window == NULL) fprintf(stderr, "th08-modern: SDL_CreateWindow failed: %s\n", SDL_GetError());
     else SetApplicationIcon(g_window);
@@ -622,6 +1087,9 @@ int SetBkMode(HDC, int mode) { return mode; }
 COLORREF SetTextColor(HDC raw, COLORREF color) { GdiDc *dc = static_cast<GdiDc *>(raw); COLORREF old = dc->color; dc->color = color; return old; }
 HFONT CreateFontA(int height, int, int, int, int weight, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, LPCSTR)
 {
+#ifdef TH08_MODERN_WEB
+    return new GdiFont(NULL, height < 0 ? -height : height, weight);
+#else
     const char *path = ResolveJapaneseFont();
     if (path == NULL) return new GdiFont();
     if (!TTF_WasInit() && TTF_Init() != 0)
@@ -637,7 +1105,8 @@ HFONT CreateFontA(int height, int, int, int, int weight, DWORD, DWORD, DWORD, DW
     }
     if (weight >= FW_SEMIBOLD) TTF_SetFontStyle(font, TTF_STYLE_BOLD);
     TTF_SetFontHinting(font, TTF_HINTING_LIGHT);
-    return new GdiFont(font);
+    return new GdiFont(font, height < 0 ? -height : height, weight);
+#endif
 }
 HBITMAP CreateDIBSection(HDC, const void *infoRaw, UINT, VOID **pixels, HANDLE, DWORD)
 {
@@ -648,7 +1117,11 @@ BOOL TextOutA(HDC dcRaw, int x, int y, LPCSTR text, int length)
 {
     if (dcRaw == NULL || text == NULL || length <= 0) return FALSE;
     GdiDc *dc = static_cast<GdiDc *>(dcRaw);
-    if (dc->bitmap == NULL || dc->font == NULL || dc->font->font == NULL) return FALSE;
+    if (dc->bitmap == NULL || dc->font == NULL) return FALSE;
+#ifdef TH08_MODERN_WEB
+    return RenderWebText(dc, x, y, text, length) ? TRUE : FALSE;
+#else
+    if (dc->font->font == NULL) return FALSE;
     std::string utf8 = ConvertCp932ToUtf8(text, static_cast<size_t>(length));
     SDL_Color white = {255, 255, 255, 255};
     SDL_Surface *rendered = TTF_RenderUTF8_Blended(dc->font->font, utf8.c_str(), white);
@@ -666,6 +1139,7 @@ BOOL TextOutA(HDC dcRaw, int x, int y, LPCSTR text, int length)
     if (SDL_MUSTLOCK(glyph)) SDL_UnlockSurface(glyph);
     SDL_FreeSurface(glyph);
     return TRUE;
+#endif
 }
 HRESULT CoInitialize(LPVOID) { return S_OK; }
 void CoUninitialize(void) {}
@@ -920,6 +1394,39 @@ void AudioCallback(void *, Uint8 *stream, int length)
         g_soundBuffers[index]->Mix(output, frames);
 }
 
+#ifdef TH08_MODERN_WEB
+struct WebAudioOpenRequest
+{
+    SDL_AudioSpec *requested;
+    SDL_AudioSpec *obtained;
+    SDL_AudioDeviceID device;
+};
+
+void OpenWebAudioDevice(void *opaque)
+{
+    WebAudioOpenRequest *request = static_cast<WebAudioOpenRequest *>(opaque);
+    request->device = SDL_OpenAudioDevice(NULL, 0, request->requested, request->obtained, 0);
+}
+
+struct WebAudioDeviceRequest
+{
+    SDL_AudioDeviceID device;
+    int value;
+};
+
+void PauseWebAudioDevice(void *opaque)
+{
+    WebAudioDeviceRequest *request = static_cast<WebAudioDeviceRequest *>(opaque);
+    SDL_PauseAudioDevice(request->device, request->value);
+}
+
+void CloseWebAudioDevice(void *opaque)
+{
+    WebAudioDeviceRequest *request = static_cast<WebAudioDeviceRequest *>(opaque);
+    SDL_CloseAudioDevice(request->device);
+}
+#endif
+
 void EnsureAudio()
 {
     if (g_audioDevice != 0) return;
@@ -929,16 +1436,33 @@ void EnsureAudio()
     memset(&requested, 0, sizeof(requested));
     requested.freq = 44100; requested.format = AUDIO_S16SYS; requested.channels = 2;
     requested.samples = 1024; requested.callback = AudioCallback;
+#ifdef TH08_MODERN_WEB
+    WebAudioOpenRequest openRequest = {&requested, &obtained, 0};
+    emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, OpenWebAudioDevice, &openRequest);
+    g_audioDevice = openRequest.device;
+#else
     g_audioDevice = SDL_OpenAudioDevice(NULL, 0, &requested, &obtained, 0);
+#endif
     if (g_audioDevice == 0)
     { fprintf(stderr, "th08-modern: SDL audio device unavailable: %s\n", SDL_GetError()); return; }
+#ifdef TH08_MODERN_WEB
+    WebAudioDeviceRequest pauseRequest = {g_audioDevice, 0};
+    emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, PauseWebAudioDevice, &pauseRequest);
+#else
     SDL_PauseAudioDevice(g_audioDevice, 0);
+#endif
 }
 
 void ShutdownAudio()
 {
     if (g_audioDevice == 0) return;
+#ifdef TH08_MODERN_WEB
+    WebAudioDeviceRequest closeRequest = {g_audioDevice, 0};
+    emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, CloseWebAudioDevice, &closeRequest);
+    g_audioDevice = 0;
+#else
     SDL_CloseAudioDevice(g_audioDevice); g_audioDevice = 0;
+#endif
 }
 
 class LinuxDirectSound : public IDirectSound8

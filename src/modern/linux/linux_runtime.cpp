@@ -1,8 +1,12 @@
 #include "modern/windows_runtime.hpp"
 
+#ifndef TH08_MODERN_WEB
 #include <execinfo.h>
+#endif
 #include <fcntl.h>
+#ifndef TH08_MODERN_WEB
 #include <signal.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -65,6 +69,7 @@ namespace
 {
 int g_argumentCount;
 char **g_arguments;
+#ifndef TH08_MODERN_WEB
 volatile sig_atomic_t g_reportingCrash;
 
 void WriteCrashLine(int file, const char *line)
@@ -107,6 +112,7 @@ void InstallSignalHandler(int signalNumber)
     action.sa_flags = SA_SIGINFO | SA_RESETHAND;
     sigaction(signalNumber, &action, NULL);
 }
+#endif
 
 struct SpellPracticeMusic
 {
@@ -296,11 +302,13 @@ bool ConfigureDataDirectory()
 void InstallCrashReporter()
 {
     InitializeTargetData();
+#ifndef TH08_MODERN_WEB
     InstallSignalHandler(SIGSEGV);
     InstallSignalHandler(SIGABRT);
     InstallSignalHandler(SIGFPE);
     InstallSignalHandler(SIGILL);
     InstallSignalHandler(SIGBUS);
+#endif
 }
 
 void LogArchiveRequest(const char *path)

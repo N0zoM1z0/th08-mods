@@ -4,8 +4,10 @@
 
 #include "AnmManager.hpp"
 #include "Background.hpp"
+#include "EclManager.hpp"
 #include "GameManager.hpp"
 #include "Global.hpp"
+#include "Player.hpp"
 #include "ResultScreen.hpp"
 #include "ScreenEffect.hpp"
 #include "SoundPlayer.hpp"
@@ -28,6 +30,9 @@
 #include <string.h>
 #include <windows.h>
 #include <winnls32.h>
+#ifdef TH08_MODERN_WEB
+#include <emscripten.h>
+#endif
 
 namespace th08
 {
@@ -81,9 +86,111 @@ C_ASSERT(sizeof(GameWindow) == 0x44);
 
 DIFFABLE_STATIC(HANDLE, g_ExclusiveMutex);
 DIFFABLE_STATIC(GameWindow, g_GameWindow);
+#ifdef TH08_MODERN_WEB
+extern u16 g_GuiMessageInputCurrent;
+static u32 g_WebMainLoopCallbacks;
+static u32 g_WebCalcFrames;
+#endif
 }; // namespace th08
 
 using namespace th08;
+
+#ifdef TH08_MODERN_WEB
+#define TH08_WEB_STARTUP_STAGE(stage) fprintf(stderr, "th08-web: startup: %s\n", stage)
+#else
+#define TH08_WEB_STARTUP_STAGE(stage) ((void)0)
+#endif
+
+#ifdef TH08_MODERN_WEB
+extern "C" {
+EMSCRIPTEN_KEEPALIVE u32 th08_web_get_input_snapshot()
+{
+    return static_cast<u32>(g_CurFrameInput) |
+           (static_cast<u32>(g_GuiMessageInputCurrent) << 16);
+}
+
+EMSCRIPTEN_KEEPALIVE u32 th08_web_get_frame_snapshot()
+{
+    return (g_WebMainLoopCallbacks & 0xffff) | ((g_WebCalcFrames & 0xffff) << 16);
+}
+
+EMSCRIPTEN_KEEPALIVE double th08_web_get_player_x()
+{
+    return g_Player.position.x;
+}
+
+EMSCRIPTEN_KEEPALIVE double th08_web_get_player_y()
+{
+    return g_Player.position.y;
+}
+
+EMSCRIPTEN_KEEPALIVE double th08_web_get_game_time_scale()
+{
+    return g_EclGameTimeScale;
+}
+
+EMSCRIPTEN_KEEPALIVE u32 th08_web_get_player_state()
+{
+    return static_cast<u8>(g_Player.playerState) |
+           ((static_cast<u32>(g_Player.timer.current) & 0xffff) << 8) |
+           ((static_cast<u32>(g_Player.movementDirection) & 0xf) << 24) |
+           (g_GameManager.unk2C != 0 ? 0x10000000u : 0) |
+           (g_GameManager.flags.unk2 ? 0x20000000u : 0);
+}
+
+EMSCRIPTEN_KEEPALIVE double th08_web_get_player_move_speed()
+{
+    if (g_Player.primaryShtFile == NULL)
+        return 0.0;
+    return *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(g_Player.primaryShtFile) + 0x24);
+}
+}
+
+static void Th08WebMainLoop()
+{
+    MSG msg;
+
+    g_WebMainLoopCallbacks++;
+
+    if (g_GameWindow.windowIsClosing)
+    {
+        emscripten_cancel_main_loop();
+        return;
+    }
+
+    if (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE))
+    {
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+        return;
+    }
+
+    const HRESULT d3dDeviceStatus = g_Supervisor.d3dDevice->TestCooperativeLevel();
+    if (d3dDeviceStatus == D3D_OK)
+    {
+        if (g_GameWindow.Render() != RENDER_RESULT_KEEP_RUNNING)
+        {
+            g_GameWindow.windowIsClosing = true;
+            emscripten_cancel_main_loop();
+            return;
+        }
+        g_Supervisor.flags.d3dDevDisconnectFlag = 0;
+    }
+    else if (d3dDeviceStatus == D3DERR_DEVICENOTRESET)
+    {
+        g_AnmManager->ReleaseSurfaces();
+        if (g_Supervisor.d3dDevice->Reset(&g_Supervisor.presentParameters) != D3D_OK)
+        {
+            g_GameWindow.windowIsClosing = true;
+            emscripten_cancel_main_loop();
+            return;
+        }
+        GameWindow::ResetRenderState();
+        g_Supervisor.unk174 = 3;
+        g_Supervisor.flags.d3dDevDisconnectFlag = 1;
+    }
+}
+#endif
 
 #pragma var_order(d3dDeviceStatus, msg, renderResult, i)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR pCmdLine, int nCmdShow)
@@ -99,6 +206,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR pCmdLine
     modern::InstallCrashReporter();
     if (!modern::ConfigureDataDirectory())
         return EXIT_FAILURE;
+    TH08_WEB_STARTUP_STAGE("data directory ready");
 #endif
 
     g_Supervisor.hInstance = hInstance;
@@ -111,7 +219,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR pCmdLine
     SystemParametersInfoA(SPI_SETPOWEROFFACTIVE, 0, (LPVOID *)false, SPIF_SENDCHANGE);
 
     g_Supervisor.InitializeCriticalSections();
+#ifdef TH08_MODERN_WEB
+    // The original process enters gameplay with a unit ECL time scale. The
+    // browser executable has no target image layout to supply that runtime
+    // data value, so establish it explicitly at the platform boundary.
+    g_EclGameTimeScale = 1.0f;
+    g_EclGameTimeScaleFlags = 0;
+#endif
     g_GameErrorContext.Log(TH_ERR_LOGGER_START);
+    TH08_WEB_STARTUP_STAGE("core state initialized");
 
     if (GameWindow::CheckForRunningGameInstance(hInstance) == ZUN_ERROR)
     {
@@ -122,31 +238,37 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR pCmdLine
     {
         goto stop;
     }
+    TH08_WEB_STARTUP_STAGE("configuration loaded");
 
     GameWindow::CalcExecutableChecksum();
     QueryPerformanceFrequency(&g_GameWindow.pcFrequency);
+    TH08_WEB_STARTUP_STAGE("runtime timing ready");
 
 restart:
     if (GameWindow::InitD3DInterface())
     {
         goto stop;
     }
+    TH08_WEB_STARTUP_STAGE("D3D8 compatibility interface ready");
 
     if (GameWindow::CreateGameWindow(hInstance))
     {
         goto stop;
     }
+    TH08_WEB_STARTUP_STAGE("game window ready");
 
     if (GameWindow::InitD3DRendering())
     {
         goto stop;
     }
+    TH08_WEB_STARTUP_STAGE("renderer ready");
 
     g_SoundPlayer.InitializeDSound(g_GameWindow.window);
     Controller::GetJoystickCaps();
     Controller::ResetKeyboard();
 
     g_AnmManager = ZUN_NEW(AnmManager, "SprtCtrlInf");
+    TH08_WEB_STARTUP_STAGE("input, sound, and animation state ready");
 
     if (!g_Supervisor.IsWindowed())
     {
@@ -156,6 +278,7 @@ restart:
     }
 
     renderResult = Supervisor::RegisterChain();
+    TH08_WEB_STARTUP_STAGE("main archive and initial chain processed");
 
     if (renderResult != RENDER_RESULT_KEEP_RUNNING)
     {
@@ -176,6 +299,11 @@ restart:
         g_GameWindow.lastTimestamp = g_GameWindow.lastFrameTime;
         g_GameWindow.curTimestamp = g_GameWindow.lastTimestamp;
 
+#ifdef TH08_MODERN_WEB
+        // Returning from each callback lets the worker's OffscreenCanvas
+        // present its implicit WebGL swap to the browser compositor.
+        emscripten_set_main_loop(Th08WebMainLoop, 0, true);
+#else
         while (!g_GameWindow.windowIsClosing)
         {
             if (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE))
@@ -213,6 +341,7 @@ restart:
                 }
             }
         }
+#endif
     }
 
 awfulConditionalBreak:
@@ -336,6 +465,9 @@ RenderResult GameWindow::Render()
         g_Supervisor.d3dDevice->SetViewport(&g_Supervisor.viewport);
 
         calcChainResult = g_Chain.RunCalcChain();
+#ifdef TH08_MODERN_WEB
+        g_WebCalcFrames++;
+#endif
         g_SoundPlayer.ProcessQueues();
 
         if (calcChainResult == 0)

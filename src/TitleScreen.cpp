@@ -7,6 +7,10 @@
 #include "SoundPlayer.hpp"
 #include "Spellcard.hpp"
 #include "TitleScreen.hpp"
+
+#ifdef TH08_MODERN_WEB
+#include <emscripten.h>
+#endif
 #include "ZunMath.hpp"
 #include "i18n.hpp"
 
@@ -48,6 +52,14 @@
 
 namespace th08
 {
+#ifdef TH08_MODERN_WEB
+DWORD WINAPI TitleSetupThreadWeb(LPVOID parameter)
+{
+    TitleScreen::TitleSetupThread(static_cast<TitleScreen *>(parameter));
+    return 0;
+}
+#endif
+
 #ifndef TH08_MODERN_PORT
 inline Float3::Float3(float x, float y, float z)
 {
@@ -3779,7 +3791,11 @@ ZunResult TitleScreen::ActualAddedCallback()
     g_GameManager.demoFrameCount = 0;
 
     this->state = TitleScreenState_Loading;
+#ifdef TH08_MODERN_WEB
+    g_Supervisor.ThreadStart(TitleSetupThreadWeb, NULL);
+#else
     g_Supervisor.ThreadStart((LPTHREAD_START_ROUTINE)TitleScreen::TitleSetupThread, NULL);
+#endif
 
     return ZUN_SUCCESS;
 }
@@ -3863,6 +3879,14 @@ void TitleScreen::TitleSetupThread(TitleScreen *titleScreen)
 
     g_TitleScreen->currentHelpTextVm = &g_TitleScreen->helpTextVms[0];
     g_TitleScreen->state = TitleScreenState_Ready;
+#ifdef TH08_MODERN_WEB
+    fprintf(stderr, "th08-web: title: ready\n");
+    MAIN_THREAD_ASYNC_EM_ASM({
+        const status = document.querySelector('#status');
+        if (status)
+            status.textContent = 'TH08 title and menus are running from local retail data.';
+    });
+#endif
     g_Supervisor.HideLoadingVms();
     g_Supervisor.runningSubthreadHandle = NULL;
     g_Supervisor.subthreadCloseRequestActive = FALSE;
