@@ -205,6 +205,17 @@ All Web builds use
   spell-card numbers 14, 18, 22, 26, and 29 when its documented Last Spell
   time-orb requirement was met, and returned to the title without the former
   Wasm out-of-bounds trap.
+- A Chromium Lunatic Border Team Final-B endurance run crossed all six route
+  stages, credits, result/score writing, title reconstruction, and a second
+  start without a runtime trap. Per-stage spell observations were 1, 5, 9,
+  12; 16, 20, 24, 28, 31; 35, 38, 42, 46, 50, 53; 80, 84, 88, 92, 96, 99;
+  103, 107, 111, 115, 118; and 150, 154, 158, 162, 166, 170, 174, 178, 182,
+  186. Failing Kaguya's fourth Last Spell correctly reached the original 5:00
+  cutoff and skipped the remaining request. A separate collision-free Stage
+  6B practice run followed the real ECL flow through spell 190 and its All
+  Clear transition, completing conditional coverage of all 37 expected route
+  spells. The result path wrote a 17,074-byte `score.dat` into volatile
+  `/game`; persistence remains deliberately disabled.
 
 Run the bounded probes with:
 
@@ -219,18 +230,16 @@ python3 scripts/check-web-provenance.py
 ## Remaining work
 
 The port has crossed the full-link, title/menu, input, audio-device, BGM-range,
-direct-renderer, and initial-gameplay gates. It is an engineering preview, not
-a release. The next work is:
+direct-renderer, full-route, conditional-spell, and volatile result/save gates.
+It is an engineering preview, not a release. The next work is:
 
-1. complete deterministic Lunatic-route, result/save, restart, and Firefox
-   endurance coverage for spell, callback, and resource-transition behavior;
-2. add an IDBFS save overlay for cfg, score, replay, and backup files, with an
+1. add an IDBFS save overlay for cfg, score, replay, and backup files, with an
    explicit guarantee that the retail archives cannot enter it;
-3. run replay, pause/focus, audio-underrun, and repeated stage-reload
-   regressions in current Chromium and Firefox;
-4. measure and tune the fixed shared-memory ceiling, then produce an
+2. run Firefox full-route plus Chromium/Firefox replay, pause/focus,
+   audio-underrun, and repeated stage-reload regressions;
+3. measure and tune the fixed shared-memory ceiling, then produce an
    allowlisted static release artifact and clean-profile deployment test;
-5. add gamepad mapping and user-facing diagnostics for unsupported browsers.
+4. add gamepad mapping and user-facing diagnostics for unsupported browsers.
 
 ## Primary references
 

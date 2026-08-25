@@ -50,11 +50,18 @@ Web-port state on 2026-08-25:
   Stage 2 darkness parameters were subsequently corrected against
   `config/reccmp-globals.csv`: radius is at `0x004E3D24` and alpha at
   `0x004E3D28`;
+- a Chromium Lunatic Border Team Final-B endurance run traversed Stages 1, 2,
+  3, 4B, 5, and 6B, the ending, score write, title reload, and a second game
+  start without a worker error or Wasm out-of-bounds trap. The run observed
+  every expected route spell except 190; it failed Kaguya's fourth Last Spell,
+  so the retail 5:00 rule ended the remaining requests. A separate
+  collision-free Stage 6B practice run then observed the complete
+  150, 154, 158, 162, 166, 170, 174, 178, 182, 186, 190 sequence. The result
+  path created a 17,074-byte `score.dat` in volatile `/game` session storage;
 - `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence. The
-  corrected Stage 2 replay has completed with the same five-spell sequence and
-  no runtime trap. The active bounded task is a complete Lunatic-route browser
-  endurance run. An IDBFS save overlay remains later work and must never
-  include retail archives.
+  active bounded task is persistent save isolation plus Firefox and replay
+  endurance. An IDBFS save overlay remains later work and must never include
+  retail archives.
 
 ## Active playable-port branch
 
