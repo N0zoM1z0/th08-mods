@@ -115,12 +115,25 @@ immediate-mode or fixed-function GL emulation remains on the Web hot path.
 
 The context uses implicit swap control: returning from each Emscripten
 main-loop callback lets the browser compositor present the completed frame and
-provides browser-side pacing. A short active-gameplay sample recorded 297
-browser callbacks and 297 authored calculation frames in five seconds. The
-renderer separately measured approximately 0.08--0.15 ms of CPU game
-submission and 0.01--0.03 ms of blit work per frame in representative scenes.
-Those bounded observations demonstrate that the previous renderer bottleneck
-is gone; they are not a substitute for full-route browser endurance testing.
+provides browser-side pacing. Chromium presents this worker-owned canvas
+directly. Firefox 153 accepted the same completed WebGL 2 framebuffer but did
+not update the transferred canvas placeholder in the page. The launcher
+therefore installs a Firefox-only presentation bridge before starting the
+game: after the final blit, the worker transfers an `ImageBitmap` for the main
+thread to present with `bitmaprenderer`. Simulation and rendering remain in
+the worker, while Chromium retains the direct path without this extra frame
+transfer.
+
+A short Chromium active-gameplay sample recorded 297 browser callbacks and 297
+authored calculation frames in five seconds. The renderer separately measured
+approximately 0.08--0.15 ms of CPU game submission and 0.01--0.03 ms of blit
+work per frame in representative scenes. A headed Firefox title/menu test on
+Xvfb's software `llvmpipe` renderer kept callbacks and authored calculations in
+exact 236/236 lockstep over five seconds, although that software-only setup ran
+at about 47 FPS. These bounded observations demonstrate that the previous
+renderer bottleneck is gone and that the Firefox fallback preserves timing
+lockstep; they are not hardware Firefox performance claims or substitutes for
+full-route browser endurance testing.
 
 An earlier blocking-loop experiment rendered correctly into the WebGL default
 framebuffer but remained black on screen. In Emscripten 6, the native
@@ -238,6 +251,13 @@ All Web builds use
   restore; both `/game` DAT entries remained zero bytes, every persistent mount
   was DAT-free, and all three authored directory round trips returned to
   `/game`.
+- A headed Firefox 153 test used the Firefox-only `ImageBitmap` presentation
+  bridge to render the title and difficulty menu, accepted Z input, reloaded,
+  reselected both local retail files, and recovered an auto-persisted probe.
+  Recursive inspection after restore found no retail DAT in any persistent
+  mount. This test ran with Xvfb's software `llvmpipe` renderer and therefore
+  establishes functional presentation, input, and storage behavior rather
+  than production GPU performance.
 
 Run the bounded probes with:
 
@@ -256,8 +276,8 @@ direct-renderer, full-route, conditional-spell, and isolated persistent-save
 gates.
 It is an engineering preview, not a release. The next work is:
 
-1. run Firefox full-route plus Chromium/Firefox replay, pause/focus,
-   audio-underrun, and repeated stage-reload regressions;
+1. run a hardware-accelerated Firefox full route plus Chromium/Firefox replay,
+   pause/focus, audio-underrun, and repeated stage-reload regressions;
 2. measure and tune the fixed shared-memory ceiling, then produce an
    allowlisted static release artifact and clean-profile deployment test;
 3. add gamepad mapping and user-facing diagnostics for unsupported browsers.

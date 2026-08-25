@@ -917,7 +917,7 @@ class LinuxDevice : public IDirect3DDevice8
     LinuxDevice(SDL_Window *window_, const D3DPRESENT_PARAMETERS &parameters)
         : refs(1), window(window_), context(NULL), backbuffer(NULL), texture(NULL), vertexBuffer(NULL),
 #ifdef TH08_MODERN_WEB
-          webContext(0),
+          webContext(0), bitmapPresentation(false),
 #endif
           fvf(0), streamStride(0), renderFramebuffer(0), renderColorTexture(0), renderDepthBuffer(0),
           dialogueSnapshotTexture(0), framebufferReady(false), dialogueSnapshotReady(false),
@@ -938,6 +938,9 @@ class LinuxDevice : public IDirect3DDevice8
         attributes.enableExtensionsByDefault = EM_TRUE;
         attributes.explicitSwapControl = EM_FALSE;
         attributes.proxyContextToMainThread = EMSCRIPTEN_WEBGL_CONTEXT_PROXY_DISALLOW;
+        bitmapPresentation = EM_ASM_INT({
+            return typeof navigator != "undefined" && navigator.userAgent.includes("Firefox/");
+        }) != 0;
         webContext = emscripten_webgl_create_context("#canvas", &attributes);
         if (webContext > 0 && emscripten_webgl_make_context_current(webContext) == EMSCRIPTEN_RESULT_SUCCESS)
         {
@@ -1071,6 +1074,23 @@ class LinuxDevice : public IDirect3DDevice8
         PopRendererState();
 
         glFlush();
+#ifdef TH08_MODERN_WEB
+        if (bitmapPresentation)
+        {
+            EM_ASM({
+                try {
+                    const source = GL.currentContext && GL.currentContext.GLctx.canvas;
+                    const bitmap = source.transferToImageBitmap();
+                    postMessage({ th08WebFrame: bitmap }, [bitmap]);
+                } catch (error) {
+                    if (!Module.th08BitmapPresentationError) {
+                        Module.th08BitmapPresentationError = true;
+                        console.error("th08-web: Firefox bitmap presentation failed", error);
+                    }
+                }
+            });
+        }
+#endif
 #ifndef TH08_MODERN_WEB
         SDL_GL_SwapWindow(window);
 #endif
@@ -1732,6 +1752,7 @@ class LinuxDevice : public IDirect3DDevice8
     LinuxVertexBuffer *vertexBuffer;
 #ifdef TH08_MODERN_WEB
     EMSCRIPTEN_WEBGL_CONTEXT_HANDLE webContext;
+    bool bitmapPresentation;
 #endif
     DWORD fvf;
     UINT streamStride;

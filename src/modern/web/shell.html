@@ -22,8 +22,11 @@
       button:disabled { cursor: not-allowed; opacity: .45; }
       #status { min-height: 2.8rem; margin: 1rem 0 0; padding: .8rem; border-radius: .5rem; background: #0a0b12; color: #ddd5f5; }
       #log { max-height: 13rem; overflow: auto; margin: 1rem 0 0; padding: .8rem; border-radius: .5rem; background: #08090e; color: #aaa3bc; font: .75rem/1.45 ui-monospace, monospace; white-space: pre-wrap; }
-      .game { display: flex; justify-content: center; padding: 1.25rem; overflow: hidden; }
-      canvas { width: 640px; height: 480px; max-width: 100%; border: 1px solid #302a44; background: #000; image-rendering: auto; outline: none; }
+      .game { display: grid; place-items: start center; padding: 1.25rem; overflow: hidden; }
+      canvas { grid-area: 1 / 1; width: 640px; height: 480px; max-width: 100%; border: 1px solid #302a44; background: #000; image-rendering: auto; outline: none; }
+      #display-canvas { visibility: hidden; }
+      .game.bitmap-presentation #canvas { visibility: hidden; }
+      .game.bitmap-presentation #display-canvas { visibility: visible; }
       .policy { font-size: .92rem; }
       .controls { font-size: .86rem; }
       code { color: #d6c8ff; }
@@ -55,6 +58,7 @@
       </section>
       <section class="game">
         <canvas id="canvas" width="640" height="480" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+        <canvas id="display-canvas" width="640" height="480" tabindex="0" aria-hidden="true" oncontextmenu="event.preventDefault()"></canvas>
       </section>
     </main>
     <script>
@@ -64,6 +68,9 @@
       const statusElement = document.querySelector("#status");
       const logElement = document.querySelector("#log");
       const canvas = document.querySelector("#canvas");
+      const displayCanvas = document.querySelector("#display-canvas");
+      const gameSection = document.querySelector(".game");
+      const useBitmapPresentation = navigator.userAgent.includes("Firefox/");
       let runtimeReady = false;
       let started = false;
       let gameFileSystemReady = false;
@@ -155,6 +162,33 @@
         Module.FS.symlink(savePath, gamePath);
       }
 
+      function installBitmapPresentation() {
+        if (!useBitmapPresentation) return;
+        const bitmapContext = displayCanvas.getContext("bitmaprenderer");
+        if (!bitmapContext) {
+          throw new Error("Firefox bitmap presentation is unavailable.");
+        }
+        gameSection.classList.add("bitmap-presentation");
+        canvas.setAttribute("aria-hidden", "true");
+        displayCanvas.removeAttribute("aria-hidden");
+        for (const worker of PThread.unusedWorkers) {
+          const handleRuntimeMessage = worker.onmessage;
+          worker.onmessage = (event) => {
+            const bitmap = event.data?.th08WebFrame;
+            if (bitmap) {
+              bitmapContext.transferFromImageBitmap(bitmap);
+              return;
+            }
+            handleRuntimeMessage.call(worker, event);
+          };
+        }
+        Module.th08BitmapPresentation = true;
+      }
+
+      function focusGameCanvas() {
+        (useBitmapPresentation ? displayCanvas : canvas).focus();
+      }
+
       async function prepareGameFileSystem() {
         if (gameFileSystemReady) return;
         ensureDirectory("/game");
@@ -224,7 +258,8 @@
       window.addEventListener("blur", () => {
         if (runtimeReady) Module._th08_web_clear_key_state();
       });
-      canvas.addEventListener("pointerdown", () => canvas.focus());
+      canvas.addEventListener("pointerdown", focusGameCanvas);
+      displayCanvas.addEventListener("pointerdown", focusGameCanvas);
 
       var Module = {
         noInitialRun: true,
@@ -238,6 +273,7 @@
           statusElement.textContent = `The game aborted: ${reason}`;
         },
         onRuntimeInitialized: () => {
+          installBitmapPresentation();
           runtimeReady = true;
           updateStartState();
         },
@@ -265,7 +301,7 @@
           Module.FS.chdir("/game");
           Module.FS.writeFile("th08.dat", new Uint8Array(0));
           Module.FS.writeFile("thbgm.dat", new Uint8Array(0));
-          canvas.focus();
+          focusGameCanvas();
           statusElement.textContent = "Starting TH08 from local retail data…";
           Module.callMain([]);
         } catch (error) {

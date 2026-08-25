@@ -69,9 +69,19 @@ Web-port state on 2026-08-25:
   `thbgm.dat` entries in separate mounts were removed on restore, recursive
   inventory confirmed no DAT in any IDBFS mount, and `chdir` round trips for
   all three persistent directories returned to `/game`;
+- Firefox 153 needs an explicit presentation boundary for this pthread-owned
+  OffscreenCanvas even though its completed default framebuffer is valid. A
+  Firefox-only bridge now transfers the finished frame as an `ImageBitmap` to
+  a main-thread `bitmaprenderer`; Chromium keeps the direct compositor path.
+  A headed Firefox test rendered the title and difficulty menu, accepted Z,
+  reloaded, recovered an auto-persisted probe, and found no DAT in persistent
+  storage. Its Xvfb `llvmpipe` sample kept callbacks/calculations in 236/236
+  lockstep over five seconds at about 47 FPS, which is functional evidence but
+  not a hardware performance result;
 - `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence. The
-  next bounded tasks are Firefox and replay endurance, followed by memory
-  ceiling measurement and an allowlisted static deployment test.
+  next bounded tasks are hardware Firefox full-route and replay endurance,
+  followed by memory-ceiling measurement and an allowlisted static deployment
+  test.
 
 ## Active playable-port branch
 
