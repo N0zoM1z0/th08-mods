@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>TH08 Web — Imperishable Night</title>
     <link rel="icon" type="image/png" href="th08-web-icon.png">
+    <script>
+      (() => {
+        const query = new URLSearchParams(location.search);
+        if (query.has("presentation")) return;
+        const firefox = navigator.userAgent.includes("Firefox/");
+        const firefoxBuild = location.pathname.endsWith("/th08-web-firefox.html");
+        if (firefox === firefoxBuild) return;
+        const target = new URL(
+          firefox ? "th08-web-firefox.html" : "th08-web.html",
+          location.href,
+        );
+        target.search = location.search;
+        target.hash = location.hash;
+        location.replace(target.href);
+      })();
+    </script>
     <style>
       :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
       * { box-sizing: border-box; }
@@ -25,8 +41,8 @@
       .game { display: grid; place-items: start center; padding: 1.25rem; overflow: hidden; }
       canvas { grid-area: 1 / 1; width: 640px; height: 480px; max-width: 100%; border: 1px solid #302a44; background: #000; image-rendering: auto; outline: none; }
       #display-canvas { visibility: hidden; }
-      .game.bitmap-presentation #canvas { visibility: hidden; }
-      .game.bitmap-presentation #display-canvas { visibility: visible; }
+      .game.secondary-presentation #canvas { visibility: hidden; }
+      .game.secondary-presentation #display-canvas { visibility: visible; }
       .policy { font-size: .92rem; }
       .controls { font-size: .86rem; }
       code { color: #d6c8ff; }
@@ -70,7 +86,17 @@
       const canvas = document.querySelector("#canvas");
       const displayCanvas = document.querySelector("#display-canvas");
       const gameSection = document.querySelector(".game");
-      const useBitmapPresentation = navigator.userAgent.includes("Firefox/");
+      const query = new URLSearchParams(location.search);
+      const performanceDiagnosticsEnabled = query.get("perf") === "1";
+      const requestedPresentationMode = query.get("presentation");
+      const firefoxProxyBuild = location.pathname.endsWith("/th08-web-firefox.html");
+      const presentationMode = ["direct", "bitmap", "proxy"].includes(requestedPresentationMode)
+        ? requestedPresentationMode
+        : firefoxProxyBuild ? "proxy"
+        : navigator.userAgent.includes("Firefox/") ? "bitmap" : "direct";
+      const presentationModeCodes = { direct: 1, bitmap: 2, proxy: 3 };
+      const useBitmapPresentation = presentationMode === "bitmap";
+      const useSecondaryPresentation = useBitmapPresentation;
       let runtimeReady = false;
       let started = false;
       let gameFileSystemReady = false;
@@ -78,6 +104,68 @@
       const persistentFiles = ["th08.cfg", "score.dat", "score.txt"];
       const persistentDirectories = ["replay", "backup", "snapshot"];
       const retailArchiveNames = new Set(["th08.dat", "thbgm.dat"]);
+
+      function createTimingMetric() {
+        return { count: 0, total: 0, maximum: 0, over20ms: 0, over33ms: 0 };
+      }
+
+      const framePacing = {
+        mainRafInterval: createTimingMetric(),
+        bitmapTransfer: createTimingMetric(),
+        bitmapMessageLatency: createTimingMetric(),
+        bitmapArrivalInterval: createTimingMetric(),
+        bitmapPresent: createTimingMetric(),
+      };
+      let previousRafTime;
+      let previousBitmapArrivalTime;
+
+      function recordTiming(metric, milliseconds) {
+        if (!Number.isFinite(milliseconds) || milliseconds < 0) return;
+        metric.count += 1;
+        metric.total += milliseconds;
+        metric.maximum = Math.max(metric.maximum, milliseconds);
+        if (milliseconds > 20) metric.over20ms += 1;
+        if (milliseconds > 33) metric.over33ms += 1;
+      }
+
+      function timingSnapshot(metric) {
+        return {
+          count: metric.count,
+          averageMilliseconds: metric.count ? metric.total / metric.count : 0,
+          maximumMilliseconds: metric.maximum,
+          over20ms: metric.over20ms,
+          over33ms: metric.over33ms,
+        };
+      }
+
+      function resetFramePacing() {
+        for (const metric of Object.values(framePacing)) {
+          Object.assign(metric, createTimingMetric());
+        }
+        previousRafTime = undefined;
+        previousBitmapArrivalTime = undefined;
+      }
+
+      window.th08GetFramePacingSnapshot = () => ({
+        presentationMode,
+        mainRafInterval: timingSnapshot(framePacing.mainRafInterval),
+        bitmapTransfer: timingSnapshot(framePacing.bitmapTransfer),
+        bitmapMessageLatency: timingSnapshot(framePacing.bitmapMessageLatency),
+        bitmapArrivalInterval: timingSnapshot(framePacing.bitmapArrivalInterval),
+        bitmapPresent: timingSnapshot(framePacing.bitmapPresent),
+      });
+      window.th08ResetFramePacing = resetFramePacing;
+
+      if (performanceDiagnosticsEnabled) {
+        const sampleAnimationFrame = (time) => {
+          if (previousRafTime !== undefined) {
+            recordTiming(framePacing.mainRafInterval, time - previousRafTime);
+          }
+          previousRafTime = time;
+          requestAnimationFrame(sampleAnimationFrame);
+        };
+        requestAnimationFrame(sampleAnimationFrame);
+      }
 
       function appendLog(line) {
         logElement.textContent += `${line}\n`;
@@ -162,21 +250,38 @@
         Module.FS.symlink(savePath, gamePath);
       }
 
-      function installBitmapPresentation() {
+      function installPresentation() {
+        if (!useSecondaryPresentation) return;
+        gameSection.classList.add("secondary-presentation");
+        canvas.setAttribute("aria-hidden", "true");
+        displayCanvas.removeAttribute("aria-hidden");
         if (!useBitmapPresentation) return;
         const bitmapContext = displayCanvas.getContext("bitmaprenderer");
         if (!bitmapContext) {
           throw new Error("Firefox bitmap presentation is unavailable.");
         }
-        gameSection.classList.add("bitmap-presentation");
-        canvas.setAttribute("aria-hidden", "true");
-        displayCanvas.removeAttribute("aria-hidden");
         for (const worker of PThread.unusedWorkers) {
           const handleRuntimeMessage = worker.onmessage;
           worker.onmessage = (event) => {
             const bitmap = event.data?.th08WebFrame;
             if (bitmap) {
+              const arrivalTime = performance.now();
+              if (performanceDiagnosticsEnabled) {
+                recordTiming(framePacing.bitmapTransfer, event.data.transferMilliseconds);
+                recordTiming(
+                  framePacing.bitmapMessageLatency,
+                  performance.timeOrigin + arrivalTime - event.data.producedAt,
+                );
+                if (previousBitmapArrivalTime !== undefined) {
+                  recordTiming(framePacing.bitmapArrivalInterval, arrivalTime - previousBitmapArrivalTime);
+                }
+                previousBitmapArrivalTime = arrivalTime;
+              }
+              const presentStarted = performance.now();
               bitmapContext.transferFromImageBitmap(bitmap);
+              if (performanceDiagnosticsEnabled) {
+                recordTiming(framePacing.bitmapPresent, performance.now() - presentStarted);
+              }
               return;
             }
             handleRuntimeMessage.call(worker, event);
@@ -186,7 +291,7 @@
       }
 
       function focusGameCanvas() {
-        (useBitmapPresentation ? displayCanvas : canvas).focus();
+        (useSecondaryPresentation ? displayCanvas : canvas).focus();
       }
 
       async function prepareGameFileSystem() {
@@ -273,7 +378,8 @@
           statusElement.textContent = `The game aborted: ${reason}`;
         },
         onRuntimeInitialized: () => {
-          installBitmapPresentation();
+          installPresentation();
+          appendLog(`th08-web: presentation mode: ${presentationMode}`);
           runtimeReady = true;
           updateStartState();
         },
@@ -298,6 +404,10 @@
           Module.HEAPU8.set(gameBytes, gameDataPointer);
           Module.th08RetailFiles = [game, bgm];
           Module._th08_web_set_retail_file_sizes(game.size, bgm.size);
+          Module._th08_web_configure_presentation(
+            presentationModeCodes[presentationMode],
+            performanceDiagnosticsEnabled ? 1 : 0,
+          );
           Module.FS.chdir("/game");
           Module.FS.writeFile("th08.dat", new Uint8Array(0));
           Module.FS.writeFile("thbgm.dat", new Uint8Array(0));

@@ -575,6 +575,15 @@ unsigned long g_webMeasuredFrames = 0;
 unsigned long g_webMeasuredCommands = 0;
 unsigned long g_webMeasuredVertices = 0;
 bool g_webMeasurementComplete = false;
+enum WebPresentationMode
+{
+    WEB_PRESENTATION_AUTO = 0,
+    WEB_PRESENTATION_DIRECT = 1,
+    WEB_PRESENTATION_BITMAP = 2,
+    WEB_PRESENTATION_PROXY = 3
+};
+int g_webPresentationMode = WEB_PRESENTATION_AUTO;
+bool g_webPresentationDiagnostics = false;
 
 GLuint CompileWebShader(GLenum type, const char *source)
 {
@@ -937,10 +946,19 @@ class LinuxDevice : public IDirect3DDevice8
         attributes.minorVersion = 0;
         attributes.enableExtensionsByDefault = EM_TRUE;
         attributes.explicitSwapControl = EM_FALSE;
-        attributes.proxyContextToMainThread = EMSCRIPTEN_WEBGL_CONTEXT_PROXY_DISALLOW;
-        bitmapPresentation = EM_ASM_INT({
-            return typeof navigator != "undefined" && navigator.userAgent.includes("Firefox/");
-        }) != 0;
+        if (g_webPresentationMode == WEB_PRESENTATION_AUTO)
+        {
+            bitmapPresentation = EM_ASM_INT({
+                return typeof navigator != "undefined" && navigator.userAgent.includes("Firefox/");
+            }) != 0;
+        }
+        else
+        {
+            bitmapPresentation = g_webPresentationMode == WEB_PRESENTATION_BITMAP;
+        }
+        attributes.proxyContextToMainThread = g_webPresentationMode == WEB_PRESENTATION_PROXY
+                                                  ? EMSCRIPTEN_WEBGL_CONTEXT_PROXY_ALWAYS
+                                                  : EMSCRIPTEN_WEBGL_CONTEXT_PROXY_DISALLOW;
         webContext = emscripten_webgl_create_context("#canvas", &attributes);
         if (webContext > 0 && emscripten_webgl_make_context_current(webContext) == EMSCRIPTEN_RESULT_SUCCESS)
         {
@@ -1073,25 +1091,35 @@ class LinuxDevice : public IDirect3DDevice8
 #endif
         PopRendererState();
 
-        glFlush();
 #ifdef TH08_MODERN_WEB
+        glFlush();
+        if (g_webPresentationMode == WEB_PRESENTATION_PROXY)
+            emscripten_webgl_commit_frame();
         if (bitmapPresentation)
         {
             EM_ASM({
                 try {
+                    const diagnostics = !!$0;
+                    const started = diagnostics ? performance.now() : 0;
                     const source = GL.currentContext && GL.currentContext.GLctx.canvas;
                     const bitmap = source.transferToImageBitmap();
-                    postMessage({ th08WebFrame: bitmap }, [bitmap]);
+                    const message = { th08WebFrame: bitmap };
+                    if (diagnostics) {
+                        message.transferMilliseconds = performance.now() - started;
+                        message.producedAt = performance.timeOrigin + performance.now();
+                    }
+                    postMessage(message, [bitmap]);
                 } catch (error) {
                     if (!Module.th08BitmapPresentationError) {
                         Module.th08BitmapPresentationError = true;
                         console.error("th08-web: Firefox bitmap presentation failed", error);
                     }
                 }
-            });
+            }, g_webPresentationDiagnostics ? 1 : 0);
         }
 #endif
 #ifndef TH08_MODERN_WEB
+        glFlush();
         SDL_GL_SwapWindow(window);
 #endif
 
@@ -1788,6 +1816,17 @@ class LinuxDirect3D : public IDirect3D8
   private: ULONG refs;
 };
 } // namespace
+
+#ifdef TH08_MODERN_WEB
+extern "C" EMSCRIPTEN_KEEPALIVE void th08_web_configure_presentation(int mode, int diagnostics)
+{
+    if (mode >= WEB_PRESENTATION_DIRECT && mode <= WEB_PRESENTATION_PROXY)
+        g_webPresentationMode = mode;
+    else
+        g_webPresentationMode = WEB_PRESENTATION_AUTO;
+    g_webPresentationDiagnostics = diagnostics != 0;
+}
+#endif
 
 bool th08_linux_surface_access(IDirect3DSurface8 *surfaceRaw, LinuxSurfaceAccess *access, bool readBackbuffer)
 {

@@ -16,7 +16,9 @@ docker run --rm \
     "${image}" \
     env EM_CACHE=/src/build/emscripten-cache \
     emcmake cmake -S /src -B /src/build/web-game -G "Unix Makefiles" \
-        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_BUILD_TYPE=Release \
+        -DTH08_WEB_PROXY_GL_TO_MAIN_THREAD=OFF \
+        -DTH08_WEB_OUTPUT_NAME=th08-web
 
 docker run --rm \
     --volume "${repo_root}:/src" \
@@ -28,8 +30,48 @@ docker run --rm \
 
 echo "Built ${build_dir}/th08-web.html"
 
+# Firefox currently turns WebGL OffscreenCanvas snapshots into synchronous
+# GPU readbacks. Reuse the compiled objects and relink a browser-specific build
+# whose small batched WebGL command stream is proxied to a main-thread canvas.
+docker run --rm \
+    --volume "${repo_root}:/src" \
+    --workdir /src \
+    --user "$(id -u):$(id -g)" \
+    "${image}" \
+    env EM_CACHE=/src/build/emscripten-cache \
+    emcmake cmake -S /src -B /src/build/web-game -G "Unix Makefiles" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DTH08_WEB_PROXY_GL_TO_MAIN_THREAD=ON \
+        -DTH08_WEB_OUTPUT_NAME=th08-web-firefox
+
+docker run --rm \
+    --volume "${repo_root}:/src" \
+    --workdir /src \
+    --user "$(id -u):$(id -g)" \
+    "${image}" \
+    env EM_CACHE=/src/build/emscripten-cache \
+    cmake --build /src/build/web-game --target th08-web --parallel 1
+
+echo "Built ${build_dir}/th08-web-firefox.html"
+
+# Leave the build tree configured for the primary Chromium artifact so a
+# normal incremental `cmake --build` does not unexpectedly relink Firefox.
+docker run --rm \
+    --volume "${repo_root}:/src" \
+    --workdir /src \
+    --user "$(id -u):$(id -g)" \
+    "${image}" \
+    env EM_CACHE=/src/build/emscripten-cache \
+    emcmake cmake -S /src -B /src/build/web-game -G "Unix Makefiles" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DTH08_WEB_PROXY_GL_TO_MAIN_THREAD=OFF \
+        -DTH08_WEB_OUTPUT_NAME=th08-web
+
 cmake -E make_directory "${dist_dir}"
-for artifact in th08-web.html th08-web.js th08-web.wasm th08-web-icon.png; do
+for artifact in \
+    th08-web.html th08-web.js th08-web.wasm \
+    th08-web-firefox.html th08-web-firefox.js th08-web-firefox.wasm \
+    th08-web-icon.png; do
     cmake -E copy_if_different "${build_dir}/${artifact}" "${dist_dir}/${artifact}"
 done
 for metadata in _headers _redirects; do

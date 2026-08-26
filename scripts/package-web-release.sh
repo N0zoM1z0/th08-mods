@@ -35,6 +35,9 @@ artifacts=(
     th08-web.html
     th08-web.js
     th08-web.wasm
+    th08-web-firefox.html
+    th08-web-firefox.js
+    th08-web-firefox.wasm
     th08-web-icon.png
 )
 

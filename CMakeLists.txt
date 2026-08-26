@@ -81,6 +81,10 @@ set(TH08_GAME_SOURCES
 # source/compiler portability; the browser platform, renderer, filesystem, and
 # event-loop boundaries are separate milestones.
 if(EMSCRIPTEN)
+    option(TH08_WEB_PROXY_GL_TO_MAIN_THREAD
+        "Keep the canvas on the browser main thread and proxy WebGL calls to it" OFF)
+    set(TH08_WEB_OUTPUT_NAME "th08-web" CACHE STRING
+        "Output basename for the browser build")
     add_library(th08-web-authored-compile OBJECT ${TH08_GAME_SOURCES})
     add_dependencies(th08-web-authored-compile th08-modern-generated)
     target_compile_features(th08-web-authored-compile PRIVATE cxx_std_98)
@@ -136,6 +140,17 @@ if(EMSCRIPTEN)
         --use-port=sdl2_image:formats=png,jpg
         --use-port=sdl2_ttf
     )
+    set(TH08_WEB_THREAD_LINK_OPTIONS
+        -sPROXY_TO_PTHREAD
+        -sOFFSCREENCANVAS_SUPPORT
+        -sALLOW_BLOCKING_ON_MAIN_THREAD=0
+    )
+    if(TH08_WEB_PROXY_GL_TO_MAIN_THREAD)
+        list(APPEND TH08_WEB_THREAD_LINK_OPTIONS
+            "-sOFFSCREENCANVASES_TO_PTHREAD=\"\""
+            -sOFFSCREEN_FRAMEBUFFER
+        )
+    endif()
     target_link_options(th08-web PRIVATE
         -pthread
         --use-port=sdl2
@@ -146,20 +161,18 @@ if(EMSCRIPTEN)
         -sEXPORTED_RUNTIME_METHODS=FS,IDBFS,callMain,HEAPU8
         -sFORCE_FILESYSTEM
         -lidbfs.js
-        -sPROXY_TO_PTHREAD
-        -sOFFSCREENCANVAS_SUPPORT
+        ${TH08_WEB_THREAD_LINK_OPTIONS}
         -sMIN_WEBGL_VERSION=2
         -sMAX_WEBGL_VERSION=2
         -sGLOBAL_BASE=33554432
         -sINITIAL_MEMORY=268435456
         -sSTACK_SIZE=4194304
         -sPTHREAD_POOL_SIZE=3
-        -sALLOW_BLOCKING_ON_MAIN_THREAD=0
         -sEXIT_RUNTIME=0
     )
     set_target_properties(th08-web PROPERTIES
         LINK_DEPENDS "${CMAKE_SOURCE_DIR}/src/modern/web/shell.html"
-        OUTPUT_NAME "th08-web"
+        OUTPUT_NAME "${TH08_WEB_OUTPUT_NAME}"
         SUFFIX ".html"
     )
     add_custom_command(TARGET th08-web POST_BUILD
