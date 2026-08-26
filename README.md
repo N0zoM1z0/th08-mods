@@ -64,6 +64,10 @@ Settings, scores, replays, backups, and snapshots are stored separately in the
 browser's IndexedDB storage. They survive a normal reload and remain private to
 that browser profile. Clearing site data for `th08-web.pages.dev` removes them.
 
+Replay recording and playback are supported. Complete the original save flow
+by choosing a replay slot and confirming **End** on the name-entry screen; the
+saved run then appears in the title screen's **Replay** menu.
+
 That is the whole ritual. There is no installer, account, upload, or server-side
 game session: once the static Web build arrives, the night unfolds entirely on
 your machine.
@@ -131,7 +135,8 @@ The imperishable night is playable from title to ending. The following paths
 have been exercised with locally selected retail data:
 
 - title, difficulty, team, practice, Music Room, dialogue, and result screens;
-- keyboard movement, shooting, focus, bombs, score, and browser-local saves;
+- keyboard movement, shooting, focus, bombs, score, browser-local replay
+  recording and playback, and other browser-local saves;
 - direct WebGL 2 rendering and Web Audio playback;
 - a complete Lunatic Border Team Final-B route in Chromium;
 - a complete Lunatic Border Team Final-B endurance route on the earlier
