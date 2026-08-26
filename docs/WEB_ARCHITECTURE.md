@@ -137,6 +137,40 @@ keeps `glFlush()` before the explicit commit: removing the flush reduced frame
 progress in a controlled Stage 1 A/B, so it is an intentional command-submission
 boundary rather than an unmeasured legacy call.
 
+The two presentation links have the following frame boundaries:
+
+```text
+Chromium
+game pthread -> batched WebGL 2 -> worker OffscreenCanvas -> compositor
+
+Firefox
+game pthread -> batched WebGL 2 -> glFlush -> main-thread GL proxy
+             -> Emscripten offscreen default FBO -> commit-frame GPU blit
+             -> visible canvas -> compositor
+```
+
+Both links retain `PROXY_TO_PTHREAD` and `OFFSCREENCANVAS_SUPPORT`. The Firefox
+link additionally sets `OFFSCREENCANVASES_TO_PTHREAD` to an empty list and
+enables `OFFSCREEN_FRAMEBUFFER`; context creation then requests
+`EMSCRIPTEN_WEBGL_CONTEXT_PROXY_ALWAYS`. These settings are link-time choices,
+so `scripts/build-web-game.sh` compiles the game objects once, emits the direct
+Chromium link, reconfigures and relinks the Firefox artifact, then restores the
+incremental build tree to the Chromium configuration.
+
+This design is viable because the modern renderer already collapses the
+D3D8-shaped sprite stream into a few commands and one batched vertex upload per
+frame. Proxying the earlier immediate-mode stream would merely have replaced a
+readback bottleneck with thousands of cross-thread calls. The current proxy
+moves a small command stream while all framebuffer pixels remain on the GPU.
+
+`?perf=1` enables presentation diagnostics without changing the default
+release hot path. It measures main-thread animation-frame intervals, bitmap
+creation, worker-to-main message latency, bitmap arrival, and bitmap
+presentation separately. C++ counters independently report browser callbacks,
+authored calculation frames, draw commands, and submitted vertices. Keeping
+these clocks separate prevents a nominal browser callback rate or the in-game
+counter from hiding slower simulation progress.
+
 A short Chromium active-gameplay sample recorded 297 browser callbacks and 297
 authored calculation frames in five seconds. The renderer separately measured
 approximately 0.08--0.15 ms of CPU game submission and 0.01--0.03 ms of blit
@@ -151,6 +185,14 @@ FPS in the same test while preserving movement, shooting, bullets, HUD, audio,
 and callback/calculation lockstep. A separate title sample improved from about
 15--19 FPS to about 30--31 FPS. These ratios are repeatable software-renderer
 evidence, not a hardware Firefox performance claim.
+
+After the optimized artifact was exposed through the normal HTTPS launcher on
+2026-08-26, real-hardware Firefox play was reported as generally sustaining
+more than 50 FPS with a clear responsiveness improvement. This is preliminary
+operator evidence, not a controlled benchmark: the browser build, GPU, scene,
+and complete-route duration were not captured. It validates that the
+no-readback path translates beyond `llvmpipe`, while controlled traces and a
+complete-route endurance run remain open.
 
 The earlier bitmap build remains important correctness evidence: a 45-minute
 Firefox Lunatic Final-B endurance route completed all six route stages and
@@ -328,7 +370,8 @@ The port has crossed the full-link, title/menu, input, audio-device, BGM-range,
 direct-renderer, full-route, conditional-spell, isolated persistent-save, and
 public-deployment gates. It is a public engineering release. The next work is:
 
-1. validate hardware Firefox proxy pacing and complete-route endurance,
+1. capture controlled hardware Firefox proxy pacing and complete-route
+   endurance,
    pause/focus, audio-underrun, and repeated stage-reload regressions;
 2. measure and tune the fixed shared-memory ceiling under repeated long
    sessions;

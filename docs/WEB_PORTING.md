@@ -337,6 +337,18 @@ the tested configuration. The first correctness fix called
 `transferToImageBitmap()` after the final blit, transferred the bitmap to the
 main thread, and presented it with `bitmaprenderer`.
 
+The important diagnostic step was to time each boundary independently instead
+of attributing the result to generic Wasm or browser overhead. The launcher can
+enable low-overhead probes with `?perf=1`, while exported C++ snapshots count
+browser callbacks and authored calculation frames. Measurements separated:
+
+- main-thread `requestAnimationFrame` spacing;
+- worker-side `transferToImageBitmap()` duration;
+- worker-to-main message latency and bitmap arrival spacing;
+- the main-thread `bitmaprenderer` call;
+- authored simulation progress, movement distance, active shots, draw calls,
+  and submitted vertices.
+
 That bridge was functionally correct but not a suitable hot path. Firefox's
 WebGL snapshot implementation performs a synchronous GPU-to-CPU readback. TH08
 diagnostics measured an average 38.82 ms and a maximum 82.32 ms per snapshot in
@@ -355,12 +367,47 @@ The optimized release uses two links of the same compiled game objects:
    stream and `emscripten_webgl_commit_frame()` performs the explicit swap.
 5. The launcher selects `th08-web-firefox.html` before the user chooses DATs.
 
+The link-time split is explicit:
+
+```text
+Shared by both links:
+  -sPROXY_TO_PTHREAD
+  -sOFFSCREENCANVAS_SUPPORT
+
+Firefox link only:
+  -sOFFSCREENCANVASES_TO_PTHREAD=""
+  -sOFFSCREEN_FRAMEBUFFER
+  proxyContextToMainThread = EMSCRIPTEN_WEBGL_CONTEXT_PROXY_ALWAYS
+```
+
+The build compiles the authored game and compatibility objects once. It first
+links `th08-web.html`/`.js`/`.wasm`, then reuses those objects for
+`th08-web-firefox.html`/`.js`/`.wasm`. The early launcher script redirects a
+Firefox visit before the user selects retail files or starts the Wasm runtime.
+Chromium therefore pays no proxy cost, while Firefox never enters the bitmap
+snapshot path during normal play.
+
 The proxy `Present` path deliberately calls `glFlush()` immediately before
 `emscripten_webgl_commit_frame()`. Removing that apparently redundant flush in
 a back-to-back Stage 1 probe reduced simulation progress and movement distance
 under the same loaded software-renderer setup. The explicit commit performs
 the framebuffer blit, while the flush makes the preceding proxied command
 stream ready promptly; the measured version keeps both boundaries.
+
+Keeping pixel data on the GPU is the decisive property. The old path copied a
+640x480 completed framebuffer through CPU-visible bitmap storage every frame.
+The new path proxies only the renderer's small command stream, draws into
+Emscripten's offscreen default framebuffer on the main-thread WebGL context,
+and performs the final copy with a GPU framebuffer blit. This would not have
+worked well with the initial immediate-mode renderer; the direct renderer's
+state cache, command batching, and single vertex upload are prerequisites for
+making the proxy narrow enough.
+
+Neither retail archive was the per-frame bottleneck. `th08.dat` is copied once
+into session memory because its small random reads are frequent. The roughly
+450 MB `thbgm.dat` remains a browser `File` and is range-read, so it is never
+copied wholesale into the fixed Wasm heap. The measured stall occurred after
+rendering, at frame presentation, independently of archive access.
 
 Two tempting shortcuts were rejected by screenshots and startup evidence.
 Direct Firefox worker presentation remained black despite valid framebuffer
@@ -369,11 +416,20 @@ startup event loop. WebGL context proxying also failed until the fixed
 Emscripten source showed that the proxy implementation is compiled only with
 `PTHREADS && OFFSCREEN_FRAMEBUFFER`.
 
-In the same Xvfb/`llvmpipe` Stage 1 scenario, the proxy build improved from
-about 24 FPS to about 33--36 FPS and preserved movement, shooting, bullets,
-HUD, and callback/calculation alignment. This is a repeatable relative result;
-hardware Firefox pacing and long-route endurance still require separate
-validation. Chrome remains recommended until that coverage is complete.
+The evidence progressed in layers:
+
+| Environment and path | Observation |
+| --- | --- |
+| Firefox bitmap, Xvfb/`llvmpipe`, Stage 1 | About 24 FPS; snapshot averaged 38.82 ms and peaked at 82.32 ms. |
+| Firefox proxy, Xvfb/`llvmpipe`, Stage 1 | About 33--36 FPS; no bitmap readback; movement, shots, bullets, HUD, audio, and callback/calculation alignment remained active. |
+| Firefox proxy, real hardware, 2026-08-26 | Operator reported gameplay generally above 50 FPS with substantially better responsiveness. |
+
+The first two rows are controlled relative software-renderer evidence. The
+hardware row is a preliminary user observation rather than a benchmark because
+the exact browser version, GPU, scene, and trace were not captured. It confirms
+that the architecture improves real play, but complete-route endurance and a
+controlled hardware trace remain separate acceptance gates. Chrome remains
+recommended until that coverage is complete.
 
 ## 11. Make keyboard edges survive scheduling
 
@@ -520,7 +576,7 @@ path. Correctness testing moved outward in layers.
 | Route logic | Expected stage branch and spell sequence appear through a full Lunatic Final-B route. |
 | Lifecycle | Ending/result, score write, title reconstruction, and a second start complete without a Wasm trap. |
 | Persistence | Config and save probes survive reload; recursive inspection finds no DAT in IDBFS. |
-| Browser boundary | Chromium direct presentation has complete-route coverage; Firefox bitmap has historical complete-route coverage, and the faster proxy path has Stage 1 coverage. |
+| Browser boundary | Chromium direct presentation has complete-route coverage; Firefox bitmap has historical complete-route coverage, while the faster proxy path has Stage 1 automation and preliminary 50+ FPS hardware play. |
 | Deployment | Public HTML/Wasm carry isolation headers; Wasm MIME and remote digest match the local release. |
 
 Long-route automation used locally selected retail files and isolated,
@@ -642,7 +698,8 @@ Several decisions generalized beyond TH08.
 The current Web build is playable and publicly deployed. The next engineering
 work is bounded rather than architectural:
 
-- validate the Firefox proxy build on hardware and across a complete route;
+- capture a controlled Firefox hardware trace and validate the proxy build
+  across a complete route;
 - expand replay, pause/focus, audio-underrun, and repeated-stage regressions;
 - measure the fixed shared-memory ceiling under repeated long sessions;
 - add optional gamepad mapping and clearer unsupported-browser diagnostics.

@@ -11,7 +11,7 @@ come from the ledgers, not this prose.
 lane and does not alter the exact VC7 evidence product or its authored/library
 ledgers.
 
-Web-port state on 2026-08-25:
+Web-port state on 2026-08-26:
 
 - the digest-pinned Emscripten 6.0.8 compiler builds all 44 shared authored
   game/PBG translation units and links them into a pthread-enabled WebAssembly
@@ -96,13 +96,16 @@ Web-port state on 2026-08-25:
   and explicitly commits frames. It improved the same software-rendered stage
   from about 24 FPS to about 33--36 FPS; movement, shooting, bullets, HUD,
   audio, and callback/calculation alignment remained active. The launcher
-  selects this artifact automatically. Hardware and complete-route validation
-  of the new path remain pending;
+  selects this artifact automatically. Real-hardware Firefox play subsequently
+  reported generally more than 50 FPS and materially better responsiveness.
+  That result is preliminary operator evidence because browser/GPU/scene trace
+  data was not captured; controlled profiling and complete-route validation of
+  the new path remain pending;
 - `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence, while
   `docs/WEB_PORTING.md` gives the chronological from-zero engineering narrative
   from compiler feasibility through the public release. The next bounded tasks
-  are hardware Firefox proxy validation, replay endurance, and memory-ceiling
-  measurement.
+  are controlled Firefox hardware profiling and proxy complete-route
+  endurance, replay endurance, and memory-ceiling measurement.
 
 ## Active playable-port branch
 

@@ -80,7 +80,7 @@ from this revision use the exact nine-file layout documented below.
 | --- | --- | --- |
 | Chrome | **Recommended** | Best observed performance and frame pacing. |
 | Chromium-based desktop browsers | Expected to work | Use a current version with hardware acceleration enabled. |
-| Firefox | Supported | Automatically uses a dedicated no-readback presentation build; Chrome still has the strongest hardware validation. |
+| Firefox | Supported | Automatically uses a dedicated no-readback build; preliminary hardware play now generally reports 50+ FPS. |
 | Safari and mobile browsers | Not verified | Keyboard play, WebAssembly threads, and the current presentation path are desktop-oriented. |
 
 The game requires WebAssembly threads, `SharedArrayBuffer`, WebGL 2, Web Audio,
@@ -139,10 +139,10 @@ have been exercised with locally selected retail data:
 - a separate Stage 6B practice run covering the final spell sequence;
 - reload and persistence tests confirming that no DAT enters IndexedDB.
 
-Remaining engineering work includes hardware validation and long-route
-endurance for the new Firefox presentation build, additional replay endurance,
-and browser memory-ceiling measurement. See the architecture document for the
-exact evidence and limitations behind each claim.
+Remaining engineering work includes controlled hardware profiling and
+long-route endurance for the new Firefox presentation build, additional replay
+endurance, and browser memory-ceiling measurement. See the architecture
+document for the exact evidence and limitations behind each claim.
 
 ## Build your own night
 
