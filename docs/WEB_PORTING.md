@@ -258,7 +258,7 @@ documentation promise.
 
 [`check-web-provenance.py`](../scripts/check-web-provenance.py) checks tracked
 source for original executables, DAT files, and common retail containers. When
-given `build/web-dist`, it additionally requires exactly these six regular
+given `build/web-dist`, it additionally requires exactly these nine regular
 files:
 
 ```text
@@ -267,6 +267,9 @@ _redirects
 th08-web.html
 th08-web.js
 th08-web.wasm
+th08-web-firefox.html
+th08-web-firefox.js
+th08-web-firefox.wasm
 th08-web-icon.png
 ```
 
@@ -330,17 +333,47 @@ the main-loop callback returns.
 
 Firefox accepted the same WebGL 2 commands and contained a valid completed
 framebuffer, but the transferred canvas placeholder did not visibly update in
-the tested configuration. The fix is deliberately browser-scoped:
+the tested configuration. The first correctness fix called
+`transferToImageBitmap()` after the final blit, transferred the bitmap to the
+main thread, and presented it with `bitmaprenderer`.
 
-1. the worker calls `transferToImageBitmap()` after the final blit;
-2. the bitmap is transferred to the main thread;
-3. a second canvas presents it through `bitmaprenderer`;
-4. old bitmaps are closed after transfer.
+That bridge was functionally correct but not a suitable hot path. Firefox's
+WebGL snapshot implementation performs a synchronous GPU-to-CPU readback. TH08
+diagnostics measured an average 38.82 ms and a maximum 82.32 ms per snapshot in
+one software-rendered Lunatic Stage 1 run; `bitmaprenderer` itself averaged
+only 0.04 ms. The browser main thread and message transport were not the
+primary bottleneck.
 
-Only Firefox enables this bridge. Chromium avoids the extra frame copy and
-keeps its direct compositor path. This is why both browsers are supported while
-Chrome is currently recommended for the strongest observed performance and
-frame pacing.
+The optimized release uses two links of the same compiled game objects:
+
+1. Chromium keeps the worker-owned `OffscreenCanvas` and implicit compositor
+   presentation.
+2. Firefox leaves the visible canvas on the main thread.
+3. The game still runs under `PROXY_TO_PTHREAD`, preserving startup and BGM
+   worker behavior.
+4. Emscripten `OFFSCREEN_FRAMEBUFFER` proxies the already batched WebGL command
+   stream and `emscripten_webgl_commit_frame()` performs the explicit swap.
+5. The launcher selects `th08-web-firefox.html` before the user chooses DATs.
+
+The proxy `Present` path deliberately calls `glFlush()` immediately before
+`emscripten_webgl_commit_frame()`. Removing that apparently redundant flush in
+a back-to-back Stage 1 probe reduced simulation progress and movement distance
+under the same loaded software-renderer setup. The explicit commit performs
+the framebuffer blit, while the flush makes the preceding proxied command
+stream ready promptly; the measured version keeps both boundaries.
+
+Two tempting shortcuts were rejected by screenshots and startup evidence.
+Direct Firefox worker presentation remained black despite valid framebuffer
+pixels. Moving the whole Wasm program to the browser main thread blocked its
+startup event loop. WebGL context proxying also failed until the fixed
+Emscripten source showed that the proxy implementation is compiled only with
+`PTHREADS && OFFSCREEN_FRAMEBUFFER`.
+
+In the same Xvfb/`llvmpipe` Stage 1 scenario, the proxy build improved from
+about 24 FPS to about 33--36 FPS and preserved movement, shooting, bullets,
+HUD, and callback/calculation alignment. This is a repeatable relative result;
+hardware Firefox pacing and long-route endurance still require separate
+validation. Chrome remains recommended until that coverage is complete.
 
 ## 11. Make keyboard edges survive scheduling
 
@@ -487,7 +520,7 @@ path. Correctness testing moved outward in layers.
 | Route logic | Expected stage branch and spell sequence appear through a full Lunatic Final-B route. |
 | Lifecycle | Ending/result, score write, title reconstruction, and a second start complete without a Wasm trap. |
 | Persistence | Config and save probes survive reload; recursive inspection finds no DAT in IDBFS. |
-| Browser boundary | Chromium direct presentation and Firefox bitmap presentation both complete long routes. |
+| Browser boundary | Chromium direct presentation has complete-route coverage; Firefox bitmap has historical complete-route coverage, and the faster proxy path has Stage 1 coverage. |
 | Deployment | Public HTML/Wasm carry isolation headers; Wasm MIME and remote digest match the local release. |
 
 Long-route automation used locally selected retail files and isolated,
@@ -563,7 +596,7 @@ To package the exact allowlisted output for a tagged GitHub Release:
 scripts/package-web-release.sh v0.1.0
 ```
 
-The deterministic archive contains only the six deployment files and is
+The deterministic archive contains only the nine deployment files and is
 accompanied by a SHA-256 manifest. It never contains either retail DAT file.
 
 The image digest fixes the compiler and SDK inputs, but this project does not
@@ -609,7 +642,7 @@ Several decisions generalized beyond TH08.
 The current Web build is playable and publicly deployed. The next engineering
 work is bounded rather than architectural:
 
-- tune Firefox hardware pacing and measure the bitmap-transfer cost;
+- validate the Firefox proxy build on hardware and across a complete route;
 - expand replay, pause/focus, audio-underrun, and repeated-stage regressions;
 - measure the fixed shared-memory ceiling under repeated long sessions;
 - add optional gamepad mapping and clearer unsupported-browser diagnostics.
@@ -624,5 +657,6 @@ static release.
 - [Emscripten file system API](https://emscripten.org/docs/api_reference/Filesystem-API.html)
 - [Emscripten OpenGL support](https://emscripten.org/docs/porting/multimedia_and_graphics/OpenGL-support.html)
 - [Emscripten compiler settings](https://emscripten.org/docs/tools_reference/settings_reference.html)
+- [Mozilla Bug 1864882: WebGL OffscreenCanvas bitmap transfer performance](https://bugzilla.mozilla.org/show_bug.cgi?id=1864882)
 - [Cloudflare Pages custom headers](https://developers.cloudflare.com/pages/configuration/headers/)
 - [Cloudflare Pages Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/)

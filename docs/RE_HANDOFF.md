@@ -40,9 +40,9 @@ Web-port state on 2026-08-25:
   Localhost works directly; remote browsers require HTTPS. The temporary
   tailnet preview uses HTTPS port 8443 without changing the existing service on
   port 443;
-- Cloudflare Pages metadata is staged beside the four generated assets. Its
+- Cloudflare Pages metadata is staged beside the seven generated assets. Its
   `_headers` file preserves COOP/COEP/CORP and its `_redirects` file handles the
-  site root. The provenance gate now requires exactly these six regular files,
+  site root. The provenance gate now requires exactly these nine regular files,
   rejecting unlisted files, missing files, symbolic links, DATs, original
   executables, and common retail containers before Direct Upload. The first
   production deployment is live at `https://th08-web.pages.dev/`: the root
@@ -79,20 +79,29 @@ Web-port state on 2026-08-25:
   inventory confirmed no DAT in any IDBFS mount, and `chdir` round trips for
   all three persistent directories returned to `/game`;
 - Firefox 153 needs an explicit presentation boundary for this pthread-owned
-  OffscreenCanvas even though its completed default framebuffer is valid. A
-  Firefox-only bridge now transfers the finished frame as an `ImageBitmap` to
-  a main-thread `bitmaprenderer`; Chromium keeps the direct compositor path.
-  A headed Firefox 153 Lunatic Border Team Final-B endurance run traversed
-  Stages 1, 2, 3, 4B, 5, and 6B for 45 minutes, returned through Result to the
-  title, wrote `score.dat`, and raised no browser, worker, or Wasm memory error.
-  It observed the expected route sequence through spell 186; the retail 5:00
-  cutoff skipped spell 190, which remains covered separately by the Chromium
-  Stage 6B practice run. This Firefox evidence used Xvfb `llvmpipe`, so it is
-  correctness evidence rather than a hardware performance result;
+  OffscreenCanvas even though its completed default framebuffer is valid. The
+  first bridge transferred each frame as an `ImageBitmap` to a main-thread
+  `bitmaprenderer`; a headed Lunatic Border Team Final-B endurance run on that
+  path traversed Stages 1, 2, 3, 4B, 5, and 6B for 45 minutes, returned through
+  Result to the title, wrote `score.dat`, and raised no browser, worker, or Wasm
+  memory error. It observed the expected route sequence through spell 186; the
+  retail 5:00 cutoff skipped spell 190, which remains covered separately by the
+  Chromium Stage 6B practice run;
+- Firefox pacing instrumentation then isolated the bitmap snapshot as the hot
+  boundary: in one Xvfb `llvmpipe` Lunatic Stage 1 sample,
+  `transferToImageBitmap()` averaged 38.82 ms and peaked at 82.32 ms while the
+  `bitmaprenderer` call averaged 0.04 ms. A Firefox-specific link now retains
+  `PROXY_TO_PTHREAD`, leaves the visible canvas on the main thread, enables
+  Emscripten `OFFSCREEN_FRAMEBUFFER`, proxies the already batched WebGL stream,
+  and explicitly commits frames. It improved the same software-rendered stage
+  from about 24 FPS to about 33--36 FPS; movement, shooting, bullets, HUD,
+  audio, and callback/calculation alignment remained active. The launcher
+  selects this artifact automatically. Hardware and complete-route validation
+  of the new path remain pending;
 - `docs/WEB_ARCHITECTURE.md` records the implemented design and evidence, while
   `docs/WEB_PORTING.md` gives the chronological from-zero engineering narrative
   from compiler feasibility through the public release. The next bounded tasks
-  are hardware Firefox pacing, replay endurance, and memory-ceiling
+  are hardware Firefox proxy validation, replay endurance, and memory-ceiling
   measurement.
 
 ## Active playable-port branch

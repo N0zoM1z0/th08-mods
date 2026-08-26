@@ -70,9 +70,9 @@ your machine.
 
 Prefer to keep a copy or host the page yourself? The
 **[latest GitHub Release](https://github.com/N0zoM1z0/th08-web/releases/latest)**
-contains a provenance-gated six-file static build and its SHA-256
-manifest. It still contains no game data; local legal DAT selection is always
-required.
+contains a provenance-gated static build and its SHA-256 manifest. It still
+contains no game data; local legal DAT selection is always required. Builds
+from this revision use the exact nine-file layout documented below.
 
 ## Choose your browser
 
@@ -80,7 +80,7 @@ required.
 | --- | --- | --- |
 | Chrome | **Recommended** | Best observed performance and frame pacing. |
 | Chromium-based desktop browsers | Expected to work | Use a current version with hardware acceleration enabled. |
-| Firefox | Supported | Gameplay, audio, saves, and complete routes work, but performance is currently lower on typical Firefox configurations. |
+| Firefox | Supported | Automatically uses a dedicated no-readback presentation build; Chrome still has the strongest hardware validation. |
 | Safari and mobile browsers | Not verified | Keyboard play, WebAssembly threads, and the current presentation path are desktop-oriented. |
 
 The game requires WebAssembly threads, `SharedArrayBuffer`, WebGL 2, Web Audio,
@@ -109,6 +109,9 @@ throttle the display refresh rate.
   retains the existing startup and BGM thread structure.
 - A direct WebGL 2 renderer translates the D3D8-shaped draw interface into
   shaders, batched vertex uploads, and browser canvas presentation.
+- Chromium composites the worker-owned canvas directly. Firefox receives the
+  same batched renderer through a main-thread WebGL proxy, avoiding its costly
+  per-frame `OffscreenCanvas` snapshot readback.
 - The authored DirectSound-shaped mixer feeds Web Audio while BGM data is
   range-read from the user-selected local file.
 - Browser key events enter shared atomic state and are merged with the
@@ -131,15 +134,15 @@ have been exercised with locally selected retail data:
 - keyboard movement, shooting, focus, bombs, score, and browser-local saves;
 - direct WebGL 2 rendering and Web Audio playback;
 - a complete Lunatic Border Team Final-B route in Chromium;
-- a complete Lunatic Border Team Final-B endurance route in Firefox, including
-  return through Result to the title screen;
+- a complete Lunatic Border Team Final-B endurance route on the earlier
+  Firefox bitmap bridge, including return through Result to the title screen;
 - a separate Stage 6B practice run covering the final spell sequence;
 - reload and persistence tests confirming that no DAT enters IndexedDB.
 
-Remaining engineering work includes hardware-specific Firefox pacing,
-additional replay endurance, and browser memory-ceiling measurement. See the
-architecture document for the exact evidence and limitations behind each
-claim.
+Remaining engineering work includes hardware validation and long-route
+endurance for the new Firefox presentation build, additional replay endurance,
+and browser memory-ceiling measurement. See the architecture document for the
+exact evidence and limitations behind each claim.
 
 ## Build your own night
 
@@ -163,7 +166,7 @@ Open `http://127.0.0.1:8000/`. Do not use a generic static server for this
 build: Emscripten pthreads require the COOP, COEP, and CORP headers supplied by
 `scripts/serve-web.py`.
 
-The generated deployment directory contains exactly six allowlisted files:
+The generated deployment directory contains exactly nine allowlisted files:
 
 ```text
 _headers
@@ -171,6 +174,9 @@ _redirects
 th08-web.html
 th08-web.js
 th08-web.wasm
+th08-web-firefox.html
+th08-web-firefox.js
+th08-web-firefox.wasm
 th08-web-icon.png
 ```
 
@@ -199,7 +205,7 @@ repository secrets:
 
 Pull requests do not deploy and do not receive these secrets.
 
-Tagged GitHub Releases attach a compressed six-file static
+Tagged GitHub Releases attach a compressed nine-file static
 artifact plus a SHA-256 manifest. Release archives are for self-hosting and
 offline retention; they do not include retail data and still require a host
 that supplies the staged isolation headers.
@@ -228,7 +234,7 @@ Never write deployment credentials into this repository or command logs.
 | `src/` | Reconstructed authored game code and modern host adapters |
 | `src/modern/web/` | Browser launcher, Web compatibility boundary, and Pages metadata |
 | `scripts/build-web-game.sh` | Digest-pinned Emscripten Release build and exact staging |
-| `scripts/package-web-release.sh` | Deterministic six-file release archive and SHA-256 manifest |
+| `scripts/package-web-release.sh` | Deterministic nine-file release archive and SHA-256 manifest |
 | `scripts/check-web-provenance.py` | Retail-data and exact-artifact deployment gate |
 | `scripts/serve-web.py` | Local server with cross-origin-isolation headers |
 | `docs/WEB_PORTING.md` | From-zero engineering narrative and reproducible porting method |

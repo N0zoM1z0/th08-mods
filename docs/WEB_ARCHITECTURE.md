@@ -118,29 +118,44 @@ cached blend, depth, sampler, scissor, alpha-test, fog, and texture-stage state.
 Backbuffer and dialogue-snapshot copies use a separate shader blit. No legacy
 immediate-mode or fixed-function GL emulation remains on the Web hot path.
 
-The context uses implicit swap control: returning from each Emscripten
-main-loop callback lets the browser compositor present the completed frame and
-provides browser-side pacing. Chromium presents this worker-owned canvas
-directly. Firefox 153 accepted the same completed WebGL 2 framebuffer but did
-not update the transferred canvas placeholder in the page. The launcher
-therefore installs a Firefox-only presentation bridge before starting the
-game: after the final blit, the worker transfers an `ImageBitmap` for the main
-thread to present with `bitmaprenderer`. Simulation and rendering remain in
-the worker, while Chromium retains the direct path without this extra frame
-transfer.
+Chromium uses implicit swap control: returning from each Emscripten main-loop
+callback lets its compositor present the worker-owned canvas directly. Firefox
+153 accepted the same completed WebGL 2 framebuffer but did not update the
+transferred canvas placeholder in the page. The first correctness bridge used
+`transferToImageBitmap()` and a main-thread `bitmaprenderer`, but Firefox turns
+that WebGL snapshot into a synchronous GPU-to-CPU readback.
+
+The release therefore contains two links of the same compiled C++ objects.
+The Chromium build keeps the direct worker-owned `OffscreenCanvas`. The
+Firefox build keeps simulation on the pthread worker but leaves the visible
+canvas on the main thread, enables Emscripten's `OFFSCREEN_FRAMEBUFFER` WebGL
+proxy, and explicitly commits each completed frame. The renderer's batching
+keeps this proxy narrow: representative frames contain only a handful of draw
+commands rather than the original immediate-mode call stream. The launcher
+selects the Firefox artifact before retail files are requested. Its `Present`
+keeps `glFlush()` before the explicit commit: removing the flush reduced frame
+progress in a controlled Stage 1 A/B, so it is an intentional command-submission
+boundary rather than an unmeasured legacy call.
 
 A short Chromium active-gameplay sample recorded 297 browser callbacks and 297
 authored calculation frames in five seconds. The renderer separately measured
 approximately 0.08--0.15 ms of CPU game submission and 0.01--0.03 ms of blit
-work per frame in representative scenes. A headed Firefox title/menu test on
-Xvfb's software `llvmpipe` renderer kept callbacks and authored calculations in
-exact 236/236 lockstep over five seconds, although that software-only setup ran
-at about 47 FPS. A later 45-minute Firefox Lunatic Final-B endurance route
-completed all six route stages and returned through Result to title without a
-browser, worker, or Wasm memory error. These observations demonstrate that the
-previous renderer bottleneck is gone and that the Firefox fallback preserves
-functional timing; the software-rendered run is not a hardware Firefox
-performance claim.
+work per frame in representative direct-rendering scenes.
+
+Firefox pacing diagnostics isolate browser rAF, bitmap creation, message
+latency, bitmap presentation, worker callbacks, and authored calculations. In
+an Xvfb `llvmpipe` Lunatic Stage 1 comparison, the old bitmap path spent an
+average 38.82 ms and as much as 82.32 ms in `transferToImageBitmap()`, reaching
+about 24 FPS. The proxied build removed that readback and reached about 33--36
+FPS in the same test while preserving movement, shooting, bullets, HUD, audio,
+and callback/calculation lockstep. A separate title sample improved from about
+15--19 FPS to about 30--31 FPS. These ratios are repeatable software-renderer
+evidence, not a hardware Firefox performance claim.
+
+The earlier bitmap build remains important correctness evidence: a 45-minute
+Firefox Lunatic Final-B endurance route completed all six route stages and
+returned through Result to title without a browser, worker, or Wasm memory
+error. Equivalent long-route coverage for the new proxy build remains pending.
 
 An earlier blocking-loop experiment rendered correctly into the WebGL default
 framebuffer but remained black on screen. In Emscripten 6, the native
@@ -203,11 +218,12 @@ scripts/serve-web.py --bind 127.0.0.1 --port 8000
 
 Open `http://127.0.0.1:8000/`, select local files named exactly `th08.dat` and
 `thbgm.dat`, and choose **Start TH08**. Keyboard controls are listed in the
-launcher. The generated static artifact consists of `th08-web.html`,
-`th08-web.js`, `th08-web.wasm`, the project-owned `th08-web-icon.png`, and the
-two static-host metadata files `_headers` and `_redirects`. CMake metadata stays
-in `build/web-game`; only these allowlisted files are staged in
-`build/web-dist`.
+launcher. The generated static artifact consists of the Chromium
+`th08-web.html`/`.js`/`.wasm` triplet, the Firefox
+`th08-web-firefox.html`/`.js`/`.wasm` triplet, the project-owned
+`th08-web-icon.png`, and the two static-host metadata files `_headers` and
+`_redirects`. CMake metadata stays in `build/web-game`; only these nine
+allowlisted files are staged in `build/web-dist`.
 
 The normal script builds `Release`; the staged JavaScript and Wasm are
 approximately 232 KiB and 1.4 MiB respectively. The old Debug Wasm was about
@@ -252,7 +268,7 @@ All Web builds use
   files. Browser resource inspection showed only HTML, JavaScript, Worker, and
   Wasm requests; neither DAT appeared as a network resource.
 - Browser screenshots show the full title, menus, Japanese dialogue, the Music
-  Room, and gameplay on the worker-owned OffscreenCanvas. After the direct
+  Room, and gameplay on the browser canvas. After the direct
   WebGL 2 renderer landed, bounded samples held authored calculation frames in
   lockstep with browser callbacks near 60 Hz. Stage 2 Normal registered
   spell-card numbers 14, 18, 22, 26, and 29 when its documented Last Spell
@@ -289,6 +305,12 @@ All Web builds use
   skipped 190, which is separately covered by the Chromium Stage 6B practice
   run. These Firefox tests used Xvfb's software `llvmpipe` renderer and
   therefore establish correctness rather than production GPU performance.
+- A later Firefox 153 A/B test measured presentation stages separately. In
+  Lunatic Stage 1, bitmap creation averaged 38.82 ms and peaked at 82.32 ms;
+  the browser-specific proxy build removed that readback, increased authored
+  progression from about 24 FPS to about 33--36 FPS, moved the player through
+  the expected shared input path, created active/hit shots, and rendered the
+  gameplay field without a page or worker error.
 
 Run the bounded probes with:
 
@@ -306,7 +328,7 @@ The port has crossed the full-link, title/menu, input, audio-device, BGM-range,
 direct-renderer, full-route, conditional-spell, isolated persistent-save, and
 public-deployment gates. It is a public engineering release. The next work is:
 
-1. tune hardware Firefox pacing and expand Chromium/Firefox replay,
+1. validate hardware Firefox proxy pacing and complete-route endurance,
    pause/focus, audio-underrun, and repeated stage-reload regressions;
 2. measure and tune the fixed shared-memory ceiling under repeated long
    sessions;
@@ -318,3 +340,4 @@ public-deployment gates. It is a public engineering release. The next work is:
 - [Emscripten file system API](https://emscripten.org/docs/api_reference/Filesystem-API.html)
 - [Emscripten OpenGL support](https://emscripten.org/docs/porting/multimedia_and_graphics/OpenGL-support.html)
 - [Emscripten compiler settings](https://emscripten.org/docs/tools_reference/settings_reference.html)
+- [Mozilla Bug 1864882: WebGL OffscreenCanvas bitmap transfer performance](https://bugzilla.mozilla.org/show_bug.cgi?id=1864882)
