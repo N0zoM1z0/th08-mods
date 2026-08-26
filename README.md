@@ -70,7 +70,7 @@ your machine.
 
 Prefer to keep a copy or host the page yourself? The
 **[latest GitHub Release](https://github.com/N0zoM1z0/th08-web/releases/latest)**
-contains the same provenance-gated six-file static build and its SHA-256
+contains a provenance-gated six-file static build and its SHA-256
 manifest. It still contains no game data; local legal DAT selection is always
 required.
 
@@ -199,7 +199,7 @@ repository secrets:
 
 Pull requests do not deploy and do not receive these secrets.
 
-Tagged GitHub Releases attach a compressed copy of the same six-file static
+Tagged GitHub Releases attach a compressed six-file static
 artifact plus a SHA-256 manifest. Release archives are for self-hosting and
 offline retention; they do not include retail data and still require a host
 that supplies the staged isolation headers.
@@ -227,7 +227,7 @@ Never write deployment credentials into this repository or command logs.
 | --- | --- |
 | `src/` | Reconstructed authored game code and modern host adapters |
 | `src/modern/web/` | Browser launcher, Web compatibility boundary, and Pages metadata |
-| `scripts/build-web-game.sh` | Reproducible Emscripten Release build and staging |
+| `scripts/build-web-game.sh` | Digest-pinned Emscripten Release build and exact staging |
 | `scripts/package-web-release.sh` | Deterministic six-file release archive and SHA-256 manifest |
 | `scripts/check-web-provenance.py` | Retail-data and exact-artifact deployment gate |
 | `scripts/serve-web.py` | Local server with cross-origin-isolation headers |

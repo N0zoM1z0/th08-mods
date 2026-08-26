@@ -529,10 +529,11 @@ about three minutes. Production verification confirmed:
 - `crossOriginIsolated === true`;
 - correct isolation headers on redirect, HTML, and Wasm responses;
 - `application/wasm` content type;
-- a downloaded Wasm SHA-256 equal to the local Release artifact;
+- for that initial deployment, a downloaded Wasm SHA-256 equal to the tested
+  local Release artifact;
 - no Chromium console errors before local file selection.
 
-## 18. Reproduce the Web build from a clean checkout
+## 18. Rebuild the Web port from a clean checkout
 
 The build requires Docker and Python 3. It does not require an installed
 Emscripten SDK because the image is pinned by tag and digest.
@@ -564,6 +565,13 @@ scripts/package-web-release.sh v0.1.0
 
 The deterministic archive contains only the six deployment files and is
 accompanied by a SHA-256 manifest. It never contains either retail DAT file.
+
+The image digest fixes the compiler and SDK inputs, but this project does not
+claim that minified JS/Wasm is bit-for-bit identical across different host
+environments. Emscripten/Binaryen may assign different short internal symbol
+names on separate runners. For one fixed `build/web-dist`, the packaging script
+does normalize file order, timestamps, ownership, permissions, and gzip
+metadata so repeated archives are byte-identical.
 
 For an authorized production deployment, configure
 `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` outside the repository, then
