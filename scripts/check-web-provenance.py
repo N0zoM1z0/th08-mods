@@ -79,6 +79,15 @@ def save_boundary_violations() -> list[str]:
     if not has_save_mount:
         violations.append("the browser save filesystem must be isolated at /save")
 
+    if r"th08-web-firefox(?:\.html)?$" not in source:
+        violations.append(
+            "the Firefox launcher route must accept both .html and extensionless Pages paths"
+        )
+    if source.count("th08IsFirefoxBuildPath(location.pathname)") != 2:
+        violations.append(
+            "the early router and runtime mode selection must share the Firefox path predicate"
+        )
+
     for declaration in ("persistentFiles", "persistentDirectories"):
         match = re.search(rf"const\s+{declaration}\s*=\s*\[(.*?)\];", source, re.DOTALL)
         if match is None:

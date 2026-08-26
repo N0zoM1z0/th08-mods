@@ -155,7 +155,9 @@ enables `OFFSCREEN_FRAMEBUFFER`; context creation then requests
 `EMSCRIPTEN_WEBGL_CONTEXT_PROXY_ALWAYS`. These settings are link-time choices,
 so `scripts/build-web-game.sh` compiles the game objects once, emits the direct
 Chromium link, reconfigures and relinks the Firefox artifact, then restores the
-incremental build tree to the Chromium configuration.
+incremental build tree to the Chromium configuration. The shared launcher path
+predicate accepts both the `.html` filenames used by the development server
+and Cloudflare Pages' extensionless canonical aliases.
 
 This design is viable because the modern renderer already collapses the
 D3D8-shaped sprite stream into a few commands and one batched vertex upload per

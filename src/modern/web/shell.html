@@ -6,11 +6,15 @@
     <title>TH08 Web — Imperishable Night</title>
     <link rel="icon" type="image/png" href="th08-web-icon.png">
     <script>
+      function th08IsFirefoxBuildPath(pathname) {
+        return /(?:^|\/)th08-web-firefox(?:\.html)?$/.test(pathname);
+      }
+
       (() => {
         const query = new URLSearchParams(location.search);
         if (query.has("presentation")) return;
         const firefox = navigator.userAgent.includes("Firefox/");
-        const firefoxBuild = location.pathname.endsWith("/th08-web-firefox.html");
+        const firefoxBuild = th08IsFirefoxBuildPath(location.pathname);
         if (firefox === firefoxBuild) return;
         const target = new URL(
           firefox ? "th08-web-firefox.html" : "th08-web.html",
@@ -89,7 +93,7 @@
       const query = new URLSearchParams(location.search);
       const performanceDiagnosticsEnabled = query.get("perf") === "1";
       const requestedPresentationMode = query.get("presentation");
-      const firefoxProxyBuild = location.pathname.endsWith("/th08-web-firefox.html");
+      const firefoxProxyBuild = th08IsFirefoxBuildPath(location.pathname);
       const presentationMode = ["direct", "bitmap", "proxy"].includes(requestedPresentationMode)
         ? requestedPresentationMode
         : firefoxProxyBuild ? "proxy"

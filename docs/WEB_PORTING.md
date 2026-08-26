@@ -385,7 +385,10 @@ links `th08-web.html`/`.js`/`.wasm`, then reuses those objects for
 `th08-web-firefox.html`/`.js`/`.wasm`. The early launcher script redirects a
 Firefox visit before the user selects retail files or starts the Wasm runtime.
 Chromium therefore pays no proxy cost, while Firefox never enters the bitmap
-snapshot path during normal play.
+snapshot path during normal play. Cloudflare Pages canonicalizes HTML files to
+extensionless paths, so the same predicate recognizes both
+`th08-web-firefox.html` and `/th08-web-firefox`; the provenance/CI gate requires
+the early router and runtime mode selection to share that predicate.
 
 The proxy `Present` path deliberately calls `glFlush()` immediately before
 `emscripten_webgl_commit_frame()`. Removing that apparently redundant flush in
