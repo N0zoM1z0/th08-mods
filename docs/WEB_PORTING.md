@@ -88,6 +88,8 @@ flowchart LR
 The main thread owns browser-only APIs. A pthread worker owns the authored game
 loop and can block at compatibility boundaries without freezing the page.
 
+![TH08 Web launcher before any retail files are selected](../resources/web-launcher.png)
+
 ## 3. Milestone sequence
 
 The port was developed as a series of independently testable gates.
@@ -553,6 +555,15 @@ python3 scripts/ci.py
 python3 scripts/check-web-provenance.py --artifact build/web-dist
 git diff --check
 ```
+
+To package the exact allowlisted output for a tagged GitHub Release:
+
+```bash
+scripts/package-web-release.sh v0.1.0
+```
+
+The deterministic archive contains only the six deployment files and is
+accompanied by a SHA-256 manifest. It never contains either retail DAT file.
 
 For an authorized production deployment, configure
 `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` outside the repository, then

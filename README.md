@@ -15,6 +15,8 @@
 <p align="center">
   <a href="https://th08-web.pages.dev/"><strong>Enter the endless night</strong></a>
   ·
+  <a href="https://github.com/N0zoM1z0/th08-web/releases/latest">Latest release</a>
+  ·
   <a href="docs/WEB_PORTING.md">How we brought TH08 to the Web</a>
   ·
   <a href="docs/WEB_ARCHITECTURE.md">Architecture and verification</a>
@@ -26,7 +28,7 @@
 </p>
 
 <p align="center">
-  <img src="resources/web-launcher.png" width="1180" alt="TH08 Web launcher waiting for locally selected retail DAT files">
+  <img src="resources/th08-web-social-preview.jpg" width="1280" alt="TH08 Web source-built browser port and Imperishable Night title screen">
 </p>
 
 The false moon is up, the clock is moving, and Gensokyo has found one more
@@ -65,6 +67,12 @@ that browser profile. Clearing site data for `th08-web.pages.dev` removes them.
 That is the whole ritual. There is no installer, account, upload, or server-side
 game session: once the static Web build arrives, the night unfolds entirely on
 your machine.
+
+Prefer to keep a copy or host the page yourself? The
+**[latest GitHub Release](https://github.com/N0zoM1z0/th08-web/releases/latest)**
+contains the same provenance-gated six-file static build and its SHA-256
+manifest. It still contains no game data; local legal DAT selection is always
+required.
 
 ## Choose your browser
 
@@ -191,6 +199,18 @@ repository secrets:
 
 Pull requests do not deploy and do not receive these secrets.
 
+Tagged GitHub Releases attach a compressed copy of the same six-file static
+artifact plus a SHA-256 manifest. Release archives are for self-hosting and
+offline retention; they do not include retail data and still require a host
+that supplies the staged isolation headers.
+
+Build and package a tagged artifact locally with:
+
+```bash
+scripts/build-web-game.sh
+scripts/package-web-release.sh v0.1.0
+```
+
 For an authorized manual deployment:
 
 ```bash
@@ -208,6 +228,7 @@ Never write deployment credentials into this repository or command logs.
 | `src/` | Reconstructed authored game code and modern host adapters |
 | `src/modern/web/` | Browser launcher, Web compatibility boundary, and Pages metadata |
 | `scripts/build-web-game.sh` | Reproducible Emscripten Release build and staging |
+| `scripts/package-web-release.sh` | Deterministic six-file release archive and SHA-256 manifest |
 | `scripts/check-web-provenance.py` | Retail-data and exact-artifact deployment gate |
 | `scripts/serve-web.py` | Local server with cross-origin-isolation headers |
 | `docs/WEB_PORTING.md` | From-zero engineering narrative and reproducible porting method |
