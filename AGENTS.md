@@ -21,7 +21,7 @@ analyze or substitute a localized, patched, trial, or earlier executable.
 
 - Keep target observations, upstream reconstruction claims, adjacent-version
   inferences, and unknowns distinct.
-- [GensokyoClub/th08](https://github.com/GensokyoClub/th08) is the imported
+- [N0zoM1z0/th08](https://github.com/N0zoM1z0/th08) is the maintained
   reconstruction baseline. Its complete Git history and original contributor
   attribution must remain intact.
 - The [N0zoM1z0/th07 reconstruction](https://github.com/N0zoM1z0/th07)

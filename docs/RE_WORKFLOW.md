@@ -7,7 +7,7 @@ Use evidence in this order:
 1. The exact TH08 1.00d executable identified in `docs/ARCHITECTURE.md`.
 2. Target disassembly, bytes, imports, relocations, xrefs, and runtime behavior.
 3. Exact compiler/reccmp/objdiff output produced in this repository.
-4. The inherited GensokyoClub TH08 source and mapping files.
+4. The maintained N0zoM1z0 TH08 source and mapping files.
 5. TH06, TH07, decompiler output, and other adjacent-version references.
 
 Lower-ranked evidence helps form hypotheses but cannot override target bytes.

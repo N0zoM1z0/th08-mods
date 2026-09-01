@@ -23,7 +23,7 @@ reconciled against the exact target before they become comparison boundaries.
 ## Provenance
 
 The repository is a history-preserving continuation of
-[GensokyoClub/th08](https://github.com/GensokyoClub/th08). The upstream source,
+[N0zoM1z0/th08](https://github.com/N0zoM1z0/th08). The upstream source,
 configuration, build tools, and contributor commits form the initial baseline.
 Continuation changes should be additive commits by their actual authors; do
 not squash or re-author the imported history.

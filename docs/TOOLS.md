@@ -52,7 +52,7 @@ gh run list --repo N0zoM1z0/th08 --branch main
 ```
 
 A bare `gh run list` can resolve inherited upstream metadata and display
-`GensokyoClub/th08` workflows instead. Those runs are not CI evidence for this
+`N0zoM1z0/th08` workflows instead. Those runs are not CI evidence for this
 repository; confirm the URL and `headSha` before recording a remote result.
 
 ## Historical reproducers

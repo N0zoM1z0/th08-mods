@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-labelledby="title description">
+  <title id="title">TH08 Mods</title>
+  <desc id="description">A violet moon, glowing danmaku, and modifier badges above the words Imperishable Night, but the rules are optional.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070716"/>
+      <stop offset="0.55" stop-color="#171033"/>
+      <stop offset="1" stop-color="#310e45"/>
+    </linearGradient>
+    <radialGradient id="moon" cx="42%" cy="35%" r="65%">
+      <stop offset="0" stop-color="#fff8df"/>
+      <stop offset="0.62" stop-color="#f8d8ff"/>
+      <stop offset="1" stop-color="#9e56cc"/>
+    </radialGradient>
+    <linearGradient id="flare" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#52f7ff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#52f7ff" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ff5bc8" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#cfa8ff" stroke-opacity="0.055"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="420" rx="24" fill="url(#sky)"/>
+  <rect width="1280" height="420" rx="24" fill="url(#grid)"/>
+  <path d="M0 340C210 250 365 410 590 315S960 260 1280 338V420H0Z" fill="#080612" fill-opacity="0.84"/>
+
+  <g opacity="0.72" fill="none" stroke="#bd7cff">
+    <circle cx="1090" cy="62" r="3" fill="#bd7cff"/>
+    <circle cx="1160" cy="126" r="5"/>
+    <circle cx="1216" cy="216" r="3" fill="#bd7cff"/>
+    <path d="M1090 62L1160 126L1216 216" stroke-opacity="0.35"/>
+    <circle cx="82" cy="92" r="4" fill="#52f7ff" stroke="#52f7ff"/>
+    <circle cx="146" cy="55" r="3"/>
+    <circle cx="203" cy="107" r="5"/>
+    <path d="M82 92L146 55L203 107" stroke="#52f7ff" stroke-opacity="0.3"/>
+  </g>
+
+  <g transform="translate(180 210)" filter="url(#glow)">
+    <circle r="118" fill="#8f48c5" opacity="0.2"/>
+    <circle r="92" fill="url(#moon)"/>
+    <circle cx="-24" cy="-21" r="15" fill="#7d3ca5" opacity="0.16"/>
+    <circle cx="29" cy="31" r="23" fill="#7d3ca5" opacity="0.12"/>
+    <circle cx="36" cy="-39" r="10" fill="#7d3ca5" opacity="0.14"/>
+  </g>
+
+  <g filter="url(#glow)">
+    <circle cx="64" cy="250" r="6" fill="#52f7ff"/>
+    <circle cx="93" cy="295" r="5" fill="#ff5bc8"/>
+    <circle cx="130" cy="329" r="4" fill="#52f7ff"/>
+    <circle cx="229" cy="337" r="5" fill="#ff5bc8"/>
+    <circle cx="274" cy="300" r="4" fill="#52f7ff"/>
+    <circle cx="303" cy="246" r="6" fill="#ff5bc8"/>
+    <path d="M54 226C78 354 285 382 318 220" fill="none" stroke="url(#flare)" stroke-width="2"/>
+  </g>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+    <text x="356" y="178" fill="#ffffff" font-size="92" font-weight="800" letter-spacing="8">TH08 MODS</text>
+    <text x="361" y="225" fill="#e8cdfa" font-size="20" font-weight="600" letter-spacing="4">IMPERISHABLE NIGHT, BUT THE RULES ARE OPTIONAL.</text>
+
+    <g transform="translate(360 272)" font-size="17" font-weight="800" text-anchor="middle">
+      <g><rect width="62" height="42" rx="12" fill="#52f7ff"/><text x="31" y="27" fill="#091223">HD</text></g>
+      <g transform="translate(76)"><rect width="62" height="42" rx="12" fill="#ff5bc8"/><text x="31" y="27" fill="#240817">FL</text></g>
+      <g transform="translate(152)"><rect width="62" height="42" rx="12" fill="#b982ff"/><text x="31" y="27" fill="#160a24">MR</text></g>
+      <g transform="translate(228)"><rect width="62" height="42" rx="12" fill="#ffe66d"/><text x="31" y="27" fill="#231d04">DT</text></g>
+      <g transform="translate(304)"><rect width="62" height="42" rx="12" fill="#78ffa8"/><text x="31" y="27" fill="#072114">RX</text></g>
+      <g transform="translate(380)"><rect width="62" height="42" rx="12" fill="#ff8d72"/><text x="31" y="27" fill="#25100a">BS</text></g>
+      <g transform="translate(456)"><rect width="62" height="42" rx="12" fill="#f2f2ff"/><text x="31" y="27" fill="#141421">NB</text></g>
+    </g>
+  </g>
+
+  <text x="1188" y="374" text-anchor="end" fill="#bb9bcf" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" letter-spacing="2">WEB · LINUX · PORTABLE CORE</text>
+</svg>

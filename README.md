@@ -1,108 +1,92 @@
 <p align="center">
-  <img src="resources/modern-icon.png" width="128" alt="TH08 Web icon">
+  <img src="resources/th08-mods-banner.svg" width="1280" alt="TH08 Mods — Imperishable Night, but the rules are optional">
 </p>
 
-<h1 align="center">TH08 Web</h1>
+<h1 align="center">TH08 Mods</h1>
 
 <p align="center">
-  <strong>One browser tab. Two legal DAT files. One endless night.</strong>
+  <strong>Imperishable Night, but the rules are optional.</strong>
 </p>
 
 <p align="center">
-  <em>Touhou Eiyashou ~ Imperishable Night, source-built for the Web.</em>
+  Eleven deterministic gameplay modifiers. One portable runtime. Web first,
+  Linux ready, and designed to travel to TH06 and TH07.
 </p>
 
-> [!NOTE]
-> This repository is now the Web-first development home for a deterministic,
-> portable TH08 modifier runtime. The preserved TH08 Web port remains the
-> execution baseline. See the [modifier implementation plan](docs/MOD_PLAN.md)
-> for architecture, milestones, replay requirements, and the TH06/TH07 porting
-> boundary.
-
 <p align="center">
-  <a href="https://th08-mods.pages.dev/"><strong>Enter the modified night</strong></a>
+  <a href="https://th08-mods.pages.dev/"><strong>Play TH08 Mods</strong></a>
   ·
-  <a href="https://github.com/N0zoM1z0/th08-web/releases/latest">Latest release</a>
+  <a href="docs/MOD_PLAN.md">Modifier roadmap</a>
   ·
-  <a href="docs/WEB_PORTING.md">How we brought TH08 to the Web</a>
+  <a href="docs/WEB_ARCHITECTURE.md">Web architecture</a>
   ·
-  <a href="docs/WEB_ARCHITECTURE.md">Architecture and verification</a>
+  <a href="docs/WEB_PORTING.md">Porting story</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/N0zoM1z0/th08-web/actions/workflows/deploy-web.yml"><img src="https://github.com/N0zoM1z0/th08-web/actions/workflows/deploy-web.yml/badge.svg?branch=main" alt="Web deployment status"></a>
-  <a href="https://github.com/N0zoM1z0/th08-web/actions/workflows/ci.yml"><img src="https://github.com/N0zoM1z0/th08-web/actions/workflows/ci.yml/badge.svg?branch=main" alt="Repository validation status"></a>
+  <a href="https://github.com/N0zoM1z0/th08-mods/actions/workflows/deploy-web.yml"><img src="https://github.com/N0zoM1z0/th08-mods/actions/workflows/deploy-web.yml/badge.svg?branch=main" alt="Web deployment status"></a>
+  <a href="https://github.com/N0zoM1z0/th08-mods/actions/workflows/ci.yml"><img src="https://github.com/N0zoM1z0/th08-mods/actions/workflows/ci.yml/badge.svg?branch=main" alt="Repository validation status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-7c3aed.svg" alt="MIT license"></a>
 </p>
 
-<p align="center">
-  <img src="resources/th08-web-social-preview.jpg" width="1280" alt="TH08 Web source-built browser port and Imperishable Night title screen">
-</p>
+The false moon has been up for long enough. It is time to rotate it 90 degrees,
+hide half the bullets, accelerate the clock, disable bombs, and see what
+happens.
 
-The false moon is up, the clock is moving, and Gensokyo has found one more
-window: your browser.
-
-**TH08 Web** brings the original Japanese TH08 version 1.00d across the browser
-boundary. The reconstructed C++ game code runs as WebAssembly; a small
-JavaScript layer handles browser file access, input, audio, saves, and the
-canvas. This is the game logic compiled for the Web, not a TypeScript remake or
-an executable running inside an emulator.
+**TH08 Mods** turns the source-reconstructed Touhou Eiyashou ~ Imperishable
+Night into a composable modifier playground. The original C++ game logic runs
+natively on Linux or as WebAssembly in the browser. Mods live in small,
+independent source modules instead of a monolithic patch, so rules can be mixed,
+tested, replayed, and ported without tying them to one frontend.
 
 > [!IMPORTANT]
 > This project does not distribute `th08.dat`, `thbgm.dat`, `th08.exe`, or
 > extracted retail assets. You must provide the two DAT files from your own
-> legally obtained copy of TH08. They remain local to your browser and are
-> never uploaded to the site.
+> legally obtained copy of TH08. In the Web build they stay on your machine and
+> are never uploaded to the site.
 
-## Enter the night
+## Play now
 
-1. Open **[th08-mods.pages.dev](https://th08-mods.pages.dev/)** in a desktop
-   browser. Current desktop Chrome is recommended.
-2. Select `th08.dat` and `thbgm.dat` from your legally obtained TH08
-   installation.
-3. Choose **Start TH08**, then click the game canvas if it does not already
-   have keyboard focus.
+1. Open **[th08-mods.pages.dev](https://th08-mods.pages.dev/)** in a current
+   desktop browser. Chrome is recommended; Firefox has a dedicated build.
+2. Select `th08.dat` and `thbgm.dat` from your legal TH08 installation.
+3. Pick some modifiers, choose **Start TH08**, and click the canvas if it needs
+   keyboard focus.
 
-The launcher copies `th08.dat` into volatile session memory. The much larger
-`thbgm.dat` remains a browser `File` and is read in small ranges as music is
-needed. Neither archive is bundled, transmitted, cached by the site, or stored
-in browser persistence.
+The launcher keeps `th08.dat` in volatile session memory and range-reads
+`thbgm.dat` directly from the selected browser file. Settings, scores, replays,
+backups, and snapshots use a dedicated IndexedDB namespace that is separate
+from the original TH08 Web deployment.
 
-Settings, scores, replays, backups, and snapshots are stored separately in the
-browser's IndexedDB storage. They survive a normal reload and remain private to
-that browser profile. Clearing site data for `th08-mods.pages.dev` removes them.
+## Pick your poison
 
-Replay recording and playback are supported. Complete the original save flow
-by choosing a replay slot and confirming **End** on the name-entry screen; the
-saved run then appears in the title screen's **Replay** menu.
-
-That is the whole ritual. There is no installer, account, upload, or server-side
-game session: once the static Web build arrives, the night unfolds entirely on
-your machine.
-
-Prefer to keep a copy or host the page yourself? The
-**[latest GitHub Release](https://github.com/N0zoM1z0/th08-web/releases/latest)**
-contains a provenance-gated static build and its SHA-256 manifest. It still
-contains no game data; local legal DAT selection is always required. Builds
-from this revision use the exact nine-file layout documented below.
-
-## Choose your browser
-
-| Browser | Status | Notes |
+| Code | Modifier | What it does |
 | --- | --- | --- |
-| Chrome | **Recommended** | Best observed performance and frame pacing. |
-| Chromium-based desktop browsers | Expected to work | Use a current version with hardware acceleration enabled. |
-| Firefox | Supported | Automatically uses a dedicated no-readback build; preliminary hardware play now generally reports 50+ FPS. |
-| Safari and mobile browsers | Not verified | Keyboard play, WebAssembly threads, and the current presentation path are desktop-oriented. |
+| `HD` | Hidden | Bullets and lasers fade away as they age. Remember the pattern or improvise. |
+| `FL` | Flashlight | Darkness covers the playfield except for a feathered window around the player. |
+| `AT` | Autoshot | Holds Shoot during active gameplay while leaving movement, focus, and bombs to you. |
+| `MR` | Mirror | Reflects horizontally or vertically, or rotates the playfield by 90°, 180°, or 270°. Input follows the transformed view and the HUD stays upright. |
+| `NF` | No Fail | Preserves misses, deaths, power loss, and respawns, but lets the run continue at zero lives. |
+| `DT` | Double Time | Advances active gameplay at a deterministic 1.5× rate while menus and pause remain at 1×. |
+| `HR` | Hard Rock | 15% faster bullets, 10% slower movement, a 25% larger hitbox, and a 20% tighter graze radius. |
+| `EZ` | Easy | 15% slower bullets, a 25% smaller hitbox, a 25% wider graze radius, two extra starting bombs, and 25% longer spell timers. |
+| `RX` | Relax | Holds Shoot and Focus during gameplay; movement and bombs remain manual. |
+| `BS` | Blind Spot | Projectiles fade as they approach and become invisible within 48 pixels of the player. |
+| `NB` | No Bomb | Removes bomb input during gameplay. There is no emergency button now. |
 
-The game requires WebAssembly threads, `SharedArrayBuffer`, WebGL 2, Web Audio,
-and a cross-origin-isolated HTTPS page. The production site supplies the
-required COOP and COEP headers.
+`HR` conflicts with `EZ`, and `AT` conflicts with `RX`. All other combinations
+are fair game.
 
-For the smoothest bullet-hell input and pacing, close heavily loaded tabs,
-leave browser hardware acceleration enabled, and avoid power-saving modes that
-throttle the display refresh rate.
+### Suggested bad ideas
 
-## Danmaku controls
+| Recipe | Mods | Experience |
+| --- | --- | --- |
+| Memory Palace | `HD,BS` | Bullets disappear with age and proximity. Your working memory is the renderer. |
+| Sideways Moon | `MR,DT` + rotate 90° | Turn the playfield on its side, then give it a deadline. |
+| Just Dodge | `RX,NB,NF` | Shooting is automatic, bombing is impossible, and the run refuses to end. |
+| The Moon Chose Violence | `HD,FL,DT,HR` | Less information, less time, faster bullets, larger consequences. |
+
+## Controls
 
 | Key | Action |
 | --- | --- |
@@ -112,90 +96,57 @@ throttle the display refresh rate.
 | `Shift` | Focus movement and show the hitbox |
 | `Esc` | Pause |
 
-## Modifier prototype
+## Run it on Linux
 
-The Web launcher exposes **Hidden (`HD`)**, **Flashlight (`FL`)**,
-**Autoshot (`AT`)**, **Mirror (`MR`)**, **No Fail (`NF`)**, and
-**Double Time (`DT`)** as independent pre-launch selections. Mirror supports
-horizontal and vertical reflection plus
-90°, 180°, and 270° rotation. Quarter turns preserve the complete 384×448
-playfield with aspect-fit letterboxing; movement remains relative to the
-transformed screen and the HUD stays upright. No Fail retains misses, death
-animation, death count, power loss, and normal respawning, but suppresses the
-final retry transition and never decrements lives below zero. The Wasm core
-shows the canonical run manifest before retail data is loaded. Double Time
-advances authored gameplay and audio at a deterministic 1.5× rate while the
-renderer and browser presentation remain display-paced; menus and pause remain
-at 1×.
-
-The native Linux build accepts the same modifier codes:
+Build the 32-bit native target, then point it at your legal retail files:
 
 ```bash
 scripts/build-modern-linux.sh
 build/modern-linux/th08-modern \
   --data-dir /path/to/legal/th08/files \
-  --mods=HD,FL,AT,MR,NF,DT \
+  --mods=HD,FL,MR,DT,BS,NB \
   --mirror=90
 ```
 
-Inspect a selection without starting the game or supplying DAT files:
+Inspect a normalized selection without starting the game or supplying DAT
+files:
 
 ```bash
-build/modern-linux/th08-modern --mods=HD,FL,AT,MR,NF,DT --mirror=vertical --mod-manifest
+build/modern-linux/th08-modern --mods=RX,NB,NF --mod-manifest
 build/modern-linux/th08-modern --mod-help
 ```
 
-Gameplay code is organized by modifier, not by host. Each directory under
-`src/mod/modifiers/` owns its portable policy and a thin `th08/` translation;
-Web and Linux only select a configuration through the shared C ABI. See the
-[modifier implementation plan](docs/MOD_PLAN.md) for the exact source layout,
-determinism contract, and TH06/TH07 adapter boundary.
+Long names such as `hidden`, `double-time`, `blind-spot`, and `no-bomb` are
+accepted too. Mirror defaults to horizontal and supports `horizontal`,
+`vertical`, `90`, `180`, and `270`.
 
-## Inside the spell circle
+## How the mods travel
 
-- The reconstructed authored C++ game and PBG archive code compile to
-  WebAssembly with Emscripten 6.0.8.
-- `PROXY_TO_PTHREAD` keeps the authored game loop off the browser UI thread and
-  retains the existing startup and BGM thread structure.
-- A direct WebGL 2 renderer translates the D3D8-shaped draw interface into
-  shaders, batched vertex uploads, and browser canvas presentation.
-- Chromium composites the worker-owned canvas directly. Firefox receives the
-  same batched renderer through a main-thread WebGL proxy, avoiding its costly
-  per-frame `OffscreenCanvas` snapshot readback.
-- The authored DirectSound-shaped mixer feeds Web Audio while BGM data is
-  range-read from the user-selected local file.
-- Browser key events enter shared atomic state and are merged with the
-  DirectInput-shaped polling path, preserving short key presses between frames.
-- IDBFS persists only the allowlisted save paths. Retail archives stay outside
-  persistent storage.
+Every modifier is a vertical slice under `src/mod/modifiers/`:
 
-The implementation and its verified boundaries are documented in
-**[docs/WEB_ARCHITECTURE.md](docs/WEB_ARCHITECTURE.md)**. For the complete
-from-zero engineering story—including the failed bring-up paths, renderer
-replacement, browser boundaries, correctness work, and public release—read
-**[Engineering TH08 Web](docs/WEB_PORTING.md)**.
+```text
+src/mod/modifiers/
+├── hidden/
+│   ├── HiddenPolicy.*       # portable rule
+│   └── th08/Th08Hidden.*    # TH08 observation and rendering adapter
+├── mirror/
+│   ├── MirrorPolicy.*
+│   └── th08/Th08Mirror.*
+└── ... one directory per modifier
+```
 
-## Route status
+The portable layer owns configuration, conflicts, input policy, geometry,
+timing, and deterministic manifest generation. The `th08/` layer translates
+those policies into the reconstructed game's concrete objects and hooks. Web
+and Linux are hosts: they select a configuration through the shared C ABI, but
+do not own gameplay rules.
 
-The imperishable night is playable from title to ending. The following paths
-have been exercised with locally selected retail data:
+That boundary is deliberate. A future TH06 or TH07 port keeps the portable
+policy and supplies a new game adapter instead of copying frontend-specific
+patches. The full compatibility, replay, and adapter contract lives in
+[`docs/MOD_PLAN.md`](docs/MOD_PLAN.md).
 
-- title, difficulty, team, practice, Music Room, dialogue, and result screens;
-- keyboard movement, shooting, focus, bombs, score, browser-local replay
-  recording and playback, and other browser-local saves;
-- direct WebGL 2 rendering and Web Audio playback;
-- a complete Lunatic Border Team Final-B route in Chromium;
-- a complete Lunatic Border Team Final-B endurance route on the earlier
-  Firefox bitmap bridge, including return through Result to the title screen;
-- a separate Stage 6B practice run covering the final spell sequence;
-- reload and persistence tests confirming that no DAT enters IndexedDB.
-
-Remaining engineering work includes controlled hardware profiling and
-long-route endurance for the new Firefox presentation build, additional replay
-endurance, and browser memory-ceiling measurement. See the architecture
-document for the exact evidence and limitations behind each claim.
-
-## Build your own night
+## Build the Web version
 
 Requirements:
 
@@ -204,8 +155,8 @@ Requirements:
 - a desktop browser
 - your own legal `th08.dat` and `thbgm.dat`
 
-Build the pinned Release configuration and start the repository development
-server:
+Build the pinned Release configuration, verify the exact public artifact, and
+start the development server:
 
 ```bash
 scripts/build-web-game.sh
@@ -213,9 +164,8 @@ python3 scripts/check-web-provenance.py --artifact build/web-dist
 scripts/serve-web.py --port 8000
 ```
 
-Open `http://127.0.0.1:8000/`. Do not use a generic static server for this
-build: Emscripten pthreads require the COOP, COEP, and CORP headers supplied by
-`scripts/serve-web.py`.
+Open `http://127.0.0.1:8000/`. The repository server supplies the COOP, COEP,
+and CORP headers required by Emscripten pthreads.
 
 The generated deployment directory contains exactly nine allowlisted files:
 
@@ -231,85 +181,85 @@ th08-web-firefox.wasm
 th08-web-icon.png
 ```
 
-Any extra file, missing file, symbolic link, executable, retail archive, or
-common archive container causes the provenance check to fail.
+An extra file, missing file, symbolic link, executable, retail archive, or
+common archive container fails the provenance gate.
 
-## Release boundary
+## Web architecture
 
-Cloudflare Pages hosts the public static build because it applies the checked-in
-`_headers` policy required by WebAssembly threads. Bare GitHub Pages hosting is
-not used because it cannot attach the repository-defined isolation headers.
+- The reconstructed C++ game and PBG archive code compile to WebAssembly with
+  a digest-pinned Emscripten toolchain.
+- `PROXY_TO_PTHREAD` keeps the authored game loop away from the browser UI
+  thread while retaining the startup and BGM thread structure.
+- A direct WebGL 2 renderer translates the D3D8-shaped draw interface into
+  shaders, batched vertex uploads, and canvas presentation.
+- The DirectSound-shaped mixer feeds Web Audio while BGM data is range-read
+  from the local file.
+- Browser key events enter shared atomic state and merge with the
+  DirectInput-shaped polling path.
+- IDBFS persists only allowlisted save paths. Retail archives remain outside
+  persistent storage.
 
-Pushes to `main` run the following release chain:
+Chrome and Chromium use a worker-owned canvas. Firefox automatically selects a
+main-thread WebGL presentation build that avoids expensive per-frame canvas
+readback. See [`docs/WEB_ARCHITECTURE.md`](docs/WEB_ARCHITECTURE.md) for the
+verified boundaries and [`docs/WEB_PORTING.md`](docs/WEB_PORTING.md) for the
+engineering narrative.
 
-1. repository-owned validation;
-2. the digest-pinned Emscripten Release build;
-3. the exact deployment-boundary check;
-4. Cloudflare Pages Direct Upload.
+## Deployments and releases
 
-The workflow is defined in
-[`deploy-web.yml`](.github/workflows/deploy-web.yml). It requires these GitHub
-repository secrets:
+Cloudflare Pages hosts the static build at
+**[th08-mods.pages.dev](https://th08-mods.pages.dev/)** because the game needs
+repository-defined cross-origin isolation headers. Pushes to `main` validate,
+build, provenance-check, and deploy through
+[`deploy-web.yml`](.github/workflows/deploy-web.yml).
+
+The workflow expects these GitHub repository secrets:
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`, scoped to **Account → Cloudflare Pages → Edit**
 
-Pull requests do not deploy and do not receive these secrets.
+Pull requests do not deploy and do not receive those secrets. Never place
+deployment credentials in the repository or command logs.
 
-Tagged GitHub Releases attach a compressed nine-file static
-artifact plus a SHA-256 manifest. Release archives are for self-hosting and
-offline retention; they do not include retail data and still require a host
-that supplies the staged isolation headers.
-
-Build and package a tagged artifact locally with:
+Tagged releases package the same nine static files plus a SHA-256 manifest:
 
 ```bash
 scripts/build-web-game.sh
 scripts/package-web-release.sh v0.1.0
 ```
 
-For an authorized manual deployment:
+Release archives still contain no retail data and require a host that applies
+the included isolation headers.
 
-```bash
-export CLOUDFLARE_ACCOUNT_ID=<account-id>
-export CLOUDFLARE_API_TOKEN=<token-with-pages-edit>
-npx wrangler@4.125.0 pages deploy build/web-dist --project-name=th08-mods --branch=main
-```
-
-Never write deployment credentials into this repository or command logs.
-
-## Map of the boundary
+## Repository map
 
 | Path | Purpose |
 | --- | --- |
-| `src/` | Reconstructed authored game code and modern host adapters |
-| `src/mod/modifiers/` | Independent portable modifier policies and per-game translations |
-| `src/mod/hosts/` | Reusable native configuration adapters with no gameplay rules |
-| `src/modern/web/` | Browser launcher, Web compatibility boundary, and Pages metadata |
-| `scripts/build-web-game.sh` | Digest-pinned Emscripten Release build and exact staging |
-| `scripts/package-web-release.sh` | Deterministic nine-file release archive and SHA-256 manifest |
-| `scripts/check-web-provenance.py` | Retail-data and exact-artifact deployment gate |
-| `scripts/serve-web.py` | Local server with cross-origin-isolation headers |
-| `docs/WEB_PORTING.md` | From-zero engineering narrative and reproducible porting method |
-| `docs/WEB_ARCHITECTURE.md` | Architecture, provenance model, and observed verification |
-| `.github/workflows/deploy-web.yml` | Validated `main` deployment to Cloudflare Pages |
+| `src/mod/modifiers/` | Independent portable modifier policies and TH08 adapters |
+| `src/mod/core/` | Runtime state, validation, ordering, and deterministic queries |
+| `src/mod/hosts/` | Reusable host-side configuration adapters |
+| `src/modern/web/` | Browser launcher and Web compatibility boundary |
+| `src/modern/linux/` | Native Linux compatibility and presentation boundary |
+| `tests/mod/` | Portable modifier, registry, runtime, and CLI tests |
+| `scripts/check-web-provenance.py` | Exact artifact and retail-data deployment gate |
+| `docs/MOD_PLAN.md` | Modifier architecture, status, and porting contract |
 
-## Credits
+## Foundations
+
+This repository combines two maintained source foundations:
+
+- [N0zoM1z0/th08](https://github.com/N0zoM1z0/th08) — the reconstructed TH08
+  game source and native build foundation.
+- [N0zoM1z0/th08-web](https://github.com/N0zoM1z0/th08-web) — the WebAssembly,
+  browser compatibility, persistence, and deployment foundation.
 
 Touhou Project and `東方永夜抄 ～ Imperishable Night` are works of Team Shanghai
-Alice / ZUN. This project is unofficial and is not affiliated with or endorsed
-by Team Shanghai Alice.
-
-This repository is the Web-focused fork of our source reconstruction,
-[N0zoM1z0/th08](https://github.com/N0zoM1z0/th08). Its authored C++ game code is
-the foundation beneath the browser boundary, and its contributor authorship
-and commit history remain intact here.
-
-The Web icon is project-owned artwork carried over from the modern port. It is
-not extracted from the retail executable or archives.
+Alice / ZUN. TH08 Mods is an unofficial fan project and is not affiliated with
+or endorsed by Team Shanghai Alice.
 
 ## License
 
-Repository code and documentation are provided under the included MIT License.
-That license does not grant rights to the original game, executable, DAT files,
-music, dialogue, graphics, or other retail content.
+Repository code and documentation are provided under the included
+[MIT License](LICENSE). That license does not grant rights to the original
+game, executable, DAT files, music, dialogue, graphics, or other retail
+content.
