@@ -2,6 +2,9 @@
 
 #include "ModApi.h"
 #include "TestHarness.hpp"
+#include "modifiers/mirror/MirrorGeometry.hpp"
+
+#include <cmath>
 
 namespace
 {
@@ -32,11 +35,52 @@ void CheckCardinalMapping(uint32_t mode,
     CHECK(FilterDirection(mode, TH_MOD_ACTION_LEFT) == left);
 }
 
+void CheckPoint(const th_mod::mirror::Point &point, float x, float y)
+{
+    CHECK(std::fabs(point.x - x) < 0.001f);
+    CHECK(std::fabs(point.y - y) < 0.001f);
+}
+
+void TestGeometry()
+{
+    const float left = 32.0f;
+    const float top = 16.0f;
+    const float width = 384.0f;
+    const float height = 448.0f;
+    CHECK(std::fabs(th_mod::mirror::QuarterTurnScale(width, height) -
+                    6.0f / 7.0f) < 0.001f);
+    CheckPoint(th_mod::mirror::TransformPoint(
+                   TH_MOD_MIRROR_HORIZONTAL, left, top, width, height,
+                   left, top),
+               416.0f, 16.0f);
+    CheckPoint(th_mod::mirror::TransformPoint(
+                   TH_MOD_MIRROR_VERTICAL, left, top, width, height,
+                   left, top),
+               32.0f, 464.0f);
+    CheckPoint(th_mod::mirror::TransformPoint(
+                   TH_MOD_MIRROR_ROTATE_90, left, top, width, height,
+                   left, top),
+               416.0f, 75.42857f);
+    CheckPoint(th_mod::mirror::TransformPoint(
+                   TH_MOD_MIRROR_ROTATE_180, left, top, width, height,
+                   left, top),
+               416.0f, 464.0f);
+    CheckPoint(th_mod::mirror::TransformPoint(
+                   TH_MOD_MIRROR_ROTATE_270, left, top, width, height,
+                   left, top),
+               32.0f, 404.57143f);
+    CheckPoint(th_mod::mirror::TransformPoint(
+                   TH_MOD_MIRROR_ROTATE_90, left, top, width, height,
+                   224.0f, 240.0f),
+               224.0f, 240.0f);
+}
+
 } // namespace
 
 void TestMirrorPolicy()
 {
     ResetRuntime();
+    TestGeometry();
 
     CheckCardinalMapping(TH_MOD_MIRROR_HORIZONTAL,
                          TH_MOD_ACTION_UP, TH_MOD_ACTION_LEFT,

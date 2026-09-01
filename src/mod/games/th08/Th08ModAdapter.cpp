@@ -1,6 +1,7 @@
 #include "mod/games/th08/Th08ModAdapter.hpp"
 
 #include "mod/games/th08/Th08InputAdapter.hpp"
+#include "mod/modifiers/mirror/th08/Th08Mirror.hpp"
 #include <stdio.h>
 
 namespace th08
@@ -70,6 +71,10 @@ bool RegisterHooks()
     const bool filtersInput = IsEnabled(TH_MOD_BUILTIN_AUTOSHOT) ||
                               IsEnabled(TH_MOD_BUILTIN_MIRROR);
     if (filtersInput && !input::RegisterHook())
+    {
+        return false;
+    }
+    if (IsEnabled(TH_MOD_BUILTIN_MIRROR) && !mirror::RegisterHooks())
     {
         return false;
     }

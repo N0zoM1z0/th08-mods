@@ -1,5 +1,8 @@
 #include "d3d8_internal.hpp"
 #include "Gui.hpp"
+#ifdef TH08_MOD_BUILD
+#include "mod/modifiers/mirror/MirrorGeometry.hpp"
+#endif
 
 #include <SDL.h>
 #ifdef TH08_MODERN_WEB
@@ -27,6 +30,37 @@ namespace
 #define TH08_WEB_RENDER_STAGE(stage) fprintf(stderr, "th08-web: renderer: %s\n", stage)
 #else
 #define TH08_WEB_RENDER_STAGE(stage) ((void)0)
+#endif
+
+#ifdef TH08_MOD_BUILD
+struct PlayfieldTransformState
+{
+    bool enabled;
+    unsigned int mode;
+    float left;
+    float top;
+    float width;
+    float height;
+};
+
+PlayfieldTransformState g_playfieldTransform = {
+    false, TH_MOD_MIRROR_HORIZONTAL, 0.0f, 0.0f, 0.0f, 0.0f};
+
+void ApplyPlayfieldTransform(float *x, float *y)
+{
+    if (!g_playfieldTransform.enabled)
+    {
+        return;
+    }
+    const th_mod::mirror::Point transformed =
+        th_mod::mirror::TransformPoint(
+            g_playfieldTransform.mode,
+            g_playfieldTransform.left, g_playfieldTransform.top,
+            g_playfieldTransform.width, g_playfieldTransform.height,
+            *x, *y);
+    *x = transformed.x;
+    *y = transformed.y;
+}
 #endif
 
 class LinuxTexture;
@@ -1451,29 +1485,40 @@ class LinuxDevice : public IDirect3DDevice8
     {
         if (transformed)
         {
-            // D3D8 pre-transformed vertices use integer pixel centers, while
-            // OpenGL samples at half-integer centers.
-            *xOut = position[0] + 0.5f; *yOut = position[1] + 0.5f; *zOut = position[2];
+            *xOut = position[0]; *yOut = position[1]; *zOut = position[2];
             *fogCoordinateOut = 0.0f;
-            return;
         }
-        float vector[4] = {position[0], position[1], position[2], 1.0f};
-        const D3DMATRIX *matrices[3] = {&world, &view, &projection};
-        for (int index = 0; index < 3; ++index)
+        else
         {
-            const D3DMATRIX &m = *matrices[index]; float next[4];
-            next[0] = vector[0] * m._11 + vector[1] * m._21 + vector[2] * m._31 + vector[3] * m._41;
-            next[1] = vector[0] * m._12 + vector[1] * m._22 + vector[2] * m._32 + vector[3] * m._42;
-            next[2] = vector[0] * m._13 + vector[1] * m._23 + vector[2] * m._33 + vector[3] * m._43;
-            next[3] = vector[0] * m._14 + vector[1] * m._24 + vector[2] * m._34 + vector[3] * m._44;
-            memcpy(vector, next, sizeof(vector));
-            if (index == 1)
-                *fogCoordinateOut = fabsf(vector[2]);
+            float vector[4] = {position[0], position[1], position[2], 1.0f};
+            const D3DMATRIX *matrices[3] = {&world, &view, &projection};
+            for (int index = 0; index < 3; ++index)
+            {
+                const D3DMATRIX &m = *matrices[index]; float next[4];
+                next[0] = vector[0] * m._11 + vector[1] * m._21 + vector[2] * m._31 + vector[3] * m._41;
+                next[1] = vector[0] * m._12 + vector[1] * m._22 + vector[2] * m._32 + vector[3] * m._42;
+                next[2] = vector[0] * m._13 + vector[1] * m._23 + vector[2] * m._33 + vector[3] * m._43;
+                next[3] = vector[0] * m._14 + vector[1] * m._24 + vector[2] * m._34 + vector[3] * m._44;
+                memcpy(vector, next, sizeof(vector));
+                if (index == 1)
+                    *fogCoordinateOut = fabsf(vector[2]);
+            }
+            float reciprocal = fabsf(vector[3]) > 1.0e-8f ? 1.0f / vector[3] : 1.0f;
+            *xOut = viewport.X + (vector[0] * reciprocal + 1.0f) * viewport.Width * 0.5f;
+            *yOut = viewport.Y + (1.0f - vector[1] * reciprocal) * viewport.Height * 0.5f;
+            *zOut = viewport.MinZ + vector[2] * reciprocal * (viewport.MaxZ - viewport.MinZ);
         }
-        float reciprocal = fabsf(vector[3]) > 1.0e-8f ? 1.0f / vector[3] : 1.0f;
-        *xOut = viewport.X + (vector[0] * reciprocal + 1.0f) * viewport.Width * 0.5f;
-        *yOut = viewport.Y + (1.0f - vector[1] * reciprocal) * viewport.Height * 0.5f;
-        *zOut = viewport.MinZ + vector[2] * reciprocal * (viewport.MaxZ - viewport.MinZ);
+#ifdef TH08_MOD_BUILD
+        ApplyPlayfieldTransform(xOut, yOut);
+#endif
+        if (transformed)
+        {
+            // D3D8 pre-transformed vertices use integer pixel centers, while
+            // OpenGL samples at half-integer centers. Apply the gameplay
+            // transform before this backend-specific correction.
+            *xOut += 0.5f;
+            *yOut += 0.5f;
+        }
     }
 #ifndef TH08_MODERN_WEB
     void PrepareState()
@@ -1816,6 +1861,20 @@ class LinuxDirect3D : public IDirect3D8
   private: ULONG refs;
 };
 } // namespace
+
+#ifdef TH08_MOD_BUILD
+void th08_linux_set_playfield_transform(bool enabled, unsigned int mode,
+                                        float left, float top,
+                                        float width, float height)
+{
+    g_playfieldTransform.enabled = enabled;
+    g_playfieldTransform.mode = mode;
+    g_playfieldTransform.left = left;
+    g_playfieldTransform.top = top;
+    g_playfieldTransform.width = width;
+    g_playfieldTransform.height = height;
+}
+#endif
 
 #ifdef TH08_MODERN_WEB
 extern "C" EMSCRIPTEN_KEEPALIVE void th08_web_configure_presentation(int mode, int diagnostics)
