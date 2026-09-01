@@ -89,6 +89,10 @@
             <span><strong>HD — Hidden</strong><small>Bullets fade after a short visible window.</small></span>
           </label>
           <label class="modifier">
+            <input id="mod-blindspot" type="checkbox">
+            <span><strong>BS — Blind Spot</strong><small>Bullets and lasers fade out as they approach you.</small></span>
+          </label>
+          <label class="modifier">
             <input id="mod-flashlight" type="checkbox">
             <span><strong>FL — Flashlight</strong><small>Only the area around the player remains visible.</small></span>
           </label>
@@ -185,6 +189,7 @@
         { element: hardRockCheckbox, bit: 1 << 6, code: "HR" },
         { element: easyCheckbox, bit: 1 << 7, code: "EZ" },
         { element: relaxCheckbox, bit: 1 << 8, code: "RX" },
+        { element: document.querySelector("#mod-blindspot"), bit: 1 << 9, code: "BS" },
       ];
 
       const persistentFiles = ["th08.cfg", "score.dat", "score.txt"];

@@ -98,10 +98,11 @@ runtime.onRuntimeInitialized = () => {
       [64, 0, "HR@1"],
       [128, 0, "EZ@1"],
       [256, 0, "RX@1"],
-      [127, 4, "HD@1(45,45)+FL@1(96,224)+AT@1+MR@1(rotate-270)+NF@1+DT@1+HR@1"],
-      [191, 4, "HD@1(45,45)+FL@1(96,224)+AT@1+MR@1(rotate-270)+NF@1+DT@1+EZ@1"],
-      [379, 4, "HD@1(45,45)+FL@1(96,224)+MR@1(rotate-270)+NF@1+DT@1+HR@1+RX@1"],
-      [443, 4, "HD@1(45,45)+FL@1(96,224)+MR@1(rotate-270)+NF@1+DT@1+EZ@1+RX@1"],
+      [512, 0, "BS@1"],
+      [639, 4, "HD@1(45,45)+FL@1(96,224)+AT@1+MR@1(rotate-270)+NF@1+DT@1+HR@1+BS@1"],
+      [703, 4, "HD@1(45,45)+FL@1(96,224)+AT@1+MR@1(rotate-270)+NF@1+DT@1+EZ@1+BS@1"],
+      [891, 4, "HD@1(45,45)+FL@1(96,224)+MR@1(rotate-270)+NF@1+DT@1+HR@1+RX@1+BS@1"],
+      [955, 4, "HD@1(45,45)+FL@1(96,224)+MR@1(rotate-270)+NF@1+DT@1+EZ@1+RX@1+BS@1"],
     ];
 
     for (const [mask, mirrorMode, suffix] of cases) {
