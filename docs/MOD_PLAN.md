@@ -131,13 +131,14 @@ data directory for writable state.
 
 ### Phase 1: first playable vertical slice
 
-- [ ] Add pre-launch Web controls for Hidden, Flashlight, and Autoshot.
-- [ ] Pass `RunConfigV1` into Wasm before the game entry point.
+- [x] Add pre-launch Web controls for Hidden, Flashlight, and Autoshot.
+- [x] Pass `RunConfigV1` into Wasm before the game entry point.
 - [ ] Filter gameplay input for Autoshot without changing menu input.
 - [ ] Apply Hidden at the projectile rendering boundary without mutating
   persistent animation state.
 - [ ] Compose Flashlight with the native Stage 2 darkness overlay.
-- [ ] Display the frozen active modifier set and canonical identifier.
+- [x] Display the frozen active modifier set.
+- [ ] Display the canonical manifest identifier.
 - [ ] Run browser smoke coverage and Linux compile coverage.
 
 ### Phase 2: composition and replay identity

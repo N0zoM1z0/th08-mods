@@ -51,6 +51,11 @@ bool ReservedFieldsAreZero(const ThModRunConfigV1 &config)
 
 } // namespace
 
+extern "C" uint32_t th_mod_config_v1_size(void)
+{
+    return sizeof(ThModRunConfigV1);
+}
+
 extern "C" ThModResult th_mod_get_default_config_v1(
     ThModRunConfigV1 *out_config)
 {

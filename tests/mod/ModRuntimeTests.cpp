@@ -34,6 +34,7 @@ void TestDefaults()
 {
     ResetRuntime();
 
+    CHECK(th_mod_config_v1_size() == sizeof(ThModRunConfigV1));
     ThModRunConfigV1 config;
     CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(config.struct_size == sizeof(config));

@@ -36,6 +36,7 @@ typedef struct ThModRunConfigV1 {
     uint32_t reserved[8];
 } ThModRunConfigV1;
 
+uint32_t th_mod_config_v1_size(void);
 ThModResult th_mod_get_default_config_v1(ThModRunConfigV1 *out_config);
 ThModResult th_mod_validate_config_v1(const ThModRunConfigV1 *config);
 ThModResult th_mod_configure_v1(const ThModRunConfigV1 *config);

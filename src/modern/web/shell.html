@@ -38,6 +38,13 @@
       p { color: #cbc5dc; line-height: 1.55; }
       label { display: block; margin: 1rem 0; font-weight: 650; }
       input { display: block; width: 100%; margin-top: .45rem; color: #ded8ef; }
+      fieldset { margin: 1.2rem 0; padding: .9rem; border: 1px solid #37334a; border-radius: .65rem; }
+      legend { padding: 0 .4rem; color: #b8a6ff; font-size: .82rem; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+      .modifier { display: grid; grid-template-columns: auto 1fr; gap: .65rem; align-items: start; margin: .65rem 0; cursor: pointer; }
+      .modifier input { width: 1rem; height: 1rem; margin: .2rem 0 0; accent-color: #a98cff; }
+      .modifier strong, .modifier small { display: block; }
+      .modifier small { margin-top: .15rem; color: #aaa3bc; font-weight: 450; line-height: 1.35; }
+      #mod-summary { margin: -.35rem 0 1rem; color: #d6c8ff; font-size: .85rem; }
       button { width: 100%; padding: .8rem 1rem; border: 0; border-radius: .55rem; background: #a98cff; color: #100b1d; font-weight: 800; cursor: pointer; }
       button:disabled { cursor: not-allowed; opacity: .45; }
       #status { min-height: 2.8rem; margin: 1rem 0 0; padding: .8rem; border-radius: .5rem; background: #0a0b12; color: #ddd5f5; }
@@ -72,6 +79,22 @@
         <label>Background music data
           <input id="bgm-data" type="file" accept=".dat,application/octet-stream">
         </label>
+        <fieldset id="modifiers">
+          <legend>Modifiers</legend>
+          <label class="modifier">
+            <input id="mod-hidden" type="checkbox">
+            <span><strong>HD — Hidden</strong><small>Bullets fade after a short visible window.</small></span>
+          </label>
+          <label class="modifier">
+            <input id="mod-flashlight" type="checkbox">
+            <span><strong>FL — Flashlight</strong><small>Only the area around the player remains visible.</small></span>
+          </label>
+          <label class="modifier">
+            <input id="mod-autoshot" type="checkbox">
+            <span><strong>AT — Autoshot</strong><small>Shooting is held automatically during gameplay.</small></span>
+          </label>
+        </fieldset>
+        <div id="mod-summary">Active modifiers: None</div>
         <button id="start" disabled>Start TH08</button>
         <div id="status" role="status" aria-live="polite">Loading the WebAssembly runtime…</div>
         <pre id="log" aria-label="Runtime log"></pre>
@@ -85,6 +108,8 @@
       const gameInput = document.querySelector("#game-data");
       const bgmInput = document.querySelector("#bgm-data");
       const startButton = document.querySelector("#start");
+      const modifierFieldset = document.querySelector("#modifiers");
+      const modifierSummary = document.querySelector("#mod-summary");
       const statusElement = document.querySelector("#status");
       const logElement = document.querySelector("#log");
       const canvas = document.querySelector("#canvas");
@@ -104,6 +129,12 @@
       let runtimeReady = false;
       let started = false;
       let gameFileSystemReady = false;
+
+      const modifierControls = [
+        { element: document.querySelector("#mod-hidden"), bit: 1 << 0, code: "HD" },
+        { element: document.querySelector("#mod-flashlight"), bit: 1 << 1, code: "FL" },
+        { element: document.querySelector("#mod-autoshot"), bit: 1 << 2, code: "AT" },
+      ];
 
       const persistentFiles = ["th08.cfg", "score.dat", "score.txt"];
       const persistentDirectories = ["replay", "backup", "snapshot"];
@@ -180,6 +211,53 @@
         return [gameInput.files[0], bgmInput.files[0]];
       }
 
+      function selectedModifierMask() {
+        return modifierControls.reduce(
+          (mask, modifier) => modifier.element.checked ? mask | modifier.bit : mask,
+          0,
+        );
+      }
+
+      function selectedModifierLabel() {
+        const selected = modifierControls
+          .filter((modifier) => modifier.element.checked)
+          .map((modifier) => modifier.code);
+        return selected.length ? selected.join(" + ") : "None";
+      }
+
+      function updateModifierSummary() {
+        modifierSummary.textContent = `Active modifiers: ${selectedModifierLabel()}`;
+      }
+
+      function configureModifierRuntime() {
+        const configSize = Module._th_mod_config_v1_size();
+        if (configSize < 28 || configSize > 4096 || configSize % 4 !== 0) {
+          throw new Error(`Unsupported modifier configuration size: ${configSize}.`);
+        }
+
+        const configPointer = Module._malloc(configSize);
+        if (!configPointer) {
+          throw new Error("Unable to allocate modifier configuration memory.");
+        }
+
+        try {
+          let result = Module._th_mod_get_default_config_v1(configPointer);
+          if (result !== 0) {
+            throw new Error(`Unable to load modifier defaults (${result}).`);
+          }
+          const config = new DataView(Module.HEAPU8.buffer, configPointer, configSize);
+          config.setUint32(8, selectedModifierMask(), true);
+          result = Module._th_mod_configure_v1(configPointer);
+          if (result !== 0) {
+            throw new Error(`Modifier configuration was rejected (${result}).`);
+          }
+        } finally {
+          Module._free(configPointer);
+        }
+      }
+
+      window.th08GetSelectedModifierMask = selectedModifierMask;
+
       function selectionIsValid() {
         const [game, bgm] = selectedFiles();
         return game?.name.toLowerCase() === "th08.dat" &&
@@ -194,7 +272,7 @@
           statusElement.textContent = "Select files named th08.dat and thbgm.dat to continue.";
         } else if (!started && runtimeReady) {
           const [game, bgm] = selectedFiles();
-          statusElement.textContent = `Ready: ${game.name} (${game.size.toLocaleString()} bytes), ${bgm.name} (${bgm.size.toLocaleString()} bytes).`;
+          statusElement.textContent = `Ready with ${selectedModifierLabel()}: ${game.name} (${game.size.toLocaleString()} bytes), ${bgm.name} (${bgm.size.toLocaleString()} bytes).`;
         }
       }
 
@@ -344,6 +422,13 @@
 
       gameInput.addEventListener("change", updateStartState);
       bgmInput.addEventListener("change", updateStartState);
+      for (const modifier of modifierControls) {
+        modifier.element.addEventListener("change", () => {
+          updateModifierSummary();
+          updateStartState();
+        });
+      }
+      updateModifierSummary();
 
       const gameKeyCodes = new Map([
         ["ArrowUp", 0x26], ["ArrowDown", 0x28], ["ArrowLeft", 0x25], ["ArrowRight", 0x27],
@@ -393,8 +478,11 @@
         if (!selectionIsValid() || started) return;
         const [game, bgm] = selectedFiles();
         started = true;
+        modifierFieldset.disabled = true;
         updateStartState();
         try {
+          configureModifierRuntime();
+          appendLog(`th08-mod: selected ${selectedModifierLabel()}`);
           statusElement.textContent = "Loading local retail data and restoring browser-local saves…";
           const [gameBuffer] = await Promise.all([
             game.arrayBuffer(),
@@ -422,6 +510,7 @@
           console.error(error);
           statusElement.textContent = `Unable to start TH08: ${error.message}`;
           started = false;
+          modifierFieldset.disabled = false;
           updateStartState();
         }
       });
