@@ -1,0 +1,6 @@
+#ifndef TH08_MOD_TESTS_GAMES_TH08_INPUT_TIMELINE_TESTS_HPP
+#define TH08_MOD_TESTS_GAMES_TH08_INPUT_TIMELINE_TESTS_HPP
+
+void TestIndependentInputTimelines();
+
+#endif

@@ -1,5 +1,6 @@
 #include "ModApi.h"
 #include "TestHarness.hpp"
+#include "games/th08/Th08InputTimelineTests.hpp"
 #include "manifest/ManifestTests.hpp"
 #include "modifiers/autoshot/AutoshotTests.hpp"
 #include "modifiers/flashlight/FlashlightTests.hpp"
@@ -120,6 +121,7 @@ int main()
     TestDefaults();
     TestValidation();
     TestConfigurationCopyAndFreeze();
+    TestIndependentInputTimelines();
     TestManifestV1();
     TestAutoshotPolicy();
     TestFlashlightPolicy();

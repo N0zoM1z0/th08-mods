@@ -1,4 +1,5 @@
 #include "mod/games/th08/Th08InputAdapter.hpp"
+#include "mod/games/th08/Th08InputTimeline.hpp"
 
 #include "GameManager.hpp"
 #include "Global.hpp"
@@ -94,15 +95,18 @@ void ReplaceGameplayActions(u16 &nativeInput, uint32_t actions)
 
 ChainCallbackResult FilterInput(void *)
 {
-    const uint32_t actions = ToPortableActions(g_GuiMessageInputCurrent);
-    const uint32_t filtered =
-        th_mod_filter_actions_v1(actions, BuildContext());
+    const uint32_t context = BuildContext();
+    const ActionTimeline filtered = FilterActionTimeline(
+        ToPortableActions(g_GuiMessageInputCurrent),
+        ToPortableActions(g_CurFrameInput), context);
 
-    // Player consumes the GUI snapshot. The replay recorder later consumes
-    // g_CurFrameInput, so both receive the same effective actions. Playback
-    // is excluded by the portable policy to prevent a second transformation.
-    ReplaceGameplayActions(g_GuiMessageInputCurrent, filtered);
-    ReplaceGameplayActions(g_CurFrameInput, filtered);
+    // Player consumes the previous GUI snapshot while the recorder later
+    // consumes the current frame input. Filter each timeline independently;
+    // copying one over the other would add a frame of feedback and discard
+    // newly sampled controls. Playback is excluded by the portable policy to
+    // prevent a second transformation.
+    ReplaceGameplayActions(g_GuiMessageInputCurrent, filtered.gui_actions);
+    ReplaceGameplayActions(g_CurFrameInput, filtered.frame_actions);
     return CHAIN_CALLBACK_RESULT_CONTINUE;
 }
 

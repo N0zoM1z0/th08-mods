@@ -42,6 +42,8 @@ if(TH08_MODCORE_ONLY)
     enable_testing()
     add_executable(th08-mod-core-tests
         tests/mod/ModRuntimeTests.cpp
+        src/mod/games/th08/Th08InputTimeline.cpp
+        tests/mod/games/th08/Th08InputTimelineTests.cpp
         tests/mod/manifest/ManifestTests.cpp
         tests/mod/modifiers/autoshot/AutoshotTests.cpp
         tests/mod/modifiers/flashlight/FlashlightTests.cpp
@@ -51,6 +53,7 @@ if(TH08_MODCORE_ONLY)
     target_compile_features(th08-mod-core-tests PRIVATE cxx_std_17)
     target_include_directories(th08-mod-core-tests PRIVATE
         "${CMAKE_SOURCE_DIR}/tests/mod"
+        "${CMAKE_SOURCE_DIR}/src"
         "${CMAKE_SOURCE_DIR}/src/mod"
     )
     target_link_libraries(th08-mod-core-tests PRIVATE th08-mod-core)
@@ -164,6 +167,7 @@ if(TH08_MOD_BUILD)
     list(APPEND TH08_MOD_ADAPTER_SOURCES
         src/mod/games/th08/Th08ModAdapter.cpp
         src/mod/games/th08/Th08InputAdapter.cpp
+        src/mod/games/th08/Th08InputTimeline.cpp
         src/mod/modifiers/flashlight/th08/Th08Flashlight.cpp
         src/mod/modifiers/hidden/th08/Th08Hidden.cpp
         src/mod/modifiers/mirror/th08/Th08Mirror.cpp
