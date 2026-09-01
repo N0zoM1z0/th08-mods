@@ -49,7 +49,8 @@ typedef enum ThModActionV1 {
 typedef enum ThModInputContextV1 {
     TH_MOD_INPUT_CONTEXT_GAMEPLAY = 1u << 0,
     TH_MOD_INPUT_CONTEXT_REPLAY_PLAYBACK = 1u << 1,
-    TH_MOD_INPUT_CONTEXT_UI_BLOCKED = 1u << 2
+    TH_MOD_INPUT_CONTEXT_UI_BLOCKED = 1u << 2,
+    TH_MOD_INPUT_CONTEXT_DIALOGUE = 1u << 3
 } ThModInputContextV1;
 
 typedef struct ThModRunConfigV1 {

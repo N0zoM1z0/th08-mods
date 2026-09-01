@@ -10,7 +10,7 @@ namespace autoshot
 uint32_t FilterActions(const ThModRunConfigV1 &config, bool runActive,
                        uint32_t actions, uint32_t context)
 {
-    if (runActive && input::CanTransformGameplayInput(context) &&
+    if (runActive && input::CanInjectGameplayAction(context) &&
         (config.enabled_mods & TH_MOD_BUILTIN_AUTOSHOT) != 0)
     {
         actions |= TH_MOD_ACTION_SHOOT;

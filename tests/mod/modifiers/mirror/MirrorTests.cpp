@@ -112,6 +112,10 @@ void TestMirrorPolicy()
                           TH_MOD_INPUT_CONTEXT_GAMEPLAY |
                               TH_MOD_INPUT_CONTEXT_UI_BLOCKED) ==
           TH_MOD_ACTION_LEFT);
+    CHECK(FilterDirection(TH_MOD_MIRROR_HORIZONTAL, TH_MOD_ACTION_LEFT,
+                          TH_MOD_INPUT_CONTEXT_GAMEPLAY |
+                              TH_MOD_INPUT_CONTEXT_DIALOGUE) ==
+          TH_MOD_ACTION_RIGHT);
 
     ThModMirrorStateV1 state;
     CHECK(th_mod_get_mirror_state_v1(&state) == TH_MOD_RESULT_OK);

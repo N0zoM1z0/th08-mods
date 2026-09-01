@@ -31,10 +31,14 @@ uint32_t BuildContext()
         context |= TH_MOD_INPUT_CONTEXT_REPLAY_PLAYBACK;
     }
     if ((context & TH_MOD_INPUT_CONTEXT_GAMEPLAY) != 0 &&
-        (g_GameManager.isInGameMenu || g_GameManager.showRetryMenu ||
-         g_Gui.IsDialogPresent()))
+        (g_GameManager.isInGameMenu || g_GameManager.showRetryMenu))
     {
         context |= TH_MOD_INPUT_CONTEXT_UI_BLOCKED;
+    }
+    if ((context & TH_MOD_INPUT_CONTEXT_GAMEPLAY) != 0 &&
+        g_Gui.IsDialogPresent())
+    {
+        context |= TH_MOD_INPUT_CONTEXT_DIALOGUE;
     }
     return context;
 }
@@ -96,17 +100,20 @@ void ReplaceGameplayActions(u16 &nativeInput, uint32_t actions)
 ChainCallbackResult FilterInput(void *)
 {
     const uint32_t context = BuildContext();
-    const ActionTimeline filtered = FilterActionTimeline(
+    const ActionTimeline timeline = AdvanceLiveInputTimeline(
         ToPortableActions(g_GuiMessageInputCurrent),
         ToPortableActions(g_CurFrameInput), context);
 
-    // Player consumes the previous GUI snapshot while the recorder later
-    // consumes the current frame input. Filter each timeline independently;
-    // copying one over the other would add a frame of feedback and discard
-    // newly sampled controls. Playback is excluded by the portable policy to
-    // prevent a second transformation.
-    ReplaceGameplayActions(g_GuiMessageInputCurrent, filtered.gui_actions);
-    ReplaceGameplayActions(g_CurFrameInput, filtered.frame_actions);
+    // The live recorder runs at priority 17 and copies g_CurFrameInput into
+    // the GUI snapshot after Player has consumed the previous snapshot at
+    // priority 9. The previous snapshot was therefore filtered last frame:
+    // preserve it and filter only the newly sampled input. Filtering both
+    // would apply involutive modifiers such as horizontal Mirror twice.
+    // Replay playback is excluded by the portable policy because its manager
+    // supplies recorded logical actions at priority 6.
+    ReplaceGameplayActions(g_GuiMessageInputCurrent,
+                           timeline.player_actions);
+    ReplaceGameplayActions(g_CurFrameInput, timeline.recorder_actions);
     return CHAIN_CALLBACK_RESULT_CONTINUE;
 }
 

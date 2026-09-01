@@ -12,13 +12,13 @@ namespace input
 
 struct ActionTimeline
 {
-    uint32_t gui_actions;
-    uint32_t frame_actions;
+    uint32_t player_actions;
+    uint32_t recorder_actions;
 };
 
-ActionTimeline FilterActionTimeline(uint32_t guiActions,
-                                    uint32_t frameActions,
-                                    uint32_t context);
+ActionTimeline AdvanceLiveInputTimeline(uint32_t previousRecordedActions,
+                                        uint32_t sampledActions,
+                                        uint32_t context);
 
 } // namespace input
 } // namespace mods

@@ -22,6 +22,8 @@ void TestAutoshotPolicy()
               0, gameplay | TH_MOD_INPUT_CONTEXT_REPLAY_PLAYBACK) == 0);
     CHECK(th_mod_filter_actions_v1(
               0, gameplay | TH_MOD_INPUT_CONTEXT_UI_BLOCKED) == 0);
+    CHECK(th_mod_filter_actions_v1(
+              0, gameplay | TH_MOD_INPUT_CONTEXT_DIALOGUE) == 0);
     CHECK(th_mod_end_run() == TH_MOD_RESULT_OK);
 
     CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);

@@ -7,14 +7,15 @@ namespace mods
 namespace input
 {
 
-ActionTimeline FilterActionTimeline(uint32_t guiActions,
-                                    uint32_t frameActions,
-                                    uint32_t context)
+ActionTimeline AdvanceLiveInputTimeline(uint32_t previousRecordedActions,
+                                        uint32_t sampledActions,
+                                        uint32_t context)
 {
-    ActionTimeline filtered;
-    filtered.gui_actions = th_mod_filter_actions_v1(guiActions, context);
-    filtered.frame_actions = th_mod_filter_actions_v1(frameActions, context);
-    return filtered;
+    ActionTimeline timeline;
+    timeline.player_actions = previousRecordedActions;
+    timeline.recorder_actions =
+        th_mod_filter_actions_v1(sampledActions, context);
+    return timeline;
 }
 
 } // namespace input
