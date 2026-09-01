@@ -117,6 +117,7 @@ ThModResult th_mod_get_mirror_state_v1(ThModMirrorStateV1 *out_state);
 ThModResult th_mod_nofail_decide_miss_v1(
     int32_t lives_remaining, ThModNoFailDecisionV1 *out_decision);
 ThModResult th_mod_get_time_scale_v1(ThModTimeScaleV1 *out_state);
+void th_mod_reset_simulation_clock_v1(void);
 uint32_t th_mod_next_simulation_tick_count_v1(void);
 
 #ifdef __cplusplus

@@ -271,6 +271,11 @@ extern "C" ThModResult th_mod_get_time_scale_v1(
     return TH_MOD_RESULT_OK;
 }
 
+extern "C" void th_mod_reset_simulation_clock_v1(void)
+{
+    g_runtime.time_accumulator = 0;
+}
+
 extern "C" uint32_t th_mod_next_simulation_tick_count_v1(void)
 {
     const ThModTimeScaleV1 state = th_mod::doubletime::GetTimeScale(

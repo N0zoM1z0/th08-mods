@@ -85,6 +85,7 @@ int main()
         return 12;
     }
     ThModTimeScaleV1 timeScale;
+    th_mod_reset_simulation_clock_v1();
     if (th_mod_get_time_scale_v1(&timeScale) != TH_MOD_RESULT_OK ||
         timeScale.struct_size != sizeof(timeScale) ||
         timeScale.is_active != 1 ||

@@ -54,6 +54,10 @@ void TestDoubleTimePolicy()
     }
     CHECK(totalTicks == 12);
 
+    th_mod_reset_simulation_clock_v1();
+    CHECK(th_mod_next_simulation_tick_count_v1() == 1);
+    CHECK(th_mod_next_simulation_tick_count_v1() == 2);
+
     CHECK(th_mod_end_run() == TH_MOD_RESULT_OK);
     CheckInactiveTimeScale();
     CHECK(th_mod_begin_run() == TH_MOD_RESULT_OK);

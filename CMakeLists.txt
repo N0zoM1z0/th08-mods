@@ -174,6 +174,7 @@ if(TH08_MOD_BUILD)
         src/mod/games/th08/Th08ModAdapter.cpp
         src/mod/games/th08/Th08InputAdapter.cpp
         src/mod/games/th08/Th08InputTimeline.cpp
+        src/mod/modifiers/doubletime/th08/Th08DoubleTime.cpp
         src/mod/modifiers/flashlight/th08/Th08Flashlight.cpp
         src/mod/modifiers/hidden/th08/Th08Hidden.cpp
         src/mod/modifiers/mirror/th08/Th08Mirror.cpp

@@ -31,6 +31,7 @@
 #include "inttypes.hpp"
 #ifdef TH08_MOD_BUILD
 #include "mod/games/th08/Th08ModAdapter.hpp"
+#include "mod/modifiers/doubletime/th08/Th08DoubleTime.hpp"
 #endif
 #ifdef TH08_MODERN_PORT
 #include "modern/windows_runtime.hpp"
@@ -562,22 +563,32 @@ RenderResult GameWindow::Render()
 
         g_Supervisor.d3dDevice->SetViewport(&g_Supervisor.viewport);
 
-        calcChainResult = g_Chain.RunCalcChain();
-#ifdef TH08_MODERN_WEB
-        g_WebCalcFrames++;
+#ifdef TH08_MOD_BUILD
+        const u32 simulationTickCount =
+            mods::doubletime::SimulationTicksForPresentation();
+        for (u32 simulationTick = 0;
+             simulationTick < simulationTickCount; ++simulationTick)
+        {
 #endif
-        g_SoundPlayer.ProcessQueues();
+            calcChainResult = g_Chain.RunCalcChain();
+#ifdef TH08_MODERN_WEB
+            g_WebCalcFrames++;
+#endif
+            g_SoundPlayer.ProcessQueues();
 
-        if (calcChainResult == 0)
-        {
-            g_Supervisor.ThreadClose();
-            return RENDER_RESULT_EXIT_SUCCESS;
+            if (calcChainResult == 0)
+            {
+                g_Supervisor.ThreadClose();
+                return RENDER_RESULT_EXIT_SUCCESS;
+            }
+            else if (calcChainResult == -1)
+            {
+                g_Supervisor.ThreadClose();
+                return RENDER_RESULT_EXIT_ERROR;
+            }
+#ifdef TH08_MOD_BUILD
         }
-        else if (calcChainResult == -1)
-        {
-            g_Supervisor.ThreadClose();
-            return RENDER_RESULT_EXIT_ERROR;
-        }
+#endif
 
         this->framesSinceRedraw++;
 
