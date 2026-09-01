@@ -11,6 +11,7 @@ namespace doubletime
 {
 
 u32 SimulationTicksForPresentation();
+void ResetPresentationState();
 
 } // namespace doubletime
 } // namespace mods

@@ -1,4 +1,7 @@
 #include "linux_compat.hpp"
+#ifdef TH08_MOD_BUILD
+#include "modern/linux/audio_playback_rate.hpp"
+#endif
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -1226,6 +1229,46 @@ void UnlockAudio()
     if (g_audioDevice != 0) SDL_UnlockAudioDevice(g_audioDevice);
 }
 
+#ifdef TH08_MOD_BUILD
+namespace th08
+{
+namespace modern
+{
+namespace audio
+{
+namespace
+{
+
+u32 g_playbackRateNumerator = 1;
+u32 g_playbackRateDenominator = 1;
+
+} // namespace
+
+void SetPlaybackRate(u32 numerator, u32 denominator)
+{
+    if (numerator == 0 || denominator == 0)
+    {
+        numerator = 1;
+        denominator = 1;
+    }
+
+    ::LockAudio();
+    g_playbackRateNumerator = numerator;
+    g_playbackRateDenominator = denominator;
+    ::UnlockAudio();
+}
+
+double ScaleSourceStep(double sourceStep)
+{
+    return sourceStep * static_cast<double>(g_playbackRateNumerator) /
+           static_cast<double>(g_playbackRateDenominator);
+}
+
+} // namespace audio
+} // namespace modern
+} // namespace th08
+#endif
+
 class LinuxSoundNotify : public IDirectSoundNotify
 {
   public:
@@ -1315,7 +1358,12 @@ class LinuxSoundBuffer : public IDirectSoundBuffer
             return;
         const DWORD sourceFrames = static_cast<DWORD>(bytes.size() / frameBytes);
         if (sourceFrames == 0) return;
+#ifdef TH08_MOD_BUILD
+        const double step = th08::modern::audio::ScaleSourceStep(
+            static_cast<double>(format.nSamplesPerSec) / 44100.0);
+#else
         const double step = static_cast<double>(format.nSamplesPerSec) / 44100.0;
+#endif
         const float gain = volume <= DSBVOLUME_MIN ? 0.0f : powf(10.0f, static_cast<float>(volume) / 2000.0f);
         const float panValue = pan < -10000 ? -1.0f : pan > 10000 ? 1.0f : static_cast<float>(pan) / 10000.0f;
         const float leftGain = gain * (panValue > 0.0f ? 1.0f - panValue : 1.0f);

@@ -1,6 +1,7 @@
 #include "mod/games/th08/Th08ModAdapter.hpp"
 
 #include "mod/games/th08/Th08InputAdapter.hpp"
+#include "mod/modifiers/doubletime/th08/Th08DoubleTime.hpp"
 #include "mod/modifiers/mirror/th08/Th08Mirror.hpp"
 #include <stdio.h>
 
@@ -53,6 +54,7 @@ void Shutdown()
         return;
     }
 
+    doubletime::ResetPresentationState();
     const ThModResult result = th_mod_end_run();
     if (result != TH_MOD_RESULT_OK)
     {
