@@ -22,6 +22,7 @@ if(TH08_MOD_BUILD)
         src/mod/modifiers/hidden/HiddenPolicy.cpp
         src/mod/modifiers/hardrock/HardRockPolicy.cpp
         src/mod/modifiers/mirror/MirrorPolicy.cpp
+        src/mod/modifiers/nobomb/NoBombPolicy.cpp
         src/mod/modifiers/nofail/NoFailPolicy.cpp
         src/mod/modifiers/relax/RelaxPolicy.cpp
         src/mod/registry/ModifierRegistryV1.cpp
@@ -62,6 +63,7 @@ if(TH08_MODCORE_ONLY)
         tests/mod/modifiers/hidden/HiddenTests.cpp
         tests/mod/modifiers/hardrock/HardRockTests.cpp
         tests/mod/modifiers/mirror/MirrorTests.cpp
+        tests/mod/modifiers/nobomb/NoBombTests.cpp
         tests/mod/modifiers/nofail/NoFailTests.cpp
         tests/mod/modifiers/relax/RelaxTests.cpp
         tests/mod/registry/ModifierRegistryTests.cpp

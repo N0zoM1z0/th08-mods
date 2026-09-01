@@ -75,6 +75,13 @@ void TestManifestV1()
           "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
           "api=1;mods=BS@1");
 
+    CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
+    config.enabled_mods = TH_MOD_BUILTIN_NO_BOMB;
+    CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
+    CHECK(ReadManifest() ==
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "api=1;mods=NB@1");
+
     const uint32_t modes[] = {
         TH_MOD_MIRROR_HORIZONTAL,
         TH_MOD_MIRROR_VERTICAL,

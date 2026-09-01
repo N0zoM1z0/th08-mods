@@ -8,6 +8,7 @@
 #include "modifiers/hardrock/HardRockPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
 #include "modifiers/mirror/MirrorPolicy.hpp"
+#include "modifiers/nobomb/NoBombPolicy.hpp"
 #include "modifiers/nofail/NoFailPolicy.hpp"
 #include "modifiers/relax/RelaxPolicy.hpp"
 #include "registry/ModifierRegistryV1.hpp"
@@ -216,7 +217,9 @@ extern "C" uint32_t th_mod_filter_actions_v1(uint32_t actions,
         g_runtime.config, g_runtime.run_active, actions, context);
     actions = th_mod::relax::FilterActions(
         g_runtime.config, g_runtime.run_active, actions, context);
-    return th_mod::autoshot::FilterActions(
+    actions = th_mod::autoshot::FilterActions(
+        g_runtime.config, g_runtime.run_active, actions, context);
+    return th_mod::nobomb::FilterActions(
         g_runtime.config, g_runtime.run_active, actions, context);
 }
 

@@ -11,6 +11,7 @@
 #include "modifiers/hidden/HiddenTests.hpp"
 #include "modifiers/hardrock/HardRockTests.hpp"
 #include "modifiers/mirror/MirrorTests.hpp"
+#include "modifiers/nobomb/NoBombTests.hpp"
 #include "modifiers/nofail/NoFailTests.hpp"
 #include "modifiers/relax/RelaxTests.hpp"
 #include "registry/ModifierRegistryTests.hpp"
@@ -141,6 +142,7 @@ int main()
     TestHiddenPolicy();
     TestHardRockPolicy();
     TestMirrorPolicy();
+    TestNoBombPolicy();
     TestNoFailPolicy();
     TestRelaxPolicy();
 

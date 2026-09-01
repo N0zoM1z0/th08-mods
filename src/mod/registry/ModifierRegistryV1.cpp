@@ -8,6 +8,7 @@
 #include "modifiers/hidden/HiddenPolicy.hpp"
 #include "modifiers/hardrock/HardRockPolicy.hpp"
 #include "modifiers/mirror/MirrorPolicy.hpp"
+#include "modifiers/nobomb/NoBombPolicy.hpp"
 #include "modifiers/nofail/NoFailPolicy.hpp"
 #include "modifiers/relax/RelaxPolicy.hpp"
 
@@ -33,6 +34,7 @@ const ModifierDescriptorV1 kBuiltins[] = {
     {TH_MOD_BUILTIN_RELAX, "RX", relax::kRulesetVersion,
      TH_MOD_BUILTIN_AUTOSHOT},
     {TH_MOD_BUILTIN_BLIND_SPOT, "BS", blindspot::kRulesetVersion, 0},
+    {TH_MOD_BUILTIN_NO_BOMB, "NB", nobomb::kRulesetVersion, 0},
 };
 
 } // namespace
