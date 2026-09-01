@@ -1,6 +1,7 @@
 #include "ModApi.h"
 #include "TestHarness.hpp"
 #include "games/th08/Th08InputTimelineTests.hpp"
+#include "games/th08/Th08DifficultyAdapterTests.hpp"
 #include "manifest/ManifestTests.hpp"
 #include "modifiers/autoshot/AutoshotTests.hpp"
 #include "modifiers/doubletime/DoubleTimeTests.hpp"
@@ -128,6 +129,7 @@ int main()
     TestConfigurationCopyAndFreeze();
     TestModifierRegistryV1();
     TestIndependentInputTimelines();
+    TestTh08DifficultyAdapter();
     TestManifestV1();
     TestAutoshotPolicy();
     TestDoubleTimePolicy();

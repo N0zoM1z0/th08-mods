@@ -48,6 +48,8 @@ if(TH08_MODCORE_ONLY)
     add_executable(th08-mod-core-tests
         tests/mod/ModRuntimeTests.cpp
         src/mod/games/th08/Th08InputTimeline.cpp
+        src/mod/games/th08/Th08DifficultyAdapter.cpp
+        tests/mod/games/th08/Th08DifficultyAdapterTests.cpp
         tests/mod/games/th08/Th08InputTimelineTests.cpp
         tests/mod/manifest/ManifestTests.cpp
         tests/mod/modifiers/autoshot/AutoshotTests.cpp
@@ -178,6 +180,7 @@ if(TH08_MOD_BUILD)
         src/mod/games/th08/Th08ModAdapter.cpp
         src/mod/games/th08/Th08InputAdapter.cpp
         src/mod/games/th08/Th08InputTimeline.cpp
+        src/mod/games/th08/Th08DifficultyAdapter.cpp
         src/mod/modifiers/doubletime/th08/Th08DoubleTime.cpp
         src/mod/modifiers/flashlight/th08/Th08Flashlight.cpp
         src/mod/modifiers/hidden/th08/Th08Hidden.cpp
