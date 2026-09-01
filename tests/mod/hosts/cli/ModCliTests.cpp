@@ -80,7 +80,7 @@ void TestModifierSelection()
 {
     ResetRuntime();
     char executable[] = "th08-modern";
-    char option[] = "--mods=flashlight,HD,AT";
+    char option[] = "--mods=flashlight,HD,AT,mirror";
     char *arguments[] = {executable, option};
     CHECK(RunCli(2, arguments, NULL) == th_mod::cli::kRunGame);
 
@@ -88,7 +88,17 @@ void TestModifierSelection()
     CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(config.enabled_mods == (TH_MOD_BUILTIN_HIDDEN |
                                   TH_MOD_BUILTIN_FLASHLIGHT |
-                                  TH_MOD_BUILTIN_AUTOSHOT));
+                                  TH_MOD_BUILTIN_AUTOSHOT |
+                                  TH_MOD_BUILTIN_MIRROR));
+    CHECK(config.mirror_mode == TH_MOD_MIRROR_HORIZONTAL);
+
+    char mirrorOption[] = "--mods=MR";
+    char mirrorMode[] = "--mirror=90";
+    char *mirrorArguments[] = {executable, mirrorOption, mirrorMode};
+    CHECK(RunCli(3, mirrorArguments, NULL) == th_mod::cli::kRunGame);
+    CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
+    CHECK(config.enabled_mods == TH_MOD_BUILTIN_MIRROR);
+    CHECK(config.mirror_mode == TH_MOD_MIRROR_ROTATE_90);
 
     char modsOption[] = "--mods";
     char none[] = "none";
@@ -119,6 +129,19 @@ void TestInvalidSelections()
     char *duplicateArguments[] = {executable, first, second};
     CHECK(RunCli(3, duplicateArguments, NULL) ==
           th_mod::cli::kExitFailure);
+
+    char invalidMirror[] = "--mirror=diagonal";
+    char *invalidMirrorArguments[] = {executable, invalidMirror};
+    CHECK(RunCli(2, invalidMirrorArguments, NULL) ==
+          th_mod::cli::kExitFailure);
+
+    char mirror[] = "--mirror";
+    char vertical[] = "vertical";
+    char duplicateMirror[] = "--mirror=180";
+    char *duplicateMirrorArguments[] = {
+        executable, mirror, vertical, duplicateMirror};
+    CHECK(RunCli(4, duplicateMirrorArguments, NULL) ==
+          th_mod::cli::kExitFailure);
 }
 
 void TestHelpAndManifestOutput()
@@ -129,7 +152,8 @@ void TestHelpAndManifestOutput()
     char *helpArguments[] = {executable, help};
     std::string output;
     CHECK(RunCli(2, helpArguments, &output) == th_mod::cli::kExitSuccess);
-    CHECK(output.find("--mods=HD,FL,AT") != std::string::npos);
+    CHECK(output.find("--mods=HD,FL,AT,MR") != std::string::npos);
+    CHECK(output.find("--mirror=MODE") != std::string::npos);
 
     char mods[] = "--mods=FL";
     char manifest[] = "--mod-manifest";
@@ -139,6 +163,16 @@ void TestHelpAndManifestOutput()
     CHECK(output ==
           "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
           "api=1;mods=FL@1(96,224)\n");
+
+    char mirrorMods[] = "--mods=MR";
+    char rotate[] = "--mirror=270";
+    char *mirrorManifestArguments[] = {
+        executable, mirrorMods, rotate, manifest};
+    CHECK(RunCli(4, mirrorManifestArguments, &output) ==
+          th_mod::cli::kExitSuccess);
+    CHECK(output ==
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "api=1;mods=MR@1(rotate-270)\n");
 }
 
 } // namespace

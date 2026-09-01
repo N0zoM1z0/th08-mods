@@ -39,7 +39,50 @@ bool ModifierBit(const char *token, size_t length, uint32_t &bit)
         bit = TH_MOD_BUILTIN_AUTOSHOT;
         return true;
     }
+    if (TokenEquals(token, length, "MR") ||
+        TokenEquals(token, length, "mirror"))
+    {
+        bit = TH_MOD_BUILTIN_MIRROR;
+        return true;
+    }
     return false;
+}
+
+bool ParseMirrorMode(const char *value, uint32_t &mode)
+{
+    if (value == NULL || value[0] == '\0')
+    {
+        return false;
+    }
+    const size_t length = strlen(value);
+    if (TokenEquals(value, length, "horizontal"))
+    {
+        mode = TH_MOD_MIRROR_HORIZONTAL;
+    }
+    else if (TokenEquals(value, length, "vertical"))
+    {
+        mode = TH_MOD_MIRROR_VERTICAL;
+    }
+    else if (TokenEquals(value, length, "90") ||
+             TokenEquals(value, length, "rotate-90"))
+    {
+        mode = TH_MOD_MIRROR_ROTATE_90;
+    }
+    else if (TokenEquals(value, length, "180") ||
+             TokenEquals(value, length, "rotate-180"))
+    {
+        mode = TH_MOD_MIRROR_ROTATE_180;
+    }
+    else if (TokenEquals(value, length, "270") ||
+             TokenEquals(value, length, "rotate-270"))
+    {
+        mode = TH_MOD_MIRROR_ROTATE_270;
+    }
+    else
+    {
+        return false;
+    }
+    return true;
 }
 
 bool ParseModifierList(const char *value, uint32_t &mask)
@@ -92,12 +135,14 @@ void PrintHelp(FILE *output)
 {
     fprintf(output,
             "TH08 modifier options:\n"
-            "  --mods=HD,FL,AT     Enable a comma-separated modifier set.\n"
+            "  --mods=HD,FL,AT,MR  Enable a comma-separated modifier set.\n"
             "  --mods none         Run without modifiers.\n"
+            "  --mirror=MODE       Select horizontal, vertical, 90, 180, or 270.\n"
             "  --mod-manifest      Print the normalized manifest and exit.\n"
             "  --mod-help          Print this help and exit.\n"
             "\n"
-            "Names hidden, flashlight, and autoshot are also accepted.\n");
+            "Names hidden, flashlight, autoshot, and mirror are also accepted.\n"
+            "Mirror defaults to horizontal and only applies when MR is enabled.\n");
 }
 
 Result PrintManifest(FILE *output, FILE *errors)
@@ -139,6 +184,7 @@ Result ConfigureFromArguments(int argc, char *const *argv,
     }
 
     const char *modifierList = NULL;
+    const char *mirrorMode = NULL;
     bool printManifest = false;
     for (int index = 1; index < argc; ++index)
     {
@@ -166,17 +212,50 @@ Result ConfigureFromArguments(int argc, char *const *argv,
         {
             printManifest = true;
         }
+        else if (strcmp(argument, "--mirror") == 0)
+        {
+            if (mirrorMode != NULL || ++index >= argc)
+            {
+                fprintf(errors,
+                        "th08-mod: --mirror requires exactly one mode\n");
+                return kExitFailure;
+            }
+            mirrorMode = argv[index];
+        }
+        else if (strncmp(argument, "--mirror=", 9) == 0)
+        {
+            if (mirrorMode != NULL)
+            {
+                fprintf(errors,
+                        "th08-mod: --mirror may only be specified once\n");
+                return kExitFailure;
+            }
+            mirrorMode = argument + 9;
+        }
     }
 
-    if (modifierList != NULL)
+    if (modifierList != NULL || mirrorMode != NULL)
     {
         ThModRunConfigV1 config;
         ThModResult result = th_mod_get_default_config_v1(&config);
-        if (result != TH_MOD_RESULT_OK ||
+        if (result != TH_MOD_RESULT_OK)
+        {
+            fprintf(errors, "th08-mod: unable to load configuration defaults\n");
+            return kExitFailure;
+        }
+        if (modifierList != NULL &&
             !ParseModifierList(modifierList, config.enabled_mods))
         {
             fprintf(errors,
-                    "th08-mod: invalid modifier list; use HD, FL, AT, or none\n");
+                    "th08-mod: invalid modifier list; use HD, FL, AT, MR, or none\n");
+            return kExitFailure;
+        }
+        if (mirrorMode != NULL &&
+            !ParseMirrorMode(mirrorMode, config.mirror_mode))
+        {
+            fprintf(errors,
+                    "th08-mod: invalid Mirror mode; use horizontal, vertical, "
+                    "90, 180, or 270\n");
             return kExitFailure;
         }
 
