@@ -192,8 +192,9 @@ data directory for writable state.
 
 - [x] Add No Fail at the miss/game-over commit boundary.
 - [x] Freeze explicit `HR@1` and `EZ@1` policy values.
-- [ ] Cover bullet transformations, lasers, collision, graze, movement, and
-  resources before enabling composite difficulty modifiers.
+- [x] Cover transformed bullets, lasers, collision, graze, and movement at
+  their TH08 commit boundaries.
+- [ ] Apply the Easy starting-bomb and spell-time resource policies.
 - [ ] Balance score multipliers only after measured gameplay runs.
 
 ### Phase 5: additional games and native releases
@@ -336,6 +337,16 @@ animation, and bomb reset remain authored game behavior. The mod-disabled VC7
 lane still matches `Player::FUN_0044cbf0 @ 0x0044CBF0` exactly at 1,373 of
 1,373 bytes with all relocations, and the normal 52-object VC7 link also
 passes.
+
+Hard Rock and Easy keep their fixed ratios in separate portable modifier
+slices. The shared TH08 adapter only translates those ratios at game-specific
+commit boundaries: final player movement, initialized hurtbox and graze sizes,
+laser graze expansion, every active and fade-state bullet displacement, and
+laser length growth. Applying projectile speed to final displacement means the
+same hook covers random speeds, acceleration, turning, and bounce transforms
+without rewriting ECL records or letting a later transform restore vanilla
+motion. The target-independent policy and adapter tests pass, and the complete
+32-bit Linux game links with these hooks enabled.
 
 Double Time is implemented as a separate vertical slice under
 `src/mod/modifiers/doubletime/`. Its portable `DT@1` policy fixes the rate at

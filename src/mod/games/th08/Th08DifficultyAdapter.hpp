@@ -7,6 +7,7 @@ namespace th08
 {
 
 float ScalePlayerSpeed(float value);
+float ScaleProjectileSpeed(float value);
 float ScalePlayerHitbox(float value);
 float ScalePlayerGraze(float value);
 float ScaleLaserGrazeMargin(float value);

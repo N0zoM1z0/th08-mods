@@ -9,6 +9,7 @@
 #include "SoundPlayer.hpp"
 #include "Supervisor.hpp"
 #ifdef TH08_MOD_BUILD
+#include "mod/games/th08/Th08DifficultyAdapter.hpp"
 #include "mod/modifiers/hidden/th08/Th08Hidden.hpp"
 #endif
 
@@ -798,6 +799,10 @@ ChainCallbackResult BulletManager::OnUpdate(BulletManager *bulletManager)
     u8 *laser;
     f32 laserCenter[3];
     i32 rampWindow;
+#ifdef TH08_MOD_BUILD
+    const f32 projectileSpeedScale =
+        th_mod::th08::ScaleProjectileSpeed(1.0f);
+#endif
 
     bucketIndex = 0;
     bullet = reinterpret_cast<u8 *>(bulletManager) + 0x1A880;
@@ -854,7 +859,13 @@ updateBullet:
             if (*reinterpret_cast<i32 *>(bullet + 0xDA8) != 0)
                 --*reinterpret_cast<i32 *>(bullet + 0xDA8);
             if (!g_EclScriptedGlobalUpdateFreeze)
+#ifdef TH08_MOD_BUILD
+                *reinterpret_cast<Float3 *>(bullet + 0xD44) +=
+                    *reinterpret_cast<Float3 *>(bullet + 0xD50) *
+                    projectileSpeedScale;
+#else
                 *reinterpret_cast<Float3 *>(bullet + 0xD44) += *reinterpret_cast<Float3 *>(bullet + 0xD50);
+#endif
 
             if (*reinterpret_cast<i32 *>(bullet + 0xDA8) == 0)
             {
@@ -940,8 +951,14 @@ executeBulletScript:
                 break;
             case 2:
                 (*reinterpret_cast<ZunTimer *>(bullet + 0xD8C))--;
+#ifdef TH08_MOD_BUILD
+                *reinterpret_cast<Float3 *>(bullet + 0xD44) +=
+                    *reinterpret_cast<Float3 *>(bullet + 0xD50) *
+                    projectileSpeedScale / 2.0f;
+#else
                 *reinterpret_cast<Float3 *>(bullet + 0xD44) +=
                     *reinterpret_cast<Float3 *>(bullet + 0xD50) / 2.0f;
+#endif
                 if ((*reinterpret_cast<u32 *>(bullet + 0xDB0) & 0x1000) == 0 &&
                     g_Player.FUN_00449ff0(reinterpret_cast<Float3 *>(bullet + 0xD44),
                                          reinterpret_cast<Float3 *>(bullet + 0xD34)) == 2)
@@ -963,8 +980,14 @@ executeBulletScript:
                 goto activateBullet;
             case 3:
                 (*reinterpret_cast<ZunTimer *>(bullet + 0xD8C))--;
+#ifdef TH08_MOD_BUILD
+                *reinterpret_cast<Float3 *>(bullet + 0xD44) +=
+                    *reinterpret_cast<Float3 *>(bullet + 0xD50) *
+                    projectileSpeedScale / 2.5f;
+#else
                 *reinterpret_cast<Float3 *>(bullet + 0xD44) +=
                     *reinterpret_cast<Float3 *>(bullet + 0xD50) / 2.5f;
+#endif
                 if ((*reinterpret_cast<u32 *>(bullet + 0xDB0) & 0x1000) == 0 &&
                     g_Player.FUN_00449ff0(reinterpret_cast<Float3 *>(bullet + 0xD44),
                                          reinterpret_cast<Float3 *>(bullet + 0xD34)) == 2)
@@ -986,8 +1009,14 @@ executeBulletScript:
                 goto activateBullet;
             case 4:
                 (*reinterpret_cast<ZunTimer *>(bullet + 0xD8C))--;
+#ifdef TH08_MOD_BUILD
+                *reinterpret_cast<Float3 *>(bullet + 0xD44) +=
+                    *reinterpret_cast<Float3 *>(bullet + 0xD50) *
+                    projectileSpeedScale / 3.0f;
+#else
                 *reinterpret_cast<Float3 *>(bullet + 0xD44) +=
                     *reinterpret_cast<Float3 *>(bullet + 0xD50) / 3.0f;
+#endif
                 if ((*reinterpret_cast<u32 *>(bullet + 0xDB0) & 0x1000) == 0 &&
                     g_Player.FUN_00449ff0(reinterpret_cast<Float3 *>(bullet + 0xD44),
                                          reinterpret_cast<Float3 *>(bullet + 0xD34)) == 2)
@@ -1008,8 +1037,14 @@ executeBulletScript:
                 }
                 goto activateBullet;
             case 5:
+#ifdef TH08_MOD_BUILD
+                *reinterpret_cast<Float3 *>(bullet + 0xD44) +=
+                    *reinterpret_cast<Float3 *>(bullet + 0xD50) *
+                    projectileSpeedScale / 2.0f;
+#else
                 *reinterpret_cast<Float3 *>(bullet + 0xD44) +=
                     *reinterpret_cast<Float3 *>(bullet + 0xD50) / 2.0f;
+#endif
                 if (g_AnmManager->ExecuteScript(reinterpret_cast<AnmVm *>(bullet + 0xA90)) != 0)
                 {
                     reinterpret_cast<Bullet *>(bullet)->FUN_00432170();
@@ -1046,7 +1081,13 @@ nextBullet:
             if (*reinterpret_cast<i32 *>(laser + 0x584) == 0)
                 continue;
 
+#ifdef TH08_MOD_BUILD
+            *reinterpret_cast<f32 *>(laser + 0x55C) +=
+                g_EclGameTimeScale * *reinterpret_cast<f32 *>(laser + 0x56C) *
+                projectileSpeedScale;
+#else
             *reinterpret_cast<f32 *>(laser + 0x55C) += g_EclGameTimeScale * *reinterpret_cast<f32 *>(laser + 0x56C);
+#endif
             if (*reinterpret_cast<f32 *>(laser + 0x55C) - *reinterpret_cast<f32 *>(laser + 0x558) >
                 *reinterpret_cast<f32 *>(laser + 0x560))
                 *reinterpret_cast<f32 *>(laser + 0x558) =

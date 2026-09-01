@@ -31,6 +31,13 @@ float ScalePlayerSpeed(float value)
                  state.player_speed_denominator);
 }
 
+float ScaleProjectileSpeed(float value)
+{
+    const ThModDifficultyStateV1 state = ReadState();
+    return Scale(value, state.projectile_speed_numerator,
+                 state.projectile_speed_denominator);
+}
+
 float ScalePlayerHitbox(float value)
 {
     const ThModDifficultyStateV1 state = ReadState();
