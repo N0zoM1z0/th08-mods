@@ -175,6 +175,7 @@ if(TH08_MOD_BUILD)
         src/mod/modifiers/flashlight/th08/Th08Flashlight.cpp
         src/mod/modifiers/hidden/th08/Th08Hidden.cpp
         src/mod/modifiers/mirror/th08/Th08Mirror.cpp
+        src/mod/modifiers/nofail/th08/Th08NoFail.cpp
     )
 endif()
 

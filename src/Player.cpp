@@ -15,6 +15,9 @@
 #include "EclOperands.hpp"
 #include "ScreenEffect.hpp"
 #include "utils.hpp"
+#ifdef TH08_MOD_BUILD
+#include "mod/modifiers/nofail/th08/Th08NoFail.hpp"
+#endif
 
 namespace th08
 {
@@ -1362,7 +1365,11 @@ i32 Player::FUN_0044cbf0()
                                            ? -500
                                            : -g_GameManager.globals->currentTimeOrbs / 10);
 
+#ifdef TH08_MOD_BUILD
+            if (mods::nofail::ShouldContinueAfterMiss())
+#else
             if (g_GameManager.GetLives() > 0)
+#endif
             {
                 if (g_GameManager.GetPower() <= 16)
                     g_GameManager.SetPower(0);
@@ -1421,13 +1428,21 @@ i32 Player::FUN_0044cbf0()
             (*reinterpret_cast<AnmLoaded **>(reinterpret_cast<u8 *>(this) + 0xC))
                 ->SetAndExecuteScriptIdx(reinterpret_cast<AnmVm *>(reinterpret_cast<u8 *>(this) + 0x10), 5);
 
+#ifdef TH08_MOD_BUILD
+        if (!mods::nofail::ShouldContinueAfterMiss())
+#else
         if (g_GameManager.GetLives() <= 0)
+#endif
         {
             TH08_RESPAWN_RETRY_FLAG = 1;
         }
         else
         {
+#ifdef TH08_MOD_BUILD
+            mods::nofail::ConsumeLifeIfAvailable();
+#else
             g_GameManager.AddLives(-1);
+#endif
             g_Gui.flags.lifeDisplayUpdateFrames = 2;
             g_GameManager.SetBombCount((i32)*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(TH08_RESPAWN_PRIMARY_SHT_FILE) + 4));
             g_Gui.flags.bombDisplayUpdateFrames = 2;
