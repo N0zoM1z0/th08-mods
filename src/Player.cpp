@@ -16,6 +16,7 @@
 #include "ScreenEffect.hpp"
 #include "utils.hpp"
 #ifdef TH08_MOD_BUILD
+#include "mod/games/th08/Th08DifficultyAdapter.hpp"
 #include "mod/modifiers/nofail/th08/Th08NoFail.hpp"
 #endif
 
@@ -479,10 +480,19 @@ grazePath:
         if (!graze)
             return 0;
 
+#ifdef TH08_MOD_BUILD
+        const f32 grazeMargin =
+            th_mod::th08::ScaleLaserGrazeMargin(48.0f);
+        incomingMin.x -= grazeMargin;
+        incomingMin.y -= grazeMargin;
+        incomingMax.x += grazeMargin;
+        incomingMax.y += grazeMargin;
+#else
         incomingMin.x -= 48.0f;
         incomingMin.y -= 48.0f;
         incomingMax.x += 48.0f;
         incomingMax.y += 48.0f;
+#endif
 
         if (playerMin.x > incomingMax.x || playerMax.x < incomingMin.x ||
             playerMin.y > incomingMax.y || playerMax.y < incomingMin.y)
@@ -848,6 +858,10 @@ i32 Player::FUN_0044aec0()
 
     horizontalSpeed *= *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0x404);
     verticalSpeed *= *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0x408);
+#ifdef TH08_MOD_BUILD
+    horizontalSpeed = th_mod::th08::ScalePlayerSpeed(horizontalSpeed);
+    verticalSpeed = th_mod::th08::ScalePlayerSpeed(verticalSpeed);
+#endif
 
 #define SET_PLAYER_SCRIPT(idx) ((*reinterpret_cast<AnmLoaded **>(reinterpret_cast<u8 *>(this) + 0xC))->SetAndExecuteScriptIdx(reinterpret_cast<AnmVm *>(reinterpret_cast<u8 *>(this) + 0x10), (idx)))
     if (g_GameManager.shotType < 4)
@@ -1671,6 +1685,20 @@ ZunResult Player::AddedCallback(Player *player)
     *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3E0) =
         *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3E4);
     *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3E8) = 5.0f;
+#ifdef TH08_MOD_BUILD
+    *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3D4) =
+        th_mod::th08::ScalePlayerHitbox(
+            *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3D4));
+    *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3D8) =
+        th_mod::th08::ScalePlayerHitbox(
+            *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3D8));
+    *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3E0) =
+        th_mod::th08::ScalePlayerGraze(
+            *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3E0));
+    *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3E4) =
+        th_mod::th08::ScalePlayerGraze(
+            *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3E4));
+#endif
     *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3F0) =
         *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(g_Player.primaryShtFile) + 0x18) / 2.0f;
     *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(player) + 0x3EC) =
