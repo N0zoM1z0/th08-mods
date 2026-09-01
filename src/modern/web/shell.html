@@ -122,6 +122,10 @@
             <span><strong>NF — No Fail</strong><small>Respawn at zero remaining lives instead of ending the run.</small></span>
           </label>
           <label class="modifier">
+            <input id="mod-nobomb" type="checkbox">
+            <span><strong>NB — No Bomb</strong><small>Bomb input is disabled during active gameplay.</small></span>
+          </label>
+          <label class="modifier">
             <input id="mod-doubletime" type="checkbox">
             <span><strong>DT — Double Time</strong><small>Run gameplay and authored audio at a fixed 1.5× rate.</small></span>
           </label>
@@ -190,6 +194,7 @@
         { element: easyCheckbox, bit: 1 << 7, code: "EZ" },
         { element: relaxCheckbox, bit: 1 << 8, code: "RX" },
         { element: document.querySelector("#mod-blindspot"), bit: 1 << 9, code: "BS" },
+        { element: document.querySelector("#mod-nobomb"), bit: 1 << 10, code: "NB" },
       ];
 
       const persistentFiles = ["th08.cfg", "score.dat", "score.txt"];
