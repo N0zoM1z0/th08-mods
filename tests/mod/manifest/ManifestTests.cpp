@@ -39,7 +39,8 @@ void TestManifestV1()
     config.enabled_mods = TH_MOD_BUILTIN_AUTOSHOT |
                           TH_MOD_BUILTIN_FLASHLIGHT |
                           TH_MOD_BUILTIN_HIDDEN |
-                          TH_MOD_BUILTIN_MIRROR;
+                          TH_MOD_BUILTIN_MIRROR |
+                          TH_MOD_BUILTIN_NO_FAIL;
     config.hidden_visible_ticks = 60;
     config.hidden_fade_ticks = 30;
     config.flashlight_radius_pixels = 120;
@@ -48,7 +49,8 @@ void TestManifestV1()
     CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(ReadManifest() ==
           "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
-          "api=1;mods=HD@1(60,30)+FL@1(120,192)+AT@1+MR@1(rotate-90)");
+          "api=1;mods=HD@1(60,30)+FL@1(120,192)+AT@1+MR@1(rotate-90)+"
+          "NF@1");
 
     const uint32_t modes[] = {
         TH_MOD_MIRROR_HORIZONTAL,

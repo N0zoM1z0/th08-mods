@@ -23,7 +23,8 @@ int main()
     config.enabled_mods = TH_MOD_BUILTIN_AUTOSHOT |
                           TH_MOD_BUILTIN_HIDDEN |
                           TH_MOD_BUILTIN_FLASHLIGHT |
-                          TH_MOD_BUILTIN_MIRROR;
+                          TH_MOD_BUILTIN_MIRROR |
+                          TH_MOD_BUILTIN_NO_FAIL;
     config.mirror_mode = TH_MOD_MIRROR_ROTATE_90;
     if (th_mod_configure_v1(&config) != TH_MOD_RESULT_OK)
     {
@@ -36,7 +37,7 @@ int main()
         strcmp(manifest,
                "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
                "api=1;mods=HD@1(45,45)+FL@1(96,224)+AT@1+"
-               "MR@1(rotate-90)") != 0)
+               "MR@1(rotate-90)+NF@1") != 0)
     {
         return 5;
     }
@@ -73,9 +74,18 @@ int main()
     {
         return 11;
     }
-    if (th_mod_end_run() != TH_MOD_RESULT_OK)
+    ThModNoFailDecisionV1 noFail;
+    if (th_mod_nofail_decide_miss_v1(0, &noFail) != TH_MOD_RESULT_OK ||
+        noFail.struct_size != sizeof(noFail) ||
+        noFail.continue_run != 1 ||
+        noFail.consume_life != 0 ||
+        noFail.reserved != 0)
     {
         return 12;
+    }
+    if (th_mod_end_run() != TH_MOD_RESULT_OK)
+    {
+        return 13;
     }
 
     return 0;

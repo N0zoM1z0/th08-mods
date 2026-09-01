@@ -6,6 +6,7 @@
 #include "modifiers/flashlight/FlashlightTests.hpp"
 #include "modifiers/hidden/HiddenTests.hpp"
 #include "modifiers/mirror/MirrorTests.hpp"
+#include "modifiers/nofail/NoFailTests.hpp"
 #include "registry/ModifierRegistryTests.hpp"
 
 #include <cstdint>
@@ -129,6 +130,7 @@ int main()
     TestFlashlightPolicy();
     TestHiddenPolicy();
     TestMirrorPolicy();
+    TestNoFailPolicy();
 
     if (g_failures != 0)
     {

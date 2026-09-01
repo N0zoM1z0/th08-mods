@@ -4,6 +4,7 @@
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
 #include "modifiers/mirror/MirrorPolicy.hpp"
+#include "modifiers/nofail/NoFailPolicy.hpp"
 
 namespace th_mod
 {
@@ -17,6 +18,7 @@ const ModifierDescriptorV1 kBuiltins[] = {
     {TH_MOD_BUILTIN_FLASHLIGHT, "FL", flashlight::kRulesetVersion, 0},
     {TH_MOD_BUILTIN_AUTOSHOT, "AT", autoshot::kRulesetVersion, 0},
     {TH_MOD_BUILTIN_MIRROR, "MR", mirror::kRulesetVersion, 0},
+    {TH_MOD_BUILTIN_NO_FAIL, "NF", nofail::kRulesetVersion, 0},
 };
 
 } // namespace

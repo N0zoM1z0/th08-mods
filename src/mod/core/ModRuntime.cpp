@@ -4,6 +4,7 @@
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
 #include "modifiers/mirror/MirrorPolicy.hpp"
+#include "modifiers/nofail/NoFailPolicy.hpp"
 #include "registry/ModifierRegistryV1.hpp"
 
 #include <cstddef>
@@ -22,6 +23,8 @@ static_assert(sizeof(ThModFlashlightStateV1) == 16,
               "ThModFlashlightStateV1 must retain its version 1 ABI size.");
 static_assert(sizeof(ThModMirrorStateV1) == 16,
               "ThModMirrorStateV1 must retain its version 1 ABI size.");
+static_assert(sizeof(ThModNoFailDecisionV1) == 16,
+              "ThModNoFailDecisionV1 must retain its version 1 ABI size.");
 
 ThModRunConfigV1 MakeDefaultConfig()
 {
@@ -232,5 +235,18 @@ extern "C" ThModResult th_mod_get_mirror_state_v1(
 
     *out_state = th_mod::mirror::GetState(
         g_runtime.config, g_runtime.run_active);
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" ThModResult th_mod_nofail_decide_miss_v1(
+    int32_t lives_remaining, ThModNoFailDecisionV1 *out_decision)
+{
+    if (out_decision == 0)
+    {
+        return TH_MOD_RESULT_NULL_ARGUMENT;
+    }
+
+    *out_decision = th_mod::nofail::DecideMiss(
+        g_runtime.config, g_runtime.run_active, lives_remaining);
     return TH_MOD_RESULT_OK;
 }
