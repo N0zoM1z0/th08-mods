@@ -117,6 +117,14 @@
             <input id="mod-doubletime" type="checkbox">
             <span><strong>DT — Double Time</strong><small>Run gameplay and authored audio at a fixed 1.5× rate.</small></span>
           </label>
+          <label class="modifier">
+            <input id="mod-hardrock" type="checkbox">
+            <span><strong>HR — Hard Rock</strong><small>Faster patterns, slower movement, a larger hurtbox, and tighter grazing.</small></span>
+          </label>
+          <label class="modifier">
+            <input id="mod-easy" type="checkbox">
+            <span><strong>EZ — Easy</strong><small>Slower patterns, a smaller hurtbox, wider grazing, more bombs, and longer spells.</small></span>
+          </label>
         </fieldset>
         <div id="mod-summary">Active modifiers: None</div>
         <div id="mod-manifest">Run manifest: waiting for the WebAssembly runtime…</div>
@@ -158,6 +166,8 @@
       let currentModifierManifest;
       const mirrorCheckbox = document.querySelector("#mod-mirror");
       const mirrorModeControl = document.querySelector("#mod-mirror-mode");
+      const hardRockCheckbox = document.querySelector("#mod-hardrock");
+      const easyCheckbox = document.querySelector("#mod-easy");
 
       const modifierControls = [
         { element: document.querySelector("#mod-hidden"), bit: 1 << 0, code: "HD" },
@@ -166,6 +176,8 @@
         { element: mirrorCheckbox, bit: 1 << 3, code: "MR" },
         { element: document.querySelector("#mod-nofail"), bit: 1 << 4, code: "NF" },
         { element: document.querySelector("#mod-doubletime"), bit: 1 << 5, code: "DT" },
+        { element: hardRockCheckbox, bit: 1 << 6, code: "HR" },
+        { element: easyCheckbox, bit: 1 << 7, code: "EZ" },
       ];
 
       const persistentFiles = ["th08.cfg", "score.dat", "score.txt"];
@@ -262,6 +274,8 @@
 
       function updateModifierSummary() {
         mirrorModeControl.disabled = !mirrorCheckbox.checked;
+        hardRockCheckbox.disabled = easyCheckbox.checked;
+        easyCheckbox.disabled = hardRockCheckbox.checked;
         modifierSummary.textContent = `Active modifiers: ${selectedModifierLabel()}`;
         if (!runtimeReady || started) return;
 
@@ -333,18 +347,25 @@
       window.th08GetSelectedMirrorMode = () => Number(mirrorModeControl.value);
       window.th08GetModifierManifest = () => currentModifierManifest;
 
-      function selectionIsValid() {
+      function retailSelectionIsValid() {
         const [game, bgm] = selectedFiles();
         return game?.name.toLowerCase() === "th08.dat" &&
           bgm?.name.toLowerCase() === "thbgm.dat";
+      }
+
+      function selectionIsValid() {
+        return retailSelectionIsValid() &&
+          currentModifierManifest !== undefined;
       }
 
       function updateStartState() {
         startButton.disabled = started || !runtimeReady || !crossOriginIsolated || !selectionIsValid();
         if (!crossOriginIsolated) {
           statusElement.textContent = "This build requires cross-origin isolation. Serve it with the repository development server or equivalent COOP/COEP headers.";
-        } else if (!selectionIsValid() && runtimeReady) {
+        } else if (!retailSelectionIsValid() && runtimeReady) {
           statusElement.textContent = "Select files named th08.dat and thbgm.dat to continue.";
+        } else if (currentModifierManifest === undefined && runtimeReady) {
+          statusElement.textContent = "Choose a compatible modifier set to continue.";
         } else if (!started && runtimeReady) {
           const [game, bgm] = selectedFiles();
           statusElement.textContent = `Ready with ${selectedModifierLabel()}: ${game.name} (${game.size.toLocaleString()} bytes), ${bgm.name} (${bgm.size.toLocaleString()} bytes).`;
@@ -513,6 +534,11 @@
       bgmInput.addEventListener("change", updateStartState);
       for (const modifier of modifierControls) {
         modifier.element.addEventListener("change", () => {
+          if (modifier.code === "HR" && modifier.element.checked) {
+            easyCheckbox.checked = false;
+          } else if (modifier.code === "EZ" && modifier.element.checked) {
+            hardRockCheckbox.checked = false;
+          }
           updateModifierSummary();
           updateStartState();
         });
