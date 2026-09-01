@@ -80,7 +80,7 @@ void TestModifierSelection()
 {
     ResetRuntime();
     char executable[] = "th08-modern";
-    char option[] = "--mods=flashlight,HD,AT,mirror";
+    char option[] = "--mods=flashlight,HD,AT,mirror,no-fail";
     char *arguments[] = {executable, option};
     CHECK(RunCli(2, arguments, NULL) == th_mod::cli::kRunGame);
 
@@ -89,7 +89,8 @@ void TestModifierSelection()
     CHECK(config.enabled_mods == (TH_MOD_BUILTIN_HIDDEN |
                                   TH_MOD_BUILTIN_FLASHLIGHT |
                                   TH_MOD_BUILTIN_AUTOSHOT |
-                                  TH_MOD_BUILTIN_MIRROR));
+                                  TH_MOD_BUILTIN_MIRROR |
+                                  TH_MOD_BUILTIN_NO_FAIL));
     CHECK(config.mirror_mode == TH_MOD_MIRROR_HORIZONTAL);
 
     char mirrorOption[] = "--mods=MR";
@@ -99,6 +100,12 @@ void TestModifierSelection()
     CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(config.enabled_mods == TH_MOD_BUILTIN_MIRROR);
     CHECK(config.mirror_mode == TH_MOD_MIRROR_ROTATE_90);
+
+    char noFailOption[] = "--mods=nofail";
+    char *noFailArguments[] = {executable, noFailOption};
+    CHECK(RunCli(2, noFailArguments, NULL) == th_mod::cli::kRunGame);
+    CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
+    CHECK(config.enabled_mods == TH_MOD_BUILTIN_NO_FAIL);
 
     char modsOption[] = "--mods";
     char none[] = "none";
@@ -152,7 +159,7 @@ void TestHelpAndManifestOutput()
     char *helpArguments[] = {executable, help};
     std::string output;
     CHECK(RunCli(2, helpArguments, &output) == th_mod::cli::kExitSuccess);
-    CHECK(output.find("--mods=HD,FL,AT,MR") != std::string::npos);
+    CHECK(output.find("--mods=HD,FL,AT,MR,NF") != std::string::npos);
     CHECK(output.find("--mirror=MODE") != std::string::npos);
 
     char mods[] = "--mods=FL";
@@ -173,6 +180,15 @@ void TestHelpAndManifestOutput()
     CHECK(output ==
           "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
           "api=1;mods=MR@1(rotate-270)\n");
+
+    char noFailMods[] = "--mods=NF";
+    char *noFailManifestArguments[] = {
+        executable, noFailMods, manifest};
+    CHECK(RunCli(3, noFailManifestArguments, &output) ==
+          th_mod::cli::kExitSuccess);
+    CHECK(output ==
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "api=1;mods=NF@1\n");
 }
 
 } // namespace

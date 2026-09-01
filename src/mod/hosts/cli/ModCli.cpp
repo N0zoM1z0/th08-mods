@@ -45,6 +45,13 @@ bool ModifierBit(const char *token, size_t length, uint32_t &bit)
         bit = TH_MOD_BUILTIN_MIRROR;
         return true;
     }
+    if (TokenEquals(token, length, "NF") ||
+        TokenEquals(token, length, "nofail") ||
+        TokenEquals(token, length, "no-fail"))
+    {
+        bit = TH_MOD_BUILTIN_NO_FAIL;
+        return true;
+    }
     return false;
 }
 
@@ -135,13 +142,14 @@ void PrintHelp(FILE *output)
 {
     fprintf(output,
             "TH08 modifier options:\n"
-            "  --mods=HD,FL,AT,MR  Enable a comma-separated modifier set.\n"
+            "  --mods=HD,FL,AT,MR,NF  Enable a comma-separated modifier set.\n"
             "  --mods none         Run without modifiers.\n"
             "  --mirror=MODE       Select horizontal, vertical, 90, 180, or 270.\n"
             "  --mod-manifest      Print the normalized manifest and exit.\n"
             "  --mod-help          Print this help and exit.\n"
             "\n"
-            "Names hidden, flashlight, autoshot, and mirror are also accepted.\n"
+            "Names hidden, flashlight, autoshot, mirror, and no-fail are also "
+            "accepted.\n"
             "Mirror defaults to horizontal and only applies when MR is enabled.\n");
 }
 
@@ -247,7 +255,8 @@ Result ConfigureFromArguments(int argc, char *const *argv,
             !ParseModifierList(modifierList, config.enabled_mods))
         {
             fprintf(errors,
-                    "th08-mod: invalid modifier list; use HD, FL, AT, MR, or none\n");
+                    "th08-mod: invalid modifier list; use HD, FL, AT, MR, NF, "
+                    "or none\n");
             return kExitFailure;
         }
         if (mirrorMode != NULL &&
