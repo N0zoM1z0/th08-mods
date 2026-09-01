@@ -80,7 +80,8 @@ void TestModifierSelection()
 {
     ResetRuntime();
     char executable[] = "th08-modern";
-    char option[] = "--mods=flashlight,HD,AT,mirror,no-fail,double-time";
+    char option[] =
+        "--mods=flashlight,HD,AT,mirror,no-fail,double-time,hard-rock";
     char *arguments[] = {executable, option};
     CHECK(RunCli(2, arguments, NULL) == th_mod::cli::kRunGame);
 
@@ -91,7 +92,8 @@ void TestModifierSelection()
                                   TH_MOD_BUILTIN_AUTOSHOT |
                                   TH_MOD_BUILTIN_MIRROR |
                                   TH_MOD_BUILTIN_NO_FAIL |
-                                  TH_MOD_BUILTIN_DOUBLE_TIME));
+                                  TH_MOD_BUILTIN_DOUBLE_TIME |
+                                  TH_MOD_BUILTIN_HARD_ROCK));
     CHECK(config.mirror_mode == TH_MOD_MIRROR_HORIZONTAL);
 
     char mirrorOption[] = "--mods=MR";
@@ -114,6 +116,18 @@ void TestModifierSelection()
     CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(config.enabled_mods == TH_MOD_BUILTIN_DOUBLE_TIME);
 
+    char hardRockOption[] = "--mods=hardrock";
+    char *hardRockArguments[] = {executable, hardRockOption};
+    CHECK(RunCli(2, hardRockArguments, NULL) == th_mod::cli::kRunGame);
+    CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
+    CHECK(config.enabled_mods == TH_MOD_BUILTIN_HARD_ROCK);
+
+    char easyOption[] = "--mods=easy";
+    char *easyArguments[] = {executable, easyOption};
+    CHECK(RunCli(2, easyArguments, NULL) == th_mod::cli::kRunGame);
+    CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
+    CHECK(config.enabled_mods == TH_MOD_BUILTIN_EASY);
+
     char modsOption[] = "--mods";
     char none[] = "none";
     char *noneArguments[] = {executable, modsOption, none};
@@ -130,9 +144,13 @@ void TestInvalidSelections()
     char *emptyArguments[] = {executable, empty};
     CHECK(RunCli(2, emptyArguments, NULL) == th_mod::cli::kExitFailure);
 
-    char unknown[] = "--mods=HR";
+    char unknown[] = "--mods=XX";
     char *unknownArguments[] = {executable, unknown};
     CHECK(RunCli(2, unknownArguments, NULL) == th_mod::cli::kExitFailure);
+
+    char conflict[] = "--mods=HR,EZ";
+    char *conflictArguments[] = {executable, conflict};
+    CHECK(RunCli(2, conflictArguments, NULL) == th_mod::cli::kExitFailure);
 
     char mixed[] = "--mods=none,HD";
     char *mixedArguments[] = {executable, mixed};
@@ -166,7 +184,8 @@ void TestHelpAndManifestOutput()
     char *helpArguments[] = {executable, help};
     std::string output;
     CHECK(RunCli(2, helpArguments, &output) == th_mod::cli::kExitSuccess);
-    CHECK(output.find("--mods=HD,FL,AT,MR,NF,DT") != std::string::npos);
+    CHECK(output.find("--mods=HD,FL,AT,MR,NF,DT,HR,EZ") !=
+          std::string::npos);
     CHECK(output.find("--mirror=MODE") != std::string::npos);
 
     char mods[] = "--mods=FL";
@@ -205,6 +224,23 @@ void TestHelpAndManifestOutput()
     CHECK(output ==
           "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
           "api=1;mods=DT@1\n");
+
+    char hardRockMods[] = "--mods=HR";
+    char *hardRockManifestArguments[] = {
+        executable, hardRockMods, manifest};
+    CHECK(RunCli(3, hardRockManifestArguments, &output) ==
+          th_mod::cli::kExitSuccess);
+    CHECK(output ==
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "api=1;mods=HR@1\n");
+
+    char easyMods[] = "--mods=EZ";
+    char *easyManifestArguments[] = {executable, easyMods, manifest};
+    CHECK(RunCli(3, easyManifestArguments, &output) ==
+          th_mod::cli::kExitSuccess);
+    CHECK(output ==
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "api=1;mods=EZ@1\n");
 }
 
 } // namespace
