@@ -1,0 +1,153 @@
+#include "ModApi.h"
+
+#include <cstddef>
+#include <cstdint>
+
+namespace {
+
+constexpr uint32_t kKnownModifierMask =
+    TH_MOD_BUILTIN_HIDDEN |
+    TH_MOD_BUILTIN_FLASHLIGHT |
+    TH_MOD_BUILTIN_AUTOSHOT;
+constexpr uint32_t kMaximumTickOption = 60u * 60u * 10u;
+constexpr uint32_t kMaximumFlashlightRadius = 4096u;
+
+static_assert(sizeof(uint32_t) == 4, "The mod ABI requires 32-bit uint32_t.");
+static_assert(sizeof(ThModRunConfigV1) == 60,
+              "ThModRunConfigV1 must retain its version 1 ABI size.");
+
+ThModRunConfigV1 MakeDefaultConfig()
+{
+    ThModRunConfigV1 config = {};
+    config.struct_size = sizeof(config);
+    config.api_version = TH_MOD_API_VERSION_V1;
+    config.hidden_visible_ticks = 45;
+    config.hidden_fade_ticks = 45;
+    config.flashlight_radius_pixels = 96;
+    config.flashlight_opacity = 224;
+    return config;
+}
+
+struct RuntimeState {
+    ThModRunConfigV1 config;
+    bool run_active;
+};
+
+RuntimeState g_runtime = {MakeDefaultConfig(), false};
+
+bool ReservedFieldsAreZero(const ThModRunConfigV1 &config)
+{
+    for (std::size_t index = 0;
+         index < sizeof(config.reserved) / sizeof(config.reserved[0]);
+         ++index)
+    {
+        if (config.reserved[index] != 0)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+} // namespace
+
+extern "C" ThModResult th_mod_get_default_config_v1(
+    ThModRunConfigV1 *out_config)
+{
+    if (out_config == 0)
+    {
+        return TH_MOD_RESULT_NULL_ARGUMENT;
+    }
+
+    *out_config = MakeDefaultConfig();
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" ThModResult th_mod_validate_config_v1(
+    const ThModRunConfigV1 *config)
+{
+    if (config == 0)
+    {
+        return TH_MOD_RESULT_NULL_ARGUMENT;
+    }
+    if (config->struct_size != sizeof(*config))
+    {
+        return TH_MOD_RESULT_STRUCT_SIZE;
+    }
+    if (config->api_version != TH_MOD_API_VERSION_V1)
+    {
+        return TH_MOD_RESULT_API_VERSION;
+    }
+    if ((config->enabled_mods & ~kKnownModifierMask) != 0)
+    {
+        return TH_MOD_RESULT_UNKNOWN_MODIFIER;
+    }
+    if (config->hidden_visible_ticks > kMaximumTickOption ||
+        config->hidden_fade_ticks == 0 ||
+        config->hidden_fade_ticks > kMaximumTickOption ||
+        config->flashlight_radius_pixels == 0 ||
+        config->flashlight_radius_pixels > kMaximumFlashlightRadius ||
+        config->flashlight_opacity > 255 ||
+        !ReservedFieldsAreZero(*config))
+    {
+        return TH_MOD_RESULT_INVALID_OPTION;
+    }
+
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" ThModResult th_mod_configure_v1(
+    const ThModRunConfigV1 *config)
+{
+    if (g_runtime.run_active)
+    {
+        return TH_MOD_RESULT_RUN_STATE;
+    }
+
+    const ThModResult validation = th_mod_validate_config_v1(config);
+    if (validation != TH_MOD_RESULT_OK)
+    {
+        return validation;
+    }
+
+    g_runtime.config = *config;
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" ThModResult th_mod_get_config_v1(ThModRunConfigV1 *out_config)
+{
+    if (out_config == 0)
+    {
+        return TH_MOD_RESULT_NULL_ARGUMENT;
+    }
+
+    *out_config = g_runtime.config;
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" ThModResult th_mod_begin_run(void)
+{
+    if (g_runtime.run_active)
+    {
+        return TH_MOD_RESULT_RUN_STATE;
+    }
+
+    g_runtime.run_active = true;
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" ThModResult th_mod_end_run(void)
+{
+    if (!g_runtime.run_active)
+    {
+        return TH_MOD_RESULT_RUN_STATE;
+    }
+
+    g_runtime.run_active = false;
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" uint32_t th_mod_is_run_active(void)
+{
+    return g_runtime.run_active ? 1u : 0u;
+}

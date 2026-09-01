@@ -119,11 +119,11 @@ data directory for writable state.
 
 ### Phase 0: integration foundation
 
-- [ ] Preserve the `th08-web` Git history and record upstream remotes.
-- [ ] Add a versioned, statically linked no-op mod core.
-- [ ] Add unit tests for configuration defaults, validation, and deterministic
-  helper functions.
-- [ ] Compile the core independently with a modern host compiler.
+- [x] Preserve the `th08-web` Git history and record upstream remotes.
+- [x] Add a versioned, statically linked no-op mod core.
+- [x] Add unit tests for configuration defaults, validation, ABI compatibility,
+  and lifecycle freeze.
+- [x] Compile the core independently with a modern host compiler.
 - [ ] Link the no-op boundary into Web and Linux builds behind
   `TH08_MOD_BUILD`.
 - [ ] Prove that the default configuration leaves authored behavior untouched.
@@ -208,6 +208,24 @@ modifiers. Proceed only if:
 
 Presentation polish, score balancing, replay storage format, and additional
 games are deliberately outside this experiment.
+
+### Current evidence
+
+On 2026-09-01, the first boundary checkpoint configured and built on the host
+with:
+
+```bash
+cmake -S . -B build/mod-core -G Ninja \
+  -DTH08_MODCORE_ONLY=ON -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/mod-core --parallel 2
+ctest --test-dir build/mod-core --output-on-failure
+```
+
+The C++17 runtime tests passed. A separate executable compiled as strict C++98
+also linked against and exercised the same C ABI, which is the first direct
+signal that the authored game and modern core can remain language-separated.
+The game targets are not linked to the core yet, so this evidence supports
+continuing Phase 0 but does not complete it.
 
 ### Prototype debt gate
 

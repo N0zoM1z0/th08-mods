@@ -2,6 +2,56 @@ cmake_minimum_required(VERSION 3.20)
 
 project(th08-modern LANGUAGES CXX)
 
+option(TH08_MOD_BUILD "Build the statically linked modifier runtime" ON)
+option(TH08_MODCORE_ONLY
+    "Build only the portable modifier core and its host tests" OFF)
+
+if(TH08_MODCORE_ONLY)
+    set(TH08_MOD_BUILD ON)
+endif()
+
+if(TH08_MOD_BUILD)
+    add_library(th08-mod-core STATIC
+        src/mod/core/ModRuntime.cpp
+    )
+    target_compile_features(th08-mod-core PUBLIC cxx_std_17)
+    target_include_directories(th08-mod-core PUBLIC
+        "${CMAKE_SOURCE_DIR}/src/mod/api"
+    )
+
+    if(MSVC)
+        target_compile_options(th08-mod-core PRIVATE /W4)
+    else()
+        target_compile_options(th08-mod-core PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+    endif()
+endif()
+
+if(TH08_MODCORE_ONLY)
+    enable_testing()
+    add_executable(th08-mod-core-tests
+        tests/mod/ModRuntimeTests.cpp
+    )
+    target_compile_features(th08-mod-core-tests PRIVATE cxx_std_17)
+    target_link_libraries(th08-mod-core-tests PRIVATE th08-mod-core)
+    add_test(NAME th08-mod-core-tests COMMAND th08-mod-core-tests)
+
+    add_executable(th08-mod-api-cxx98-tests
+        tests/mod/ModApiCxx98Tests.cpp
+    )
+    set_target_properties(th08-mod-api-cxx98-tests PROPERTIES
+        CXX_STANDARD 98
+        CXX_STANDARD_REQUIRED YES
+        CXX_EXTENSIONS OFF
+    )
+    target_link_libraries(th08-mod-api-cxx98-tests PRIVATE th08-mod-core)
+    add_test(NAME th08-mod-api-cxx98-tests COMMAND th08-mod-api-cxx98-tests)
+    return()
+endif()
+
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(FATAL_ERROR "TH08 currently requires a 32-bit toolchain.")
 endif()
