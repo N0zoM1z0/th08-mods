@@ -1,4 +1,7 @@
 #include "modern/windows_runtime.hpp"
+#ifdef TH08_MOD_BUILD
+#include "mod/games/th08/Th08ModAdapter.hpp"
+#endif
 
 #ifndef TH08_MODERN_WEB
 #include <execinfo.h>
@@ -331,5 +334,17 @@ void SetArguments(int argc, char **argv)
 int main(int argc, char **argv)
 {
     th08::modern::SetArguments(argc, argv);
-    return WinMain(NULL, NULL, NULL, 0);
+#ifdef TH08_MOD_BUILD
+    if (!th08::mods::Initialize())
+    {
+        return 1;
+    }
+#endif
+
+    const int result = WinMain(NULL, NULL, NULL, 0);
+
+#ifdef TH08_MOD_BUILD
+    th08::mods::Shutdown();
+#endif
+    return result;
 }

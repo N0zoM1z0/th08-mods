@@ -124,7 +124,7 @@ data directory for writable state.
 - [x] Add unit tests for configuration defaults, validation, ABI compatibility,
   and lifecycle freeze.
 - [x] Compile the core independently with a modern host compiler.
-- [ ] Link the no-op boundary into Web and Linux builds behind
+- [x] Link the no-op boundary into Web and Linux builds behind
   `TH08_MOD_BUILD`.
 - [ ] Prove that the default configuration leaves authored behavior untouched.
 - [ ] Define a separate save namespace before modified state is persisted.
@@ -224,8 +224,17 @@ ctest --test-dir build/mod-core --output-on-failure
 The C++17 runtime tests passed. A separate executable compiled as strict C++98
 also linked against and exercised the same C ABI, which is the first direct
 signal that the authored game and modern core can remain language-separated.
-The game targets are not linked to the core yet, so this evidence supports
-continuing Phase 0 but does not complete it.
+
+The same boundary then linked into the complete 32-bit Linux game and both
+Emscripten presentation variants. `scripts/build-modern-linux.sh` completed a
+53-step build, and `scripts/build-web-game.sh` produced the Chromium and Firefox
+Wasm artifacts before passing the Web provenance allowlist. Starting the Linux
+binary without retail data printed the initialized API version and zero
+modifier mask, then followed the expected missing-DAT error path. No gameplay
+hook is registered at this checkpoint, so the runtime is structurally a no-op;
+replay and screenshot parity remain a later runtime gate. A separate complete
+Linux build with `-DTH08_MOD_BUILD=OFF` also linked successfully and omitted the
+core and adapter targets.
 
 ### Prototype debt gate
 

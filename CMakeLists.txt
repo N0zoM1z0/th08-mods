@@ -126,6 +126,13 @@ set(TH08_GAME_SOURCES
     src/pbg/PbgFile.cpp
 )
 
+set(TH08_MOD_ADAPTER_SOURCES)
+if(TH08_MOD_BUILD)
+    list(APPEND TH08_MOD_ADAPTER_SOURCES
+        src/mod/games/th08/Th08ModAdapter.cpp
+    )
+endif()
+
 # Browser-port feasibility gate: compile every shared authored translation unit
 # as wasm32 without linking a desktop runtime.  This intentionally proves only
 # source/compiler portability; the browser platform, renderer, filesystem, and
@@ -160,6 +167,7 @@ if(EMSCRIPTEN)
 
     add_executable(th08-web
         $<TARGET_OBJECTS:th08-web-authored-compile>
+        ${TH08_MOD_ADAPTER_SOURCES}
         src/modern/linux/d3d8_compat.cpp
         src/modern/linux/d3dx8_compat.cpp
         src/modern/linux/linux_compat.cpp
@@ -173,6 +181,10 @@ if(EMSCRIPTEN)
         TH08_MODERN_WEB
         WIN32_LEAN_AND_MEAN
     )
+    if(TH08_MOD_BUILD)
+        target_compile_definitions(th08-web PRIVATE TH08_MOD_BUILD)
+        target_link_libraries(th08-web PRIVATE th08-mod-core)
+    endif()
     target_include_directories(th08-web BEFORE PRIVATE
         "${CMAKE_SOURCE_DIR}/src/modern/linux/include"
         "${CMAKE_SOURCE_DIR}/src"
@@ -239,6 +251,7 @@ if(WIN32)
     add_executable(th08-modern WIN32 ${TH08_GAME_SOURCES})
 elseif(UNIX AND NOT APPLE)
     list(APPEND TH08_GAME_SOURCES
+        ${TH08_MOD_ADAPTER_SOURCES}
         src/modern/linux/d3d8_compat.cpp
         src/modern/linux/d3dx8_compat.cpp
         src/modern/linux/linux_compat.cpp
@@ -258,6 +271,10 @@ target_include_directories(th08-modern PRIVATE
     "${CMAKE_SOURCE_DIR}/src"
     "${TH08_GENERATED_DIR}"
 )
+if(TH08_MOD_BUILD AND UNIX AND NOT APPLE)
+    target_compile_definitions(th08-modern PRIVATE TH08_MOD_BUILD)
+    target_link_libraries(th08-modern PRIVATE th08-mod-core)
+endif()
 
 if(MINGW)
     # MinGW ships compatible D3D8/DirectInput/DirectSound headers and import
