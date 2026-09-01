@@ -4,6 +4,7 @@
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
 #include "modifiers/mirror/MirrorPolicy.hpp"
+#include "registry/ModifierRegistryV1.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,11 +12,6 @@
 
 namespace {
 
-constexpr uint32_t kKnownModifierMask =
-    TH_MOD_BUILTIN_HIDDEN |
-    TH_MOD_BUILTIN_FLASHLIGHT |
-    TH_MOD_BUILTIN_AUTOSHOT |
-    TH_MOD_BUILTIN_MIRROR;
 constexpr uint32_t kMaximumTickOption = 60u * 60u * 10u;
 constexpr uint32_t kMaximumFlashlightRadius = 4096u;
 
@@ -94,9 +90,11 @@ extern "C" ThModResult th_mod_validate_config_v1(
     {
         return TH_MOD_RESULT_API_VERSION;
     }
-    if ((config->enabled_mods & ~kKnownModifierMask) != 0)
+    const ThModResult selectionValidation =
+        th_mod::registry::ValidateSelectionV1(config->enabled_mods);
+    if (selectionValidation != TH_MOD_RESULT_OK)
     {
-        return TH_MOD_RESULT_UNKNOWN_MODIFIER;
+        return selectionValidation;
     }
     if (config->hidden_visible_ticks > kMaximumTickOption ||
         config->hidden_fade_ticks == 0 ||

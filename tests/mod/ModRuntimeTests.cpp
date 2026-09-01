@@ -6,6 +6,7 @@
 #include "modifiers/flashlight/FlashlightTests.hpp"
 #include "modifiers/hidden/HiddenTests.hpp"
 #include "modifiers/mirror/MirrorTests.hpp"
+#include "registry/ModifierRegistryTests.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -121,6 +122,7 @@ int main()
     TestDefaults();
     TestValidation();
     TestConfigurationCopyAndFreeze();
+    TestModifierRegistryV1();
     TestIndependentInputTimelines();
     TestManifestV1();
     TestAutoshotPolicy();

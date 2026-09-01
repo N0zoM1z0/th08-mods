@@ -1,10 +1,9 @@
 #include "manifest/ManifestV1.hpp"
 
-#include "modifiers/autoshot/AutoshotPolicy.hpp"
-#include "modifiers/flashlight/FlashlightPolicy.hpp"
-#include "modifiers/hidden/HiddenPolicy.hpp"
 #include "modifiers/mirror/MirrorPolicy.hpp"
+#include "registry/ModifierRegistryV1.hpp"
 
+#include <cstddef>
 #include <cstdint>
 
 namespace th_mod
@@ -53,34 +52,42 @@ std::string BuildV1(const ThModRunConfigV1 &config)
     output += ";mods=";
 
     bool hasModifier = false;
-    if ((config.enabled_mods & TH_MOD_BUILTIN_HIDDEN) != 0)
+    const registry::ModifierDescriptorV1 *descriptors =
+        registry::BuiltinsV1();
+    for (std::size_t index = 0; index < registry::BuiltinCountV1(); ++index)
     {
-        BeginModifier(output, hasModifier, "HD", hidden::kRulesetVersion);
-        output += '(';
-        AppendUnsigned(output, config.hidden_visible_ticks);
-        output += ',';
-        AppendUnsigned(output, config.hidden_fade_ticks);
-        output += ')';
-    }
-    if ((config.enabled_mods & TH_MOD_BUILTIN_FLASHLIGHT) != 0)
-    {
-        BeginModifier(output, hasModifier, "FL", flashlight::kRulesetVersion);
-        output += '(';
-        AppendUnsigned(output, config.flashlight_radius_pixels);
-        output += ',';
-        AppendUnsigned(output, config.flashlight_opacity);
-        output += ')';
-    }
-    if ((config.enabled_mods & TH_MOD_BUILTIN_AUTOSHOT) != 0)
-    {
-        BeginModifier(output, hasModifier, "AT", autoshot::kRulesetVersion);
-    }
-    if ((config.enabled_mods & TH_MOD_BUILTIN_MIRROR) != 0)
-    {
-        BeginModifier(output, hasModifier, "MR", mirror::kRulesetVersion);
-        output += '(';
-        output += mirror::ModeIdentifier(config.mirror_mode);
-        output += ')';
+        const registry::ModifierDescriptorV1 &descriptor = descriptors[index];
+        if ((config.enabled_mods & descriptor.flag) == 0)
+        {
+            continue;
+        }
+
+        BeginModifier(output, hasModifier, descriptor.code,
+                      descriptor.ruleset_version);
+        switch (descriptor.flag)
+        {
+        case TH_MOD_BUILTIN_HIDDEN:
+            output += '(';
+            AppendUnsigned(output, config.hidden_visible_ticks);
+            output += ',';
+            AppendUnsigned(output, config.hidden_fade_ticks);
+            output += ')';
+            break;
+        case TH_MOD_BUILTIN_FLASHLIGHT:
+            output += '(';
+            AppendUnsigned(output, config.flashlight_radius_pixels);
+            output += ',';
+            AppendUnsigned(output, config.flashlight_opacity);
+            output += ')';
+            break;
+        case TH_MOD_BUILTIN_MIRROR:
+            output += '(';
+            output += mirror::ModeIdentifier(config.mirror_mode);
+            output += ')';
+            break;
+        default:
+            break;
+        }
     }
 
     if (!hasModifier)

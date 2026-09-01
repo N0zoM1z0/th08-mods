@@ -17,7 +17,8 @@ typedef enum ThModResult {
     TH_MOD_RESULT_UNKNOWN_MODIFIER = -4,
     TH_MOD_RESULT_INVALID_OPTION = -5,
     TH_MOD_RESULT_RUN_STATE = -6,
-    TH_MOD_RESULT_BUFFER_SIZE = -7
+    TH_MOD_RESULT_BUFFER_SIZE = -7,
+    TH_MOD_RESULT_CONFLICT = -8
 } ThModResult;
 
 typedef enum ThModBuiltinV1 {
