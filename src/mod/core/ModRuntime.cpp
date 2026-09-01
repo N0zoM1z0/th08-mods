@@ -1,6 +1,7 @@
 #include "ModApi.h"
 #include "manifest/ManifestV1.hpp"
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
+#include "modifiers/doubletime/DoubleTimePolicy.hpp"
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
 #include "modifiers/mirror/MirrorPolicy.hpp"
@@ -25,6 +26,8 @@ static_assert(sizeof(ThModMirrorStateV1) == 16,
               "ThModMirrorStateV1 must retain its version 1 ABI size.");
 static_assert(sizeof(ThModNoFailDecisionV1) == 16,
               "ThModNoFailDecisionV1 must retain its version 1 ABI size.");
+static_assert(sizeof(ThModTimeScaleV1) == 16,
+              "ThModTimeScaleV1 must retain its version 1 ABI size.");
 
 ThModRunConfigV1 MakeDefaultConfig()
 {
@@ -41,9 +44,10 @@ ThModRunConfigV1 MakeDefaultConfig()
 struct RuntimeState {
     ThModRunConfigV1 config;
     bool run_active;
+    uint32_t time_accumulator;
 };
 
-RuntimeState g_runtime = {MakeDefaultConfig(), false};
+RuntimeState g_runtime = {MakeDefaultConfig(), false, 0};
 
 bool ReservedFieldsAreZero(const ThModRunConfigV1 &config)
 {
@@ -129,6 +133,7 @@ extern "C" ThModResult th_mod_configure_v1(
     }
 
     g_runtime.config = *config;
+    g_runtime.time_accumulator = 0;
     return TH_MOD_RESULT_OK;
 }
 
@@ -176,6 +181,7 @@ extern "C" ThModResult th_mod_begin_run(void)
     }
 
     g_runtime.run_active = true;
+    g_runtime.time_accumulator = 0;
     return TH_MOD_RESULT_OK;
 }
 
@@ -187,6 +193,7 @@ extern "C" ThModResult th_mod_end_run(void)
     }
 
     g_runtime.run_active = false;
+    g_runtime.time_accumulator = 0;
     return TH_MOD_RESULT_OK;
 }
 
@@ -249,4 +256,25 @@ extern "C" ThModResult th_mod_nofail_decide_miss_v1(
     *out_decision = th_mod::nofail::DecideMiss(
         g_runtime.config, g_runtime.run_active, lives_remaining);
     return TH_MOD_RESULT_OK;
+}
+
+extern "C" ThModResult th_mod_get_time_scale_v1(
+    ThModTimeScaleV1 *out_state)
+{
+    if (out_state == 0)
+    {
+        return TH_MOD_RESULT_NULL_ARGUMENT;
+    }
+
+    *out_state = th_mod::doubletime::GetTimeScale(
+        g_runtime.config, g_runtime.run_active);
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" uint32_t th_mod_next_simulation_tick_count_v1(void)
+{
+    const ThModTimeScaleV1 state = th_mod::doubletime::GetTimeScale(
+        g_runtime.config, g_runtime.run_active);
+    return th_mod::doubletime::AdvancePresentation(
+        state, g_runtime.time_accumulator);
 }

@@ -3,6 +3,7 @@
 #include "games/th08/Th08InputTimelineTests.hpp"
 #include "manifest/ManifestTests.hpp"
 #include "modifiers/autoshot/AutoshotTests.hpp"
+#include "modifiers/doubletime/DoubleTimeTests.hpp"
 #include "modifiers/flashlight/FlashlightTests.hpp"
 #include "modifiers/hidden/HiddenTests.hpp"
 #include "modifiers/mirror/MirrorTests.hpp"
@@ -127,6 +128,7 @@ int main()
     TestIndependentInputTimelines();
     TestManifestV1();
     TestAutoshotPolicy();
+    TestDoubleTimePolicy();
     TestFlashlightPolicy();
     TestHiddenPolicy();
     TestMirrorPolicy();

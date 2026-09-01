@@ -15,6 +15,7 @@ if(TH08_MOD_BUILD)
         src/mod/core/ModRuntime.cpp
         src/mod/manifest/ManifestV1.cpp
         src/mod/modifiers/autoshot/AutoshotPolicy.cpp
+        src/mod/modifiers/doubletime/DoubleTimePolicy.cpp
         src/mod/modifiers/flashlight/FlashlightPolicy.cpp
         src/mod/modifiers/hidden/HiddenPolicy.cpp
         src/mod/modifiers/mirror/MirrorPolicy.cpp
@@ -48,6 +49,7 @@ if(TH08_MODCORE_ONLY)
         tests/mod/games/th08/Th08InputTimelineTests.cpp
         tests/mod/manifest/ManifestTests.cpp
         tests/mod/modifiers/autoshot/AutoshotTests.cpp
+        tests/mod/modifiers/doubletime/DoubleTimeTests.cpp
         tests/mod/modifiers/flashlight/FlashlightTests.cpp
         tests/mod/modifiers/hidden/HiddenTests.cpp
         tests/mod/modifiers/mirror/MirrorTests.cpp

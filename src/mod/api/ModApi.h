@@ -26,7 +26,8 @@ typedef enum ThModBuiltinV1 {
     TH_MOD_BUILTIN_FLASHLIGHT = 1u << 1,
     TH_MOD_BUILTIN_AUTOSHOT = 1u << 2,
     TH_MOD_BUILTIN_MIRROR = 1u << 3,
-    TH_MOD_BUILTIN_NO_FAIL = 1u << 4
+    TH_MOD_BUILTIN_NO_FAIL = 1u << 4,
+    TH_MOD_BUILTIN_DOUBLE_TIME = 1u << 5
 } ThModBuiltinV1;
 
 typedef enum ThModMirrorModeV1 {
@@ -88,6 +89,13 @@ typedef struct ThModNoFailDecisionV1 {
     uint32_t reserved;
 } ThModNoFailDecisionV1;
 
+typedef struct ThModTimeScaleV1 {
+    uint32_t struct_size;
+    uint32_t is_active;
+    uint32_t numerator;
+    uint32_t denominator;
+} ThModTimeScaleV1;
+
 uint32_t th_mod_config_v1_size(void);
 ThModResult th_mod_get_default_config_v1(ThModRunConfigV1 *out_config);
 ThModResult th_mod_validate_config_v1(const ThModRunConfigV1 *config);
@@ -108,6 +116,8 @@ ThModResult th_mod_get_flashlight_state_v1(
 ThModResult th_mod_get_mirror_state_v1(ThModMirrorStateV1 *out_state);
 ThModResult th_mod_nofail_decide_miss_v1(
     int32_t lives_remaining, ThModNoFailDecisionV1 *out_decision);
+ThModResult th_mod_get_time_scale_v1(ThModTimeScaleV1 *out_state);
+uint32_t th_mod_next_simulation_tick_count_v1(void);
 
 #ifdef __cplusplus
 }
