@@ -97,6 +97,10 @@
             <span><strong>AT — Autoshot</strong><small>Shooting is held automatically during gameplay.</small></span>
           </label>
           <label class="modifier">
+            <input id="mod-relax" type="checkbox">
+            <span><strong>RX — Relax</strong><small>Shooting and focus are held automatically; you only move and bomb.</small></span>
+          </label>
+          <label class="modifier">
             <input id="mod-mirror" type="checkbox">
             <span><strong>MR — Mirror</strong><small>Transform the playfield while keeping movement screen-relative and the HUD upright.</small></span>
           </label>
@@ -164,6 +168,8 @@
       let started = false;
       let gameFileSystemReady = false;
       let currentModifierManifest;
+      const autoshotCheckbox = document.querySelector("#mod-autoshot");
+      const relaxCheckbox = document.querySelector("#mod-relax");
       const mirrorCheckbox = document.querySelector("#mod-mirror");
       const mirrorModeControl = document.querySelector("#mod-mirror-mode");
       const hardRockCheckbox = document.querySelector("#mod-hardrock");
@@ -172,12 +178,13 @@
       const modifierControls = [
         { element: document.querySelector("#mod-hidden"), bit: 1 << 0, code: "HD" },
         { element: document.querySelector("#mod-flashlight"), bit: 1 << 1, code: "FL" },
-        { element: document.querySelector("#mod-autoshot"), bit: 1 << 2, code: "AT" },
+        { element: autoshotCheckbox, bit: 1 << 2, code: "AT" },
         { element: mirrorCheckbox, bit: 1 << 3, code: "MR" },
         { element: document.querySelector("#mod-nofail"), bit: 1 << 4, code: "NF" },
         { element: document.querySelector("#mod-doubletime"), bit: 1 << 5, code: "DT" },
         { element: hardRockCheckbox, bit: 1 << 6, code: "HR" },
         { element: easyCheckbox, bit: 1 << 7, code: "EZ" },
+        { element: relaxCheckbox, bit: 1 << 8, code: "RX" },
       ];
 
       const persistentFiles = ["th08.cfg", "score.dat", "score.txt"];
@@ -276,6 +283,8 @@
         mirrorModeControl.disabled = !mirrorCheckbox.checked;
         hardRockCheckbox.disabled = easyCheckbox.checked;
         easyCheckbox.disabled = hardRockCheckbox.checked;
+        autoshotCheckbox.disabled = relaxCheckbox.checked;
+        relaxCheckbox.disabled = autoshotCheckbox.checked;
         modifierSummary.textContent = `Active modifiers: ${selectedModifierLabel()}`;
         if (!runtimeReady || started) return;
 
@@ -538,6 +547,11 @@
             easyCheckbox.checked = false;
           } else if (modifier.code === "EZ" && modifier.element.checked) {
             hardRockCheckbox.checked = false;
+          }
+          if (modifier.code === "AT" && modifier.element.checked) {
+            relaxCheckbox.checked = false;
+          } else if (modifier.code === "RX" && modifier.element.checked) {
+            autoshotCheckbox.checked = false;
           }
           updateModifierSummary();
           updateStartState();
