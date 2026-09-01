@@ -140,6 +140,12 @@ void TestModifierSelection()
     CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(config.enabled_mods == TH_MOD_BUILTIN_BLIND_SPOT);
 
+    char noBombOption[] = "--mods=no-bomb";
+    char *noBombArguments[] = {executable, noBombOption};
+    CHECK(RunCli(2, noBombArguments, NULL) == th_mod::cli::kRunGame);
+    CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
+    CHECK(config.enabled_mods == TH_MOD_BUILTIN_NO_BOMB);
+
     char modsOption[] = "--mods";
     char none[] = "none";
     char *noneArguments[] = {executable, modsOption, none};
@@ -201,7 +207,7 @@ void TestHelpAndManifestOutput()
     char *helpArguments[] = {executable, help};
     std::string output;
     CHECK(RunCli(2, helpArguments, &output) == th_mod::cli::kExitSuccess);
-    CHECK(output.find("--mods=HD,FL,AT,MR,NF,DT,HR,EZ,RX,BS") !=
+    CHECK(output.find("--mods=HD,FL,AT,MR,NF,DT,HR,EZ,RX,BS,NB") !=
           std::string::npos);
     CHECK(output.find("--mirror=MODE") != std::string::npos);
 
@@ -275,6 +281,14 @@ void TestHelpAndManifestOutput()
     CHECK(output ==
           "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
           "api=1;mods=BS@1\n");
+
+    char noBombMods[] = "--mods=NB";
+    char *noBombManifestArguments[] = {executable, noBombMods, manifest};
+    CHECK(RunCli(3, noBombManifestArguments, &output) ==
+          th_mod::cli::kExitSuccess);
+    CHECK(output ==
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "api=1;mods=NB@1\n");
 }
 
 } // namespace

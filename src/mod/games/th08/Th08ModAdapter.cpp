@@ -72,7 +72,8 @@ bool RegisterHooks()
     }
     const bool filtersInput = IsEnabled(TH_MOD_BUILTIN_AUTOSHOT) ||
                               IsEnabled(TH_MOD_BUILTIN_MIRROR) ||
-                              IsEnabled(TH_MOD_BUILTIN_RELAX);
+                              IsEnabled(TH_MOD_BUILTIN_RELAX) ||
+                              IsEnabled(TH_MOD_BUILTIN_NO_BOMB);
     if (filtersInput && !input::RegisterHook())
     {
         return false;
