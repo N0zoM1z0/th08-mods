@@ -90,7 +90,7 @@ inside each modifier without copying its portable policy.
 
 The Web launcher passes one validated configuration to an exported C function
 before `main`. The Linux host accepts the same logical selection with
-`--mods=HD,FL,AT,MR,NF` and `--mirror=90`; `--mod-manifest` prints its
+`--mods=HD,FL,AT,MR,NF,DT` and `--mirror=90`; `--mod-manifest` prints its
 normalized identity without requiring retail data. Host code never advances
 simulation or evaluates modifier rules.
 
@@ -153,7 +153,7 @@ data directory for writable state.
 
 ### Phase 1: first playable vertical slice
 
-- [x] Add pre-launch Web controls for Hidden, Flashlight, Autoshot, and Mirror.
+- [x] Add pre-launch Web controls for all implemented modifiers.
 - [x] Pass `RunConfigV1` into Wasm before the game entry point.
 - [x] Filter gameplay input for Autoshot without changing menu input.
 - [x] Apply Hidden at the projectile rendering boundary without mutating
@@ -163,7 +163,8 @@ data directory for writable state.
 - [x] Display the canonical manifest identifier.
 - [x] Run Linux compile and CLI coverage.
 - [x] Run Linux gameplay smoke coverage with retail data.
-- [ ] Run Chromium and Firefox gameplay smoke coverage with retail data.
+- [x] Run Chromium gameplay smoke coverage with retail data.
+- [ ] Run Firefox gameplay smoke coverage with retail data.
 
 ### Phase 2: composition and replay identity
 
@@ -175,11 +176,12 @@ data directory for writable state.
 
 ### Phase 3: time domain
 
-- [ ] Add a display-paced simulation accumulator for Double Time.
-- [ ] Advance sound queues per simulation tick and scale the shared mixer rate.
-- [ ] Validate authored-tick/present ratios and audio duration on Chromium,
-  Firefox, and Linux.
-- [ ] Define an overload policy that never silently drops deterministic ticks.
+- [x] Add a display-paced simulation accumulator for Double Time.
+- [x] Advance sound queues per simulation tick and scale the shared mixer rate.
+- [x] Validate authored-tick/present ratios on Chromium and Linux.
+- [x] Validate Linux mixer-rate transitions across gameplay and pause.
+- [ ] Validate Firefox gameplay and audible audio duration/pitch on hardware.
+- [x] Define an overload policy that never silently drops deterministic ticks.
 
 ### Phase 4: gameplay policies
 
@@ -269,8 +271,8 @@ input stream later consumed by the replay recorder. Hidden uses an
 allocation-free integer fade, observes bullet transitions and complete laser
 phase age, and restores each `AnmVm` color immediately after drawing. Core,
 strict C++98 ABI, mod-enabled Linux, mod-disabled Linux, Chromium Wasm, Firefox
-Wasm, JavaScript syntax, and Web provenance checks pass. Controlled replay,
-mod-off screenshot parity, and real-browser gameplay remain runtime gates;
+Wasm, JavaScript syntax, and Web provenance checks pass. Controlled replay and
+mod-off screenshot parity remain runtime gates;
 retail data is intentionally absent from the repository and build artifacts.
 
 Flashlight reuses the native four-rectangle mask and ANM script 105 at the same
@@ -291,9 +293,9 @@ CLI bridge. Its parser is covered independently from the game, the complete
 identity output before any retail-data check. Both final Wasm artifacts are
 loaded under Node during the Web release build and must return the expected
 manifests for no modifiers, every individual modifier, all five Mirror modes,
-and the complete `HD+FL+AT+MR+NF` set through the same exported functions used
-by the launcher. This is a Wasm host smoke, not a substitute for the pending
-real-browser gameplay and rendering checks.
+and the complete `HD+FL+AT+MR+NF+DT` set through the same exported functions
+used by the launcher. This Wasm host smoke is supplemented by the bounded
+Chromium gameplay check below; Firefox modifier gameplay remains pending.
 
 Mirror is implemented as its own vertical slice. Its portable policy owns
 direction remapping, mode validation, geometry, state, and manifest identity.
@@ -312,7 +314,8 @@ Dialogue keeps screen-relative directional mapping while suppressing Autoshot.
 The version-1 modifier registry is now the single owner of built-in bits,
 codes, ruleset versions, canonical manifest order, and conflict masks. Runtime
 validation rejects unknown bits and conflicts with distinct result codes, and
-tests pin the published `HD+FL+AT+MR+NF` order plus the generic conflict branch.
+tests pin the published `HD+FL+AT+MR+NF+DT` order plus the generic conflict
+branch.
 Effective-input composition is also fixed for version 1: geometric direction
 transforms run before assistance actions are injected. Modifier-specific
 options and behavior remain in their vertical slices instead of moving into
@@ -328,6 +331,25 @@ animation, and bomb reset remain authored game behavior. The mod-disabled VC7
 lane still matches `Player::FUN_0044cbf0 @ 0x0044CBF0` exactly at 1,373 of
 1,373 bytes with all relocations, and the normal 52-object VC7 link also
 passes.
+
+Double Time is implemented as a separate vertical slice under
+`src/mod/modifiers/doubletime/`. Its portable `DT@1` policy fixes the rate at
+3/2 and advances a bounded integer accumulator in the deterministic cadence
+`1,2,1,2,...`. Configuration, run begin/end, and non-gameplay scene boundaries
+reset the accumulator, so pause duration never creates catch-up work. The
+overload contract is deliberately small: one display-paced presentation runs
+at most two complete authored ticks, ticks are never skipped inside that
+cadence, and a slow host slows wall-clock progression instead of injecting an
+unbounded backlog.
+
+The TH08 translation wraps `RunCalcChain` and `SoundPlayer::ProcessQueues` in
+that cadence while leaving the draw chain and `Present` at one call per host
+presentation. `g_GameManager.flags.unk2` limits acceleration to active
+gameplay, keeping title, loading, retry, and pause paths at 1x. The shared
+Linux/Web mixer multiplies each PCM source cursor step by the same rational
+rate under the SDL audio-device lock and returns to 1/1 at the same scene
+boundary. The mod-disabled VC7 lane still matches `GameWindow::Render @
+0x00441E70` exactly at 482 of 482 bytes with all 38 relocations.
 
 ### Retail Linux gameplay smoke
 
@@ -366,22 +388,39 @@ exactly 0, `showRetryMenu` remained 0, gameplay updates remained active, and
 bombs reset to 3 after respawn. This verifies repeated zero-life respawning and
 the no-underflow contract, not just modifier selection.
 
+A Double Time A/B sampled `g_Supervisor.calcCount` during the same uninterrupted
+eight-second Stage 1 interval. The `NF@1` control advanced 490 complete authored
+ticks; `NF@1+DT@1` advanced 736, a measured ratio of 1.502x. Presentation and
+the HUD counter remained at 60 FPS. While paused, the counter advanced 371
+ticks in six seconds at 1x; after resume it advanced 554 ticks in six seconds
+at approximately 1.5x. Debugger snapshots also observed the shared mixer rate
+switch from 3/2 during gameplay to 1/1 in the pause menu.
+
+The same `NF@1+DT@1` run was repeated in a current headless Chromium against
+the locally served pthread Wasm build. Over eight seconds it recorded 481
+browser callbacks and 721 authored calculation frames, a ratio of 1.49896x.
+The paused sample recorded 301 callbacks and 301 calculations exactly. This
+run also exposed and fixed a launcher boundary bug: the manifest is now copied
+out of Wasm shared memory before `TextDecoder` receives it. The selected retail
+files remained browser-local, and the generated screenshot and profile stayed
+under `/tmp`.
+
 After the No Fail seam was linked, target-independent core/C++98 tests, both
 mod-enabled and mod-disabled fixed-address Linux builds, the Linux layout
 verifier, both Emscripten presentation variants, Wasm manifest smoke tests, and
 the Web retail-data provenance check all passed.
 
 All retail-derived screenshots and generated state stayed under `/tmp` and
-were not added to Git. Chromium and Firefox gameplay coverage remains pending;
-the existing Wasm/Node smoke covers selection, ABI, and manifest behavior but
-not browser rendering or input.
+were not added to Git. Firefox modifier gameplay and an audible hardware audio
+duration/pitch comparison remain pending; Node/Wasm smoke continues to cover
+both browser artifacts' selection, ABI, manifest, and provenance behavior.
 
 ### Prototype debt gate
 
 Before calling the slice production-ready, replace temporary configuration
 plumbing, add explicit validation errors, isolate writable state, settle replay
 manifest persistence, cover lasers and Stage 2 darkness composition, and run
-real Chromium and Firefox gameplay checks.
+the remaining Firefox modifier gameplay check.
 
 ## Verification matrix
 

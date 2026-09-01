@@ -115,14 +115,18 @@ throttle the display refresh rate.
 ## Modifier prototype
 
 The Web launcher exposes **Hidden (`HD`)**, **Flashlight (`FL`)**,
-**Autoshot (`AT`)**, **Mirror (`MR`)**, and **No Fail (`NF`)** as independent
-pre-launch selections. Mirror supports horizontal and vertical reflection plus
+**Autoshot (`AT`)**, **Mirror (`MR`)**, **No Fail (`NF`)**, and
+**Double Time (`DT`)** as independent pre-launch selections. Mirror supports
+horizontal and vertical reflection plus
 90°, 180°, and 270° rotation. Quarter turns preserve the complete 384×448
 playfield with aspect-fit letterboxing; movement remains relative to the
 transformed screen and the HUD stays upright. No Fail retains misses, death
 animation, death count, power loss, and normal respawning, but suppresses the
 final retry transition and never decrements lives below zero. The Wasm core
-shows the canonical run manifest before retail data is loaded.
+shows the canonical run manifest before retail data is loaded. Double Time
+advances authored gameplay and audio at a deterministic 1.5× rate while the
+renderer and browser presentation remain display-paced; menus and pause remain
+at 1×.
 
 The native Linux build accepts the same modifier codes:
 
@@ -130,14 +134,14 @@ The native Linux build accepts the same modifier codes:
 scripts/build-modern-linux.sh
 build/modern-linux/th08-modern \
   --data-dir /path/to/legal/th08/files \
-  --mods=HD,FL,AT,MR,NF \
+  --mods=HD,FL,AT,MR,NF,DT \
   --mirror=90
 ```
 
 Inspect a selection without starting the game or supplying DAT files:
 
 ```bash
-build/modern-linux/th08-modern --mods=HD,FL,AT,MR,NF --mirror=vertical --mod-manifest
+build/modern-linux/th08-modern --mods=HD,FL,AT,MR,NF,DT --mirror=vertical --mod-manifest
 build/modern-linux/th08-modern --mod-help
 ```
 

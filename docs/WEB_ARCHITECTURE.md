@@ -228,7 +228,10 @@ stuck movement or firing.
 SDL's Web Audio device must be opened, paused, and closed on the main browser
 runtime thread. Small synchronous proxies preserve the DirectSound-shaped C++
 interface, while mixing remains in the shared Linux audio implementation. BGM
-streaming reads `thbgm.dat` through the Blob range bridge.
+streaming reads `thbgm.dat` through the Blob range bridge. `DT@1` changes only
+that mixer's source-cursor rate: active gameplay uses the same 3/2 rational as
+the simulation accumulator, while title, retry, and pause restore 1/1 under the
+SDL audio-device lock.
 
 ### Wasm ABI adaptations
 
@@ -237,6 +240,10 @@ The port uses Web-only typed adapters for Win32 thread entry points and callback
 tables whose reconstructed x86 calls intentionally ignore a non-void return.
 The VC7/native branches remain unchanged. These are ABI boundary adaptations,
 not gameplay replacements.
+
+The pthread build also exposes Wasm memory through `SharedArrayBuffer`.
+Browser APIs that reject shared views receive a short ordinary-buffer copy;
+this applies both to Shift-JIS dynamic text and to launcher manifest decoding.
 
 Normal Wasm globals start at 32 MiB so existing low raw-address views remain
 available. The pthread build currently uses a fixed 256 MiB initial shared
@@ -321,6 +328,11 @@ All Web builds use
   spell-card numbers 14, 18, 22, 26, and 29 when its documented Last Spell
   time-orb requirement was met, and returned to the title without the former
   Wasm out-of-bounds trap.
+- A current Chromium `NF@1+DT@1` Stage 1 smoke measured 481 browser callbacks
+  and 721 authored calculations over eight seconds (1.49896x). The pause menu
+  measured 301 callbacks and 301 calculations (1.00000x), confirming that
+  simulation acceleration stays inside gameplay while presentation remains
+  display-paced. Both retail DATs stayed local browser `File` inputs.
 - A Chromium Lunatic Border Team Final-B endurance run crossed all six route
   stages, credits, result/score writing, title reconstruction, and a second
   start without a runtime trap. Per-stage spell observations were 1, 5, 9,
