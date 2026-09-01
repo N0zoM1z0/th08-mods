@@ -12,6 +12,9 @@
 #include "Spellcard.hpp"
 #include "Global.hpp"
 #include "utils.hpp"
+#ifdef TH08_MOD_BUILD
+#include "mod/games/th08/Th08DifficultyAdapter.hpp"
+#endif
 
 namespace th08
 {
@@ -778,6 +781,11 @@ void Spellcard::StartSpell(i32 spellCardNumber, const u8 *encodedName, i32 enemy
     {
         this->scoreLimit = 99999990;
     }
+#ifdef TH08_MOD_BUILD
+    *reinterpret_cast<i32 *>(this->activeEnemy + 0x3378) =
+        th_mod::th08::ScaleSpellTimeFrames(
+            *reinterpret_cast<i32 *>(this->activeEnemy + 0x3378));
+#endif
     this->bonusCounter =
         (this->bonusProgress - this->bonusProgress / 7u) / (*reinterpret_cast<i32 *>(this->activeEnemy + 0x3378) / 60);
     this->timer108 = *reinterpret_cast<i32 *>(this->activeEnemy + 0x3378);

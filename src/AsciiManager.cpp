@@ -12,6 +12,7 @@
 #include "Gui.hpp"
 #include "ResultScreen.hpp"
 #ifdef TH08_MOD_BUILD
+#include "mod/games/th08/Th08DifficultyAdapter.hpp"
 #include "mod/modifiers/flashlight/th08/Th08Flashlight.hpp"
 #endif
 
@@ -1507,7 +1508,13 @@ selected_no:
 
             g_GameManager.SetLives(g_GameManager.cfg->lifeCount);
 
+#ifdef TH08_MOD_BUILD
+            g_GameManager.SetBombCount(th_mod::th08::AdjustStartingBombCount(
+                reinterpret_cast<PauseRetryShtFileView *>(
+                    g_Player.primaryShtFile)->bombCount));
+#else
             g_GameManager.SetBombCount(reinterpret_cast<PauseRetryShtFileView *>(g_Player.primaryShtFile)->bombCount);
+#endif
 
             g_GameManager.globals->grazeInStage = 0;
             g_GameManager.globals->pointItemsCollectedInStage = 0;

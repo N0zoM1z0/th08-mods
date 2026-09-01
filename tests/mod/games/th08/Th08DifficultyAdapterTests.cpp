@@ -34,6 +34,9 @@ void TestTh08DifficultyAdapter()
     CheckNear(th_mod::th08::ScalePlayerHitbox(2.0f), 2.0f);
     CheckNear(th_mod::th08::ScalePlayerGraze(16.0f), 16.0f);
     CheckNear(th_mod::th08::ScaleLaserGrazeMargin(48.0f), 48.0f);
+    CHECK(th_mod::th08::AdjustStartingBombCount(3) == 3);
+    CHECK(th_mod::th08::ScaleSpellTimeFrames(-1) == -1);
+    CHECK(th_mod::th08::ScaleSpellTimeFrames(600) == 600);
 
     ConfigureAndBegin(TH_MOD_BUILTIN_HARD_ROCK);
     CheckNear(th_mod::th08::ScalePlayerSpeed(4.0f), 3.6f);
@@ -41,6 +44,8 @@ void TestTh08DifficultyAdapter()
     CheckNear(th_mod::th08::ScalePlayerHitbox(2.0f), 2.5f);
     CheckNear(th_mod::th08::ScalePlayerGraze(20.0f), 16.0f);
     CheckNear(th_mod::th08::ScaleLaserGrazeMargin(48.0f), 38.4f);
+    CHECK(th_mod::th08::AdjustStartingBombCount(3) == 3);
+    CHECK(th_mod::th08::ScaleSpellTimeFrames(600) == 600);
 
     CHECK(th_mod_end_run() == TH_MOD_RESULT_OK);
     ConfigureAndBegin(TH_MOD_BUILTIN_EASY);
@@ -49,6 +54,9 @@ void TestTh08DifficultyAdapter()
     CheckNear(th_mod::th08::ScalePlayerHitbox(4.0f), 3.0f);
     CheckNear(th_mod::th08::ScalePlayerGraze(16.0f), 20.0f);
     CheckNear(th_mod::th08::ScaleLaserGrazeMargin(48.0f), 60.0f);
+    CHECK(th_mod::th08::AdjustStartingBombCount(3) == 5);
+    CHECK(th_mod::th08::AdjustStartingBombCount(7) == 8);
+    CHECK(th_mod::th08::ScaleSpellTimeFrames(600) == 750);
 
     CHECK(th_mod_end_run() == TH_MOD_RESULT_OK);
     ResetRuntime();

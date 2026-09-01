@@ -1458,7 +1458,13 @@ i32 Player::FUN_0044cbf0()
             g_GameManager.AddLives(-1);
 #endif
             g_Gui.flags.lifeDisplayUpdateFrames = 2;
+#ifdef TH08_MOD_BUILD
+            g_GameManager.SetBombCount(th_mod::th08::AdjustStartingBombCount(
+                (i32)*reinterpret_cast<f32 *>(
+                    reinterpret_cast<u8 *>(TH08_RESPAWN_PRIMARY_SHT_FILE) + 4)));
+#else
             g_GameManager.SetBombCount((i32)*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(TH08_RESPAWN_PRIMARY_SHT_FILE) + 4));
+#endif
             g_Gui.flags.bombDisplayUpdateFrames = 2;
             return 1;
         }

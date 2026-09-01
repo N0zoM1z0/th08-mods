@@ -57,5 +57,32 @@ float ScaleLaserGrazeMargin(float value)
     return ScalePlayerGraze(value);
 }
 
+int AdjustStartingBombCount(int value)
+{
+    const ThModDifficultyStateV1 state = ReadState();
+    int adjusted = value + state.starting_bomb_delta;
+    if (adjusted < 0)
+    {
+        adjusted = 0;
+    }
+    else if (adjusted > 8)
+    {
+        adjusted = 8;
+    }
+    return adjusted;
+}
+
+int ScaleSpellTimeFrames(int value)
+{
+    if (value <= 0)
+    {
+        return value;
+    }
+
+    const ThModDifficultyStateV1 state = ReadState();
+    return value * static_cast<int>(state.spell_time_numerator) /
+           static_cast<int>(state.spell_time_denominator);
+}
+
 } // namespace th08
 } // namespace th_mod

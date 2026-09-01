@@ -22,6 +22,9 @@
 #include "ScreenEffect.hpp"
 #include "SoundPlayer.hpp"
 #include "Spellcard.hpp"
+#ifdef TH08_MOD_BUILD
+#include "mod/games/th08/Th08DifficultyAdapter.hpp"
+#endif
 
 namespace th08
 {
@@ -832,8 +835,14 @@ void __fastcall GameManager::GameplaySetupThread(void *unused)
             *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(g_GameManager.globals) + 0x74) =
                 static_cast<f32>(configMode);
             g_GameManager.UpdateAntiTamper();
+#ifdef TH08_MOD_BUILD
+            g_GameManager.SetBombCount(th_mod::th08::AdjustStartingBombCount(
+                static_cast<i32>(*reinterpret_cast<f32 *>(
+                    reinterpret_cast<u8 *>(g_Player.primaryShtFile) + 4))));
+#else
             g_GameManager.SetBombCount(static_cast<i32>(
                 *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(g_Player.primaryShtFile) + 4)));
+#endif
         }
 
         gameManager->InitArcadeRegionParams();

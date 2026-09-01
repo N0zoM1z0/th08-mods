@@ -11,6 +11,8 @@ float ScaleProjectileSpeed(float value);
 float ScalePlayerHitbox(float value);
 float ScalePlayerGraze(float value);
 float ScaleLaserGrazeMargin(float value);
+int AdjustStartingBombCount(int value);
+int ScaleSpellTimeFrames(int value);
 
 } // namespace th08
 } // namespace th_mod

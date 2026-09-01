@@ -194,7 +194,7 @@ data directory for writable state.
 - [x] Freeze explicit `HR@1` and `EZ@1` policy values.
 - [x] Cover transformed bullets, lasers, collision, graze, and movement at
   their TH08 commit boundaries.
-- [ ] Apply the Easy starting-bomb and spell-time resource policies.
+- [x] Apply the Easy starting-bomb and spell-time resource policies.
 - [ ] Balance score multipliers only after measured gameplay runs.
 
 ### Phase 5: additional games and native releases
@@ -345,8 +345,12 @@ laser graze expansion, every active and fade-state bullet displacement, and
 laser length growth. Applying projectile speed to final displacement means the
 same hook covers random speeds, acceleration, turning, and bounce transforms
 without rewriting ECL records or letting a later transform restore vanilla
-motion. The target-independent policy and adapter tests pass, and the complete
-32-bit Linux game links with these hooks enabled.
+motion. Easy also translates each authored SHT starting-bomb reset to `base+2`
+(capped at TH08's eight-bomb limit) and scales the real enemy spell timeout at
+spell start, so the countdown, bonus decay, and timeout transition share the
+same `5/4` duration. Replay stage restores remain untouched. The
+target-independent policy and adapter tests pass, and the complete 32-bit Linux
+game links with these hooks enabled.
 
 Double Time is implemented as a separate vertical slice under
 `src/mod/modifiers/doubletime/`. Its portable `DT@1` policy fixes the rate at
