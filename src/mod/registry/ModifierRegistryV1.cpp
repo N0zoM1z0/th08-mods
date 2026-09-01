@@ -2,6 +2,7 @@
 
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
 #include "modifiers/doubletime/DoubleTimePolicy.hpp"
+#include "modifiers/easy/EasyPolicy.hpp"
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
 #include "modifiers/hardrock/HardRockPolicy.hpp"
@@ -22,7 +23,10 @@ const ModifierDescriptorV1 kBuiltins[] = {
     {TH_MOD_BUILTIN_MIRROR, "MR", mirror::kRulesetVersion, 0},
     {TH_MOD_BUILTIN_NO_FAIL, "NF", nofail::kRulesetVersion, 0},
     {TH_MOD_BUILTIN_DOUBLE_TIME, "DT", doubletime::kRulesetVersion, 0},
-    {TH_MOD_BUILTIN_HARD_ROCK, "HR", hardrock::kRulesetVersion, 0},
+    {TH_MOD_BUILTIN_HARD_ROCK, "HR", hardrock::kRulesetVersion,
+     TH_MOD_BUILTIN_EASY},
+    {TH_MOD_BUILTIN_EASY, "EZ", easy::kRulesetVersion,
+     TH_MOD_BUILTIN_HARD_ROCK},
 };
 
 } // namespace

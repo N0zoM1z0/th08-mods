@@ -16,6 +16,7 @@ if(TH08_MOD_BUILD)
         src/mod/manifest/ManifestV1.cpp
         src/mod/modifiers/autoshot/AutoshotPolicy.cpp
         src/mod/modifiers/doubletime/DoubleTimePolicy.cpp
+        src/mod/modifiers/easy/EasyPolicy.cpp
         src/mod/modifiers/flashlight/FlashlightPolicy.cpp
         src/mod/modifiers/hidden/HiddenPolicy.cpp
         src/mod/modifiers/hardrock/HardRockPolicy.cpp
@@ -51,6 +52,7 @@ if(TH08_MODCORE_ONLY)
         tests/mod/manifest/ManifestTests.cpp
         tests/mod/modifiers/autoshot/AutoshotTests.cpp
         tests/mod/modifiers/doubletime/DoubleTimeTests.cpp
+        tests/mod/modifiers/easy/EasyTests.cpp
         tests/mod/modifiers/flashlight/FlashlightTests.cpp
         tests/mod/modifiers/hidden/HiddenTests.cpp
         tests/mod/modifiers/hardrock/HardRockTests.cpp

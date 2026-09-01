@@ -2,6 +2,7 @@
 #include "manifest/ManifestV1.hpp"
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
 #include "modifiers/doubletime/DoubleTimePolicy.hpp"
+#include "modifiers/easy/EasyPolicy.hpp"
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
 #include "modifiers/hardrock/HardRockPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
@@ -284,6 +285,11 @@ extern "C" ThModResult th_mod_get_difficulty_state_v1(
 
     *out_state = th_mod::hardrock::GetState(
         g_runtime.config, g_runtime.run_active);
+    if (out_state->is_active == 0)
+    {
+        *out_state = th_mod::easy::GetState(
+            g_runtime.config, g_runtime.run_active);
+    }
     return TH_MOD_RESULT_OK;
 }
 

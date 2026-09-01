@@ -105,7 +105,7 @@ simulation or evaluates modifier rules.
 | No Fail (`NF`) | Misses, death count, penalties, and respawning remain active; at zero lives the final retry transition is suppressed without underflowing the life counter. | Miss-commit policy | Unranked |
 | Double Time (`DT`) | Simulation and authored audio advance at the configured rate while presentation stays display-paced. | Frame scheduler and mixer rate | Ranked later |
 | Hard Rock (`HR`) | Enemy projectile speed is `23/20`, player movement is `9/10`, the hurtbox is `5/4`, and the graze margin is `4/5`; resources and spell time remain vanilla. | Multiple gameplay policies | Unranked until balanced |
-| Easy (`EZ`) | A frozen assistance policy changes the same explicit dimensions in the easier direction. | Multiple gameplay policies | Unranked |
+| Easy (`EZ`) | Enemy projectile speed is `17/20`, the hurtbox is `3/4`, the graze margin is `5/4`, starting bombs gain `+2`, and spell time is `5/4`; player movement remains vanilla. | Multiple gameplay policies | Unranked |
 
 `HR` and `EZ` conflict in version 1. `MR@1` records its selected transform in
 the manifest; 90° and 270° use deterministic letterboxing inside the original
@@ -191,7 +191,7 @@ data directory for writable state.
 ### Phase 4: gameplay policies
 
 - [x] Add No Fail at the miss/game-over commit boundary.
-- [ ] Freeze explicit `HR@1` and `EZ@1` policy values.
+- [x] Freeze explicit `HR@1` and `EZ@1` policy values.
 - [ ] Cover bullet transformations, lasers, collision, graze, movement, and
   resources before enabling composite difficulty modifiers.
 - [ ] Balance score multipliers only after measured gameplay runs.

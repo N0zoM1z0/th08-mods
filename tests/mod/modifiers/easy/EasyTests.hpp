@@ -1,0 +1,6 @@
+#ifndef TH_MOD_TESTS_MODIFIERS_EASY_EASY_TESTS_HPP
+#define TH_MOD_TESTS_MODIFIERS_EASY_EASY_TESTS_HPP
+
+void TestEasyPolicy();
+
+#endif

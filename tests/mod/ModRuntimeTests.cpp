@@ -4,6 +4,7 @@
 #include "manifest/ManifestTests.hpp"
 #include "modifiers/autoshot/AutoshotTests.hpp"
 #include "modifiers/doubletime/DoubleTimeTests.hpp"
+#include "modifiers/easy/EasyTests.hpp"
 #include "modifiers/flashlight/FlashlightTests.hpp"
 #include "modifiers/hidden/HiddenTests.hpp"
 #include "modifiers/hardrock/HardRockTests.hpp"
@@ -130,6 +131,7 @@ int main()
     TestManifestV1();
     TestAutoshotPolicy();
     TestDoubleTimePolicy();
+    TestEasyPolicy();
     TestFlashlightPolicy();
     TestHiddenPolicy();
     TestHardRockPolicy();

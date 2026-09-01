@@ -96,7 +96,9 @@ runtime.onRuntimeInitialized = () => {
       [16, 0, "NF@1"],
       [32, 0, "DT@1"],
       [64, 0, "HR@1"],
+      [128, 0, "EZ@1"],
       [127, 4, "HD@1(45,45)+FL@1(96,224)+AT@1+MR@1(rotate-270)+NF@1+DT@1+HR@1"],
+      [191, 4, "HD@1(45,45)+FL@1(96,224)+AT@1+MR@1(rotate-270)+NF@1+DT@1+EZ@1"],
     ];
 
     for (const [mask, mirrorMode, suffix] of cases) {

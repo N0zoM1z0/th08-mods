@@ -28,7 +28,8 @@ typedef enum ThModBuiltinV1 {
     TH_MOD_BUILTIN_MIRROR = 1u << 3,
     TH_MOD_BUILTIN_NO_FAIL = 1u << 4,
     TH_MOD_BUILTIN_DOUBLE_TIME = 1u << 5,
-    TH_MOD_BUILTIN_HARD_ROCK = 1u << 6
+    TH_MOD_BUILTIN_HARD_ROCK = 1u << 6,
+    TH_MOD_BUILTIN_EASY = 1u << 7
 } ThModBuiltinV1;
 
 typedef enum ThModMirrorModeV1 {
