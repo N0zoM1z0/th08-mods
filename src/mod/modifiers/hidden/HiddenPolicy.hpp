@@ -8,6 +8,8 @@ namespace th_mod
 namespace hidden
 {
 
+enum { kRulesetVersion = 1 };
+
 uint32_t ComputeAlpha(const ThModRunConfigV1 &config, bool runActive,
                       uint32_t baseAlpha, uint32_t activeAgeTicks);
 

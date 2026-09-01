@@ -1,5 +1,6 @@
 #include "ModApi.h"
 #include "TestHarness.hpp"
+#include "manifest/ManifestTests.hpp"
 #include "modifiers/autoshot/AutoshotTests.hpp"
 #include "modifiers/flashlight/FlashlightTests.hpp"
 #include "modifiers/hidden/HiddenTests.hpp"
@@ -113,6 +114,7 @@ int main()
     TestDefaults();
     TestValidation();
     TestConfigurationCopyAndFreeze();
+    TestManifestV1();
     TestAutoshotPolicy();
     TestFlashlightPolicy();
     TestHiddenPolicy();

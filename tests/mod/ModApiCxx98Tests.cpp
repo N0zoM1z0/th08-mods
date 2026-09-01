@@ -1,5 +1,7 @@
 #include "ModApi.h"
 
+#include <string.h>
+
 int main()
 {
     if (th_mod_config_v1_size() != sizeof(ThModRunConfigV1))
@@ -25,33 +27,43 @@ int main()
     {
         return 4;
     }
-    if (th_mod_begin_run() != TH_MOD_RESULT_OK)
+    char manifest[192];
+    if (th_mod_manifest_v1_size() > sizeof(manifest) ||
+        th_mod_write_manifest_v1(manifest, sizeof(manifest)) !=
+            TH_MOD_RESULT_OK ||
+        strcmp(manifest,
+               "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+               "api=1;mods=HD@1(45,45)+FL@1(96,224)+AT@1") != 0)
     {
         return 5;
     }
-    if (th_mod_is_run_active() == 0)
+    if (th_mod_begin_run() != TH_MOD_RESULT_OK)
     {
         return 6;
+    }
+    if (th_mod_is_run_active() == 0)
+    {
+        return 7;
     }
     if (th_mod_filter_actions_v1(0, TH_MOD_INPUT_CONTEXT_GAMEPLAY) !=
         TH_MOD_ACTION_SHOOT)
     {
-        return 7;
+        return 8;
     }
     if (th_mod_hidden_alpha_v1(255, 1000) != 0)
     {
-        return 8;
+        return 9;
     }
     ThModFlashlightStateV1 flashlight;
     if (th_mod_get_flashlight_state_v1(&flashlight) != TH_MOD_RESULT_OK ||
         flashlight.struct_size != sizeof(flashlight) ||
         flashlight.is_active != 1)
     {
-        return 9;
+        return 10;
     }
     if (th_mod_end_run() != TH_MOD_RESULT_OK)
     {
-        return 10;
+        return 11;
     }
 
     return 0;

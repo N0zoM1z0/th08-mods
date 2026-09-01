@@ -8,6 +8,8 @@ namespace th_mod
 namespace flashlight
 {
 
+enum { kRulesetVersion = 1 };
+
 ThModFlashlightStateV1 GetState(const ThModRunConfigV1 &config,
                                 bool runActive);
 

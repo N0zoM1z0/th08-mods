@@ -1,10 +1,12 @@
 #include "ModApi.h"
+#include "manifest/ManifestV1.hpp"
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 namespace {
 
@@ -132,6 +134,31 @@ extern "C" ThModResult th_mod_get_config_v1(ThModRunConfigV1 *out_config)
     }
 
     *out_config = g_runtime.config;
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" uint32_t th_mod_manifest_v1_size(void)
+{
+    const std::string manifest = th_mod::manifest::BuildV1(g_runtime.config);
+    return static_cast<uint32_t>(manifest.size() + 1);
+}
+
+extern "C" ThModResult th_mod_write_manifest_v1(
+    char *out_manifest, uint32_t manifest_capacity)
+{
+    if (out_manifest == 0)
+    {
+        return TH_MOD_RESULT_NULL_ARGUMENT;
+    }
+
+    const std::string manifest = th_mod::manifest::BuildV1(g_runtime.config);
+    const std::size_t requiredSize = manifest.size() + 1;
+    if (manifest_capacity < requiredSize)
+    {
+        return TH_MOD_RESULT_BUFFER_SIZE;
+    }
+
+    std::memcpy(out_manifest, manifest.c_str(), requiredSize);
     return TH_MOD_RESULT_OK;
 }
 

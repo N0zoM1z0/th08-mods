@@ -16,7 +16,8 @@ typedef enum ThModResult {
     TH_MOD_RESULT_API_VERSION = -3,
     TH_MOD_RESULT_UNKNOWN_MODIFIER = -4,
     TH_MOD_RESULT_INVALID_OPTION = -5,
-    TH_MOD_RESULT_RUN_STATE = -6
+    TH_MOD_RESULT_RUN_STATE = -6,
+    TH_MOD_RESULT_BUFFER_SIZE = -7
 } ThModResult;
 
 typedef enum ThModBuiltinV1 {
@@ -65,6 +66,9 @@ ThModResult th_mod_get_default_config_v1(ThModRunConfigV1 *out_config);
 ThModResult th_mod_validate_config_v1(const ThModRunConfigV1 *config);
 ThModResult th_mod_configure_v1(const ThModRunConfigV1 *config);
 ThModResult th_mod_get_config_v1(ThModRunConfigV1 *out_config);
+uint32_t th_mod_manifest_v1_size(void);
+ThModResult th_mod_write_manifest_v1(char *out_manifest,
+                                     uint32_t manifest_capacity);
 
 ThModResult th_mod_begin_run(void);
 ThModResult th_mod_end_run(void);

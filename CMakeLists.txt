@@ -13,6 +13,7 @@ endif()
 if(TH08_MOD_BUILD)
     add_library(th08-mod-core STATIC
         src/mod/core/ModRuntime.cpp
+        src/mod/manifest/ManifestV1.cpp
         src/mod/modifiers/autoshot/AutoshotPolicy.cpp
         src/mod/modifiers/flashlight/FlashlightPolicy.cpp
         src/mod/modifiers/hidden/HiddenPolicy.cpp
@@ -40,6 +41,7 @@ if(TH08_MODCORE_ONLY)
     enable_testing()
     add_executable(th08-mod-core-tests
         tests/mod/ModRuntimeTests.cpp
+        tests/mod/manifest/ManifestTests.cpp
         tests/mod/modifiers/autoshot/AutoshotTests.cpp
         tests/mod/modifiers/flashlight/FlashlightTests.cpp
         tests/mod/modifiers/hidden/HiddenTests.cpp

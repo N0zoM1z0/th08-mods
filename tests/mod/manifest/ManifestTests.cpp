@@ -1,0 +1,56 @@
+#include "manifest/ManifestTests.hpp"
+
+#include "ModApi.h"
+#include "TestHarness.hpp"
+
+#include <string>
+#include <vector>
+
+namespace
+{
+
+std::string ReadManifest()
+{
+    const uint32_t size = th_mod_manifest_v1_size();
+    std::vector<char> buffer(size);
+    CHECK(th_mod_write_manifest_v1(buffer.data(), size) == TH_MOD_RESULT_OK);
+    return std::string(buffer.data());
+}
+
+} // namespace
+
+void TestManifestV1()
+{
+    ResetRuntime();
+
+    const std::string defaultManifest =
+        "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+        "api=1;mods=none";
+    CHECK(ReadManifest() == defaultManifest);
+    CHECK(th_mod_manifest_v1_size() == defaultManifest.size() + 1);
+    CHECK(th_mod_write_manifest_v1(0, 100) == TH_MOD_RESULT_NULL_ARGUMENT);
+
+    std::vector<char> shortBuffer(defaultManifest.size());
+    CHECK(th_mod_write_manifest_v1(shortBuffer.data(), shortBuffer.size()) ==
+          TH_MOD_RESULT_BUFFER_SIZE);
+
+    ThModRunConfigV1 config;
+    CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
+    config.enabled_mods = TH_MOD_BUILTIN_AUTOSHOT |
+                          TH_MOD_BUILTIN_FLASHLIGHT |
+                          TH_MOD_BUILTIN_HIDDEN;
+    config.hidden_visible_ticks = 60;
+    config.hidden_fade_ticks = 30;
+    config.flashlight_radius_pixels = 120;
+    config.flashlight_opacity = 192;
+    CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
+    CHECK(ReadManifest() ==
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "api=1;mods=HD@1(60,30)+FL@1(120,192)+AT@1");
+
+    CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
+    config.hidden_visible_ticks = 999;
+    config.flashlight_opacity = 1;
+    CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
+    CHECK(ReadManifest() == defaultManifest);
+}
