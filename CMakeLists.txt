@@ -22,6 +22,7 @@ if(TH08_MOD_BUILD)
         src/mod/modifiers/hardrock/HardRockPolicy.cpp
         src/mod/modifiers/mirror/MirrorPolicy.cpp
         src/mod/modifiers/nofail/NoFailPolicy.cpp
+        src/mod/modifiers/relax/RelaxPolicy.cpp
         src/mod/registry/ModifierRegistryV1.cpp
     )
     target_compile_features(th08-mod-core PUBLIC cxx_std_17)
@@ -60,6 +61,7 @@ if(TH08_MODCORE_ONLY)
         tests/mod/modifiers/hardrock/HardRockTests.cpp
         tests/mod/modifiers/mirror/MirrorTests.cpp
         tests/mod/modifiers/nofail/NoFailTests.cpp
+        tests/mod/modifiers/relax/RelaxTests.cpp
         tests/mod/registry/ModifierRegistryTests.cpp
     )
     target_compile_features(th08-mod-core-tests PRIVATE cxx_std_17)

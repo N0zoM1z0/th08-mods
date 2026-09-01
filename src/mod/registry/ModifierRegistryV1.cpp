@@ -8,6 +8,7 @@
 #include "modifiers/hardrock/HardRockPolicy.hpp"
 #include "modifiers/mirror/MirrorPolicy.hpp"
 #include "modifiers/nofail/NoFailPolicy.hpp"
+#include "modifiers/relax/RelaxPolicy.hpp"
 
 namespace th_mod
 {
@@ -19,7 +20,8 @@ namespace
 const ModifierDescriptorV1 kBuiltins[] = {
     {TH_MOD_BUILTIN_HIDDEN, "HD", hidden::kRulesetVersion, 0},
     {TH_MOD_BUILTIN_FLASHLIGHT, "FL", flashlight::kRulesetVersion, 0},
-    {TH_MOD_BUILTIN_AUTOSHOT, "AT", autoshot::kRulesetVersion, 0},
+    {TH_MOD_BUILTIN_AUTOSHOT, "AT", autoshot::kRulesetVersion,
+     TH_MOD_BUILTIN_RELAX},
     {TH_MOD_BUILTIN_MIRROR, "MR", mirror::kRulesetVersion, 0},
     {TH_MOD_BUILTIN_NO_FAIL, "NF", nofail::kRulesetVersion, 0},
     {TH_MOD_BUILTIN_DOUBLE_TIME, "DT", doubletime::kRulesetVersion, 0},
@@ -27,6 +29,8 @@ const ModifierDescriptorV1 kBuiltins[] = {
      TH_MOD_BUILTIN_EASY},
     {TH_MOD_BUILTIN_EASY, "EZ", easy::kRulesetVersion,
      TH_MOD_BUILTIN_HARD_ROCK},
+    {TH_MOD_BUILTIN_RELAX, "RX", relax::kRulesetVersion,
+     TH_MOD_BUILTIN_AUTOSHOT},
 };
 
 } // namespace

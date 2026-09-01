@@ -11,6 +11,7 @@
 #include "modifiers/hardrock/HardRockTests.hpp"
 #include "modifiers/mirror/MirrorTests.hpp"
 #include "modifiers/nofail/NoFailTests.hpp"
+#include "modifiers/relax/RelaxTests.hpp"
 #include "registry/ModifierRegistryTests.hpp"
 
 #include <cstdint>
@@ -139,6 +140,7 @@ int main()
     TestHardRockPolicy();
     TestMirrorPolicy();
     TestNoFailPolicy();
+    TestRelaxPolicy();
 
     if (g_failures != 0)
     {

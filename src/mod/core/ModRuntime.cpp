@@ -8,6 +8,7 @@
 #include "modifiers/hidden/HiddenPolicy.hpp"
 #include "modifiers/mirror/MirrorPolicy.hpp"
 #include "modifiers/nofail/NoFailPolicy.hpp"
+#include "modifiers/relax/RelaxPolicy.hpp"
 #include "registry/ModifierRegistryV1.hpp"
 
 #include <cstddef>
@@ -211,6 +212,8 @@ extern "C" uint32_t th_mod_filter_actions_v1(uint32_t actions,
 {
     // V1 replay identity fixes geometry transforms before action injection.
     actions = th_mod::mirror::FilterActions(
+        g_runtime.config, g_runtime.run_active, actions, context);
+    actions = th_mod::relax::FilterActions(
         g_runtime.config, g_runtime.run_active, actions, context);
     return th_mod::autoshot::FilterActions(
         g_runtime.config, g_runtime.run_active, actions, context);
