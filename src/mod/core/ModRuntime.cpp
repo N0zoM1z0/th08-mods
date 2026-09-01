@@ -1,6 +1,7 @@
 #include "ModApi.h"
 #include "manifest/ManifestV1.hpp"
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
+#include "modifiers/blindspot/BlindSpotPolicy.hpp"
 #include "modifiers/doubletime/DoubleTimePolicy.hpp"
 #include "modifiers/easy/EasyPolicy.hpp"
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
@@ -224,6 +225,13 @@ extern "C" uint32_t th_mod_hidden_alpha_v1(uint32_t base_alpha,
 {
     return th_mod::hidden::ComputeAlpha(
         g_runtime.config, g_runtime.run_active, base_alpha, active_age_ticks);
+}
+
+extern "C" uint32_t th_mod_blind_spot_alpha_v1(
+    uint32_t base_alpha, uint32_t distance_pixels)
+{
+    return th_mod::blindspot::ComputeAlpha(
+        g_runtime.config, g_runtime.run_active, base_alpha, distance_pixels);
 }
 
 extern "C" ThModResult th_mod_get_flashlight_state_v1(

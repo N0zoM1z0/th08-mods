@@ -30,7 +30,8 @@ typedef enum ThModBuiltinV1 {
     TH_MOD_BUILTIN_DOUBLE_TIME = 1u << 5,
     TH_MOD_BUILTIN_HARD_ROCK = 1u << 6,
     TH_MOD_BUILTIN_EASY = 1u << 7,
-    TH_MOD_BUILTIN_RELAX = 1u << 8
+    TH_MOD_BUILTIN_RELAX = 1u << 8,
+    TH_MOD_BUILTIN_BLIND_SPOT = 1u << 9
 } ThModBuiltinV1;
 
 typedef enum ThModMirrorModeV1 {
@@ -131,6 +132,8 @@ uint32_t th_mod_is_run_active(void);
 uint32_t th_mod_filter_actions_v1(uint32_t actions, uint32_t context);
 uint32_t th_mod_hidden_alpha_v1(uint32_t base_alpha,
                                 uint32_t active_age_ticks);
+uint32_t th_mod_blind_spot_alpha_v1(uint32_t base_alpha,
+                                    uint32_t distance_pixels);
 ThModResult th_mod_get_flashlight_state_v1(
     ThModFlashlightStateV1 *out_state);
 ThModResult th_mod_get_mirror_state_v1(ThModMirrorStateV1 *out_state);

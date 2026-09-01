@@ -1,6 +1,7 @@
 #include "registry/ModifierRegistryV1.hpp"
 
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
+#include "modifiers/blindspot/BlindSpotPolicy.hpp"
 #include "modifiers/doubletime/DoubleTimePolicy.hpp"
 #include "modifiers/easy/EasyPolicy.hpp"
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
@@ -31,6 +32,7 @@ const ModifierDescriptorV1 kBuiltins[] = {
      TH_MOD_BUILTIN_HARD_ROCK},
     {TH_MOD_BUILTIN_RELAX, "RX", relax::kRulesetVersion,
      TH_MOD_BUILTIN_AUTOSHOT},
+    {TH_MOD_BUILTIN_BLIND_SPOT, "BS", blindspot::kRulesetVersion, 0},
 };
 
 } // namespace

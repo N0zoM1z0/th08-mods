@@ -4,6 +4,7 @@
 #include "games/th08/Th08DifficultyAdapterTests.hpp"
 #include "manifest/ManifestTests.hpp"
 #include "modifiers/autoshot/AutoshotTests.hpp"
+#include "modifiers/blindspot/BlindSpotTests.hpp"
 #include "modifiers/doubletime/DoubleTimeTests.hpp"
 #include "modifiers/easy/EasyTests.hpp"
 #include "modifiers/flashlight/FlashlightTests.hpp"
@@ -133,6 +134,7 @@ int main()
     TestTh08DifficultyAdapter();
     TestManifestV1();
     TestAutoshotPolicy();
+    TestBlindSpotPolicy();
     TestDoubleTimePolicy();
     TestEasyPolicy();
     TestFlashlightPolicy();
