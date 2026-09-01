@@ -125,6 +125,12 @@ DIFFABLE_STATIC(i8, g_EclScriptedGlobalUpdateFreeze);
 DIFFABLE_STATIC(f32, g_EclGameTimeScale);
 DIFFABLE_STATIC(u32, g_EclGameTimeScaleFlags);
 #endif
+#ifndef TH08_MODERN_PORT
+// The fixed-address VC7 lane retains the original standalone owner used by
+// Player's accepted respawn unit. Modern ports read the overlapping
+// GameManager::shotType field instead.
+DIFFABLE_STATIC(u8, g_TargetByte0164D0B1);
+#endif
 DIFFABLE_STATIC(EclManager, g_EclManager);
 
 namespace EclRunLowProposal

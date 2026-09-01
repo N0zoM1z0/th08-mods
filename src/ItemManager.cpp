@@ -18,6 +18,11 @@ i32 &g_MaxValuePointItemsCollected = g_GameManager.unk3DB94;
 #else
 DIFFABLE_STATIC(i32, g_MaxValuePointItemsCollected);
 #endif
+#ifndef TH08_MODERN_PORT
+// This target global overlaps GameManager::arcadeRegionSize.y in the retail
+// image. Keep its original symbol only for fixed-address VC7 reconstruction.
+DIFFABLE_STATIC(f32, g_ItemPlayfieldBottom);
+#endif
 DIFFABLE_STATIC_ARRAY_ASSIGN(i32, 6, g_PowerUpThresholds) = {8, 24, 48, 80, 128, 999};
 
 // FUNCTION: th08 0x441830

@@ -23,6 +23,30 @@ namespace th08
 // far before the main Player implementation that begins at 0x00449CA0. Its
 // production definitions live in PlayerBomb.cpp.
 DIFFABLE_STATIC(Player, g_Player);
+#ifdef TH08_MODERN_PORT
+#define TH08_RESPAWN_ROUTE_STATE_FLAG g_GameManager.character
+#define TH08_RESPAWN_SHOT_TYPE g_GameManager.shotType
+#define TH08_RESPAWN_PLAYFIELD_WIDTH g_GameManager.arcadeRegionSize.x
+#define TH08_RESPAWN_PLAYFIELD_BOTTOM g_GameManager.arcadeRegionSize.y
+#define TH08_RESPAWN_RETRY_FLAG g_GameManager.showRetryMenu
+#define TH08_RESPAWN_PRIMARY_SHT_FILE g_Player.primaryShtFile
+#else
+// These fixed-address names are target-proven overlapping views. Modern
+// ports use their aggregate owners above, while the VC7 reconstruction lane
+// retains the symbols recorded by the accepted Player respawn unit.
+DIFFABLE_STATIC(PlayerRawShtFile *, g_PlayerPrimaryShtFile);
+DIFFABLE_STATIC(u8, g_PlayerRouteStateFlag);
+DIFFABLE_STATIC(u8, g_PlayerNoLivesFlag);
+DIFFABLE_STATIC(f32, g_PlayerPlayfieldWidth);
+DIFFABLE_EXTERN(u8, g_TargetByte0164D0B1);
+DIFFABLE_EXTERN(f32, g_ItemPlayfieldBottom);
+#define TH08_RESPAWN_ROUTE_STATE_FLAG g_PlayerRouteStateFlag
+#define TH08_RESPAWN_SHOT_TYPE g_TargetByte0164D0B1
+#define TH08_RESPAWN_PLAYFIELD_WIDTH g_PlayerPlayfieldWidth
+#define TH08_RESPAWN_PLAYFIELD_BOTTOM g_ItemPlayfieldBottom
+#define TH08_RESPAWN_RETRY_FLAG g_PlayerNoLivesFlag
+#define TH08_RESPAWN_PRIMARY_SHT_FILE g_PlayerPrimaryShtFile
+#endif
 #ifdef TH08_MODERN_WEB
 // These target globals are field aliases inside g_GameManager in the retail
 // image. Keep one owner when the Wasm linker cannot place symbols absolutely.
@@ -1329,7 +1353,7 @@ i32 Player::FUN_0044cbf0()
             g_AnmManager->SetMixColorDefault();
             *reinterpret_cast<u32 *>(reinterpret_cast<u8 *>(this) + 0x208) &= ~0x20000u;
             *reinterpret_cast<u16 *>(reinterpret_cast<u8 *>(g_ReplayManager) + 0xDA) |= 4;
-            g_GameManager.character = 0;
+            TH08_RESPAWN_ROUTE_STATE_FLAG = 0;
             *reinterpret_cast<u8 *>(reinterpret_cast<u8 *>(this) + 4) = 0;
             g_Spellcard.FUN_0044d150();
             g_GameManager.AddToDeaths(1);
@@ -1351,7 +1375,7 @@ i32 Player::FUN_0044cbf0()
                 g_ItemManager.SpawnItem(&this->position, ITEM_POWER_SMALL, ITEM_STATE_UNK2);
                 g_ItemManager.SpawnItem(&this->position, ITEM_POWER_SMALL, ITEM_STATE_UNK2);
                 if (g_GameManager.GetBombsRemaining() > 0 &&
-                    (g_GameManager.shotType == 2 || g_GameManager.shotType == 8 || g_GameManager.shotType == 9))
+                    (TH08_RESPAWN_SHOT_TYPE == 2 || TH08_RESPAWN_SHOT_TYPE == 8 || TH08_RESPAWN_SHOT_TYPE == 9))
                     g_ItemManager.SpawnItem(&this->position, ITEM_BOMB, ITEM_STATE_UNK2);
                 g_Gui.flags.powerDisplayUpdateFrames = 2;
                 g_ItemManager.CancelAutoCollect();
@@ -1383,14 +1407,14 @@ i32 Player::FUN_0044cbf0()
     if ((i32)this->timer >= 30)
     {
         this->playerState = PLAYER_STATE_SPAWNING;
-        this->position.operator float *()[0] = g_GameManager.arcadeRegionSize.x / 2.0f;
-        this->position.operator float *()[1] = g_GameManager.arcadeRegionSize.y - 64.0f;
+        this->position.operator float *()[0] = TH08_RESPAWN_PLAYFIELD_WIDTH / 2.0f;
+        this->position.operator float *()[1] = TH08_RESPAWN_PLAYFIELD_BOTTOM - 64.0f;
         this->position.operator float *()[2] = 0.2f;
         this->timer = 0;
         *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0x28) = 3.0f;
         *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0x2C) = 3.0f;
-        if ((g_GameManager.shotType < 4 && *reinterpret_cast<u8 *>(reinterpret_cast<u8 *>(this) + 3) == 0) ||
-            (g_GameManager.shotType & 1) == 0)
+        if ((TH08_RESPAWN_SHOT_TYPE < 4 && *reinterpret_cast<u8 *>(reinterpret_cast<u8 *>(this) + 3) == 0) ||
+            (TH08_RESPAWN_SHOT_TYPE & 1) == 0)
             (*reinterpret_cast<AnmLoaded **>(reinterpret_cast<u8 *>(this) + 0xC))
                 ->SetAndExecuteScriptIdx(reinterpret_cast<AnmVm *>(reinterpret_cast<u8 *>(this) + 0x10), 0);
         else
@@ -1399,13 +1423,13 @@ i32 Player::FUN_0044cbf0()
 
         if (g_GameManager.GetLives() <= 0)
         {
-            g_GameManager.showRetryMenu = 1;
+            TH08_RESPAWN_RETRY_FLAG = 1;
         }
         else
         {
             g_GameManager.AddLives(-1);
             g_Gui.flags.lifeDisplayUpdateFrames = 2;
-            g_GameManager.SetBombCount((i32)*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(g_Player.primaryShtFile) + 4));
+            g_GameManager.SetBombCount((i32)*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(TH08_RESPAWN_PRIMARY_SHT_FILE) + 4));
             g_Gui.flags.bombDisplayUpdateFrames = 2;
             return 1;
         }
@@ -1413,6 +1437,12 @@ i32 Player::FUN_0044cbf0()
     }
     return 0;
 }
+#undef TH08_RESPAWN_ROUTE_STATE_FLAG
+#undef TH08_RESPAWN_SHOT_TYPE
+#undef TH08_RESPAWN_PLAYFIELD_WIDTH
+#undef TH08_RESPAWN_PLAYFIELD_BOTTOM
+#undef TH08_RESPAWN_RETRY_FLAG
+#undef TH08_RESPAWN_PRIMARY_SHT_FILE
 // FUNCTION: th08 0x44d180
 #pragma var_order(value, this)
 void Player::FUN_0044d180()
