@@ -90,7 +90,7 @@ inside each modifier without copying its portable policy.
 
 The Web launcher passes one validated configuration to an exported C function
 before `main`. The Linux host accepts the same logical selection with
-`--mods=HD,FL,AT,MR,NF,DT,HR,EZ,RX,BS` and `--mirror=90`; `--mod-manifest`
+`--mods=HD,FL,AT,MR,NF,DT,HR,EZ,RX,BS,NB` and `--mirror=90`; `--mod-manifest`
 prints its normalized identity without requiring retail data. Host code never
 advances simulation or evaluates modifier rules.
 
@@ -108,6 +108,7 @@ advances simulation or evaluates modifier rules.
 | Easy (`EZ`) | Enemy projectile speed is `17/20`, the hurtbox is `3/4`, the graze margin is `5/4`, starting bombs gain `+2`, and spell time is `5/4`; player movement remains vanilla. | Multiple gameplay policies | Unranked |
 | Relax (`RX`) | Shoot and Focus are held during active gameplay; movement and bombing remain manual, while menus, dialogue, blocked UI, and replay playback retain vanilla input. | Effective-input filter | Unranked |
 | Blind Spot (`BS`) | Bullets and lasers are fully visible at 128 pixels, fade linearly while approaching, and are invisible within 48 pixels of the player. | Projectile draw observation | Ranked later |
+| No Bomb (`NB`) | Bomb is suppressed during live active gameplay; menus, dialogue, blocked UI, and replay playback retain vanilla input. | Effective-input filter | Unranked |
 
 `HR` and `EZ` conflict in version 1. `AT` and `RX` also conflict because Relax
 is a strict superset of Autoshot's assistance. `MR@1` records its selected
@@ -202,6 +203,7 @@ data directory for writable state.
   native hosts.
 - [x] Add Blind Spot as a distance-based observation policy for bullets and
   active laser segments.
+- [x] Add No Bomb as a portable action-suppression policy.
 - [ ] Balance score multipliers only after measured gameplay runs.
 
 ### Phase 5: additional games and native releases
@@ -331,12 +333,13 @@ TH08 adapter merely registers the generic input hook when `RX` is selected.
 The version-1 modifier registry is now the single owner of built-in bits,
 codes, ruleset versions, canonical manifest order, and conflict masks. Runtime
 validation rejects unknown bits and conflicts with distinct result codes, and
-tests pin the published `HD+FL+AT+MR+NF+DT+HR+EZ` order, append `RX+BS` without
-renumbering earlier modifiers, and cover both conflict pairs.
+tests pin the published `HD+FL+AT+MR+NF+DT+HR+EZ` order, append `RX+BS+NB`
+without renumbering earlier modifiers, and cover both conflict pairs.
 Effective-input composition is also fixed for version 1: geometric direction
 transforms run before Relax or Autoshot assistance actions are injected.
-Modifier-specific options and behavior remain in their vertical slices instead
-of moving into the registry.
+No Bomb suppression runs last, so `RX+NB` deterministically leaves automatic
+Shoot and Focus while removing Bomb. Modifier-specific options and behavior
+remain in their vertical slices instead of moving into the registry.
 
 Blind Spot is the second projectile-observation modifier. Its portable policy
 owns the 48-to-128-pixel alpha curve, while its TH08 slice measures bullet
