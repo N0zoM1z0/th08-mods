@@ -10,7 +10,7 @@
 #include "Supervisor.hpp"
 #ifdef TH08_MOD_BUILD
 #include "mod/games/th08/Th08DifficultyAdapter.hpp"
-#include "mod/modifiers/hidden/th08/Th08Hidden.hpp"
+#include "mod/games/th08/Th08ProjectileObservation.hpp"
 #endif
 
 namespace th08
@@ -1550,7 +1550,7 @@ ChainCallbackResult BulletManager::OnDraw(BulletManager *bulletManager)
         laser->vm0.pos.x += g_GameManager.arcadeRegionTopLeftPos.x;
         laser->vm0.pos.y += g_GameManager.arcadeRegionTopLeftPos.y;
 #ifdef TH08_MOD_BUILD
-        mods::hidden::DrawLaser(laser->vm0, *laser);
+        mods::projectile_observation::DrawLaser(laser->vm0, *laser);
 #else
         g_AnmManager->Draw2D(&laser->vm0);
 #endif
@@ -1585,7 +1585,7 @@ ChainCallbackResult BulletManager::OnDraw(BulletManager *bulletManager)
                 laser->vm1.pos.x += g_GameManager.arcadeRegionTopLeftPos.x;
                 laser->vm1.pos.y += g_GameManager.arcadeRegionTopLeftPos.y;
 #ifdef TH08_MOD_BUILD
-                mods::hidden::DrawLaser(laser->vm1, *laser);
+                mods::projectile_observation::DrawLaser(laser->vm1, *laser);
 #else
                 g_AnmManager->Draw2D(&laser->vm1);
 #endif
@@ -1648,7 +1648,7 @@ ZunResult Bullet::DrawSingleBullet()
     }
 
 #ifdef TH08_MOD_BUILD
-    return mods::hidden::DrawBullet(*vm, *this);
+    return mods::projectile_observation::DrawBullet(*vm, *this);
 #else
     return g_AnmManager->Draw2D(vm);
 #endif
