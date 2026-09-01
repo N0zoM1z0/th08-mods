@@ -128,6 +128,12 @@ void TestModifierSelection()
     CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(config.enabled_mods == TH_MOD_BUILTIN_EASY);
 
+    char relaxOption[] = "--mods=relax";
+    char *relaxArguments[] = {executable, relaxOption};
+    CHECK(RunCli(2, relaxArguments, NULL) == th_mod::cli::kRunGame);
+    CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
+    CHECK(config.enabled_mods == TH_MOD_BUILTIN_RELAX);
+
     char modsOption[] = "--mods";
     char none[] = "none";
     char *noneArguments[] = {executable, modsOption, none};
@@ -151,6 +157,11 @@ void TestInvalidSelections()
     char conflict[] = "--mods=HR,EZ";
     char *conflictArguments[] = {executable, conflict};
     CHECK(RunCli(2, conflictArguments, NULL) == th_mod::cli::kExitFailure);
+
+    char inputConflict[] = "--mods=AT,RX";
+    char *inputConflictArguments[] = {executable, inputConflict};
+    CHECK(RunCli(2, inputConflictArguments, NULL) ==
+          th_mod::cli::kExitFailure);
 
     char mixed[] = "--mods=none,HD";
     char *mixedArguments[] = {executable, mixed};
@@ -184,7 +195,7 @@ void TestHelpAndManifestOutput()
     char *helpArguments[] = {executable, help};
     std::string output;
     CHECK(RunCli(2, helpArguments, &output) == th_mod::cli::kExitSuccess);
-    CHECK(output.find("--mods=HD,FL,AT,MR,NF,DT,HR,EZ") !=
+    CHECK(output.find("--mods=HD,FL,AT,MR,NF,DT,HR,EZ,RX") !=
           std::string::npos);
     CHECK(output.find("--mirror=MODE") != std::string::npos);
 
@@ -241,6 +252,14 @@ void TestHelpAndManifestOutput()
     CHECK(output ==
           "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
           "api=1;mods=EZ@1\n");
+
+    char relaxMods[] = "--mods=RX";
+    char *relaxManifestArguments[] = {executable, relaxMods, manifest};
+    CHECK(RunCli(3, relaxManifestArguments, &output) ==
+          th_mod::cli::kExitSuccess);
+    CHECK(output ==
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "api=1;mods=RX@1\n");
 }
 
 } // namespace

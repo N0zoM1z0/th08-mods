@@ -72,6 +72,12 @@ bool ModifierBit(const char *token, size_t length, uint32_t &bit)
         bit = TH_MOD_BUILTIN_EASY;
         return true;
     }
+    if (TokenEquals(token, length, "RX") ||
+        TokenEquals(token, length, "relax"))
+    {
+        bit = TH_MOD_BUILTIN_RELAX;
+        return true;
+    }
     return false;
 }
 
@@ -162,15 +168,16 @@ void PrintHelp(FILE *output)
 {
     fprintf(output,
             "TH08 modifier options:\n"
-            "  --mods=HD,FL,AT,MR,NF,DT,HR,EZ  Enable a comma-separated modifier set.\n"
+            "  --mods=HD,FL,AT,MR,NF,DT,HR,EZ,RX  Enable a comma-separated modifier set.\n"
             "  --mods none         Run without modifiers.\n"
             "  --mirror=MODE       Select horizontal, vertical, 90, 180, or 270.\n"
             "  --mod-manifest      Print the normalized manifest and exit.\n"
             "  --mod-help          Print this help and exit.\n"
             "\n"
             "Names hidden, flashlight, autoshot, mirror, no-fail, and "
-            "double-time, hard-rock, and easy are also accepted.\n"
+            "double-time, hard-rock, easy, and relax are also accepted.\n"
             "Hard Rock and Easy cannot be enabled together.\n"
+            "Autoshot and Relax cannot be enabled together.\n"
             "Mirror defaults to horizontal and only applies when MR is enabled.\n");
 }
 
@@ -277,7 +284,7 @@ Result ConfigureFromArguments(int argc, char *const *argv,
         {
             fprintf(errors,
                     "th08-mod: invalid modifier list; use HD, FL, AT, MR, NF, "
-                    "DT, HR, EZ, or none\n");
+                    "DT, HR, EZ, RX, or none\n");
             return kExitFailure;
         }
         if (mirrorMode != NULL &&
