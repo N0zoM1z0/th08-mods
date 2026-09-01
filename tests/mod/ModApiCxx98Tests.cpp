@@ -18,7 +18,9 @@ int main()
         return 3;
     }
 
-    config.enabled_mods = TH_MOD_BUILTIN_AUTOSHOT | TH_MOD_BUILTIN_HIDDEN;
+    config.enabled_mods = TH_MOD_BUILTIN_AUTOSHOT |
+                          TH_MOD_BUILTIN_HIDDEN |
+                          TH_MOD_BUILTIN_FLASHLIGHT;
     if (th_mod_configure_v1(&config) != TH_MOD_RESULT_OK)
     {
         return 4;
@@ -40,9 +42,16 @@ int main()
     {
         return 8;
     }
-    if (th_mod_end_run() != TH_MOD_RESULT_OK)
+    ThModFlashlightStateV1 flashlight;
+    if (th_mod_get_flashlight_state_v1(&flashlight) != TH_MOD_RESULT_OK ||
+        flashlight.struct_size != sizeof(flashlight) ||
+        flashlight.is_active != 1)
     {
         return 9;
+    }
+    if (th_mod_end_run() != TH_MOD_RESULT_OK)
+    {
+        return 10;
     }
 
     return 0;

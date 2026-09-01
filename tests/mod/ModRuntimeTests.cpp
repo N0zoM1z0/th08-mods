@@ -1,6 +1,7 @@
 #include "ModApi.h"
 #include "TestHarness.hpp"
 #include "modifiers/autoshot/AutoshotTests.hpp"
+#include "modifiers/flashlight/FlashlightTests.hpp"
 #include "modifiers/hidden/HiddenTests.hpp"
 
 #include <cstdint>
@@ -113,6 +114,7 @@ int main()
     TestValidation();
     TestConfigurationCopyAndFreeze();
     TestAutoshotPolicy();
+    TestFlashlightPolicy();
     TestHiddenPolicy();
 
     if (g_failures != 0)

@@ -155,7 +155,7 @@ data directory for writable state.
 - [x] Filter gameplay input for Autoshot without changing menu input.
 - [x] Apply Hidden at the projectile rendering boundary without mutating
   persistent animation state.
-- [ ] Compose Flashlight with the native Stage 2 darkness overlay.
+- [x] Compose Flashlight with the native Stage 2 darkness overlay.
 - [x] Display the frozen active modifier set.
 - [ ] Display the canonical manifest identifier.
 - [ ] Run browser smoke coverage and Linux compile coverage.
@@ -265,6 +265,11 @@ strict C++98 ABI, mod-enabled Linux, mod-disabled Linux, Chromium Wasm, Firefox
 Wasm, JavaScript syntax, and Web provenance checks pass. Replay, screenshot,
 and real-browser gameplay parity remain runtime gates because retail game data
 is not present in this repository.
+
+Flashlight reuses the native four-rectangle mask and ANM script 105 at the same
+Ascii high-priority draw point. It owns a separate mask VM and draws after the
+native Stage 2 layer, so standard alpha blending composes both visibility
+constraints without rewriting the stage-controlled radius or opacity fields.
 
 ### Prototype debt gate
 

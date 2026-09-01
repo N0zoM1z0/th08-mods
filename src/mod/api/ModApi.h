@@ -53,6 +53,13 @@ typedef struct ThModRunConfigV1 {
     uint32_t reserved[8];
 } ThModRunConfigV1;
 
+typedef struct ThModFlashlightStateV1 {
+    uint32_t struct_size;
+    uint32_t is_active;
+    uint32_t radius_pixels;
+    uint32_t opacity;
+} ThModFlashlightStateV1;
+
 uint32_t th_mod_config_v1_size(void);
 ThModResult th_mod_get_default_config_v1(ThModRunConfigV1 *out_config);
 ThModResult th_mod_validate_config_v1(const ThModRunConfigV1 *config);
@@ -65,6 +72,8 @@ uint32_t th_mod_is_run_active(void);
 uint32_t th_mod_filter_actions_v1(uint32_t actions, uint32_t context);
 uint32_t th_mod_hidden_alpha_v1(uint32_t base_alpha,
                                 uint32_t active_age_ticks);
+ThModResult th_mod_get_flashlight_state_v1(
+    ThModFlashlightStateV1 *out_state);
 
 #ifdef __cplusplus
 }

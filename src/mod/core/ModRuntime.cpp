@@ -1,5 +1,6 @@
 #include "ModApi.h"
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
+#include "modifiers/flashlight/FlashlightPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
 
 #include <cstddef>
@@ -17,6 +18,8 @@ constexpr uint32_t kMaximumFlashlightRadius = 4096u;
 static_assert(sizeof(uint32_t) == 4, "The mod ABI requires 32-bit uint32_t.");
 static_assert(sizeof(ThModRunConfigV1) == 60,
               "ThModRunConfigV1 must retain its version 1 ABI size.");
+static_assert(sizeof(ThModFlashlightStateV1) == 16,
+              "ThModFlashlightStateV1 must retain its version 1 ABI size.");
 
 ThModRunConfigV1 MakeDefaultConfig()
 {
@@ -171,4 +174,17 @@ extern "C" uint32_t th_mod_hidden_alpha_v1(uint32_t base_alpha,
 {
     return th_mod::hidden::ComputeAlpha(
         g_runtime.config, g_runtime.run_active, base_alpha, active_age_ticks);
+}
+
+extern "C" ThModResult th_mod_get_flashlight_state_v1(
+    ThModFlashlightStateV1 *out_state)
+{
+    if (out_state == 0)
+    {
+        return TH_MOD_RESULT_NULL_ARGUMENT;
+    }
+
+    *out_state = th_mod::flashlight::GetState(
+        g_runtime.config, g_runtime.run_active);
+    return TH_MOD_RESULT_OK;
 }

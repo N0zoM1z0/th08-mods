@@ -11,6 +11,9 @@
 #include "ZunMath.hpp"
 #include "Gui.hpp"
 #include "ResultScreen.hpp"
+#ifdef TH08_MOD_BUILD
+#include "mod/modifiers/flashlight/th08/Th08Flashlight.hpp"
+#endif
 
 namespace th08
 {
@@ -1714,6 +1717,10 @@ void AsciiManager::OnDrawHighPrioImpl()
         this->unk_16f0c.color1.a = this->unk_16f08;
         g_AnmManager->DrawNoRotation(&this->unk_16f0c);
     }
+
+#ifdef TH08_MOD_BUILD
+    mods::flashlight::DrawOverlay();
+#endif
 
     popup = this->timePopups;
     for (j = 0; j < ASCII_MAX_TIME_POPUPS; j++, popup++)
