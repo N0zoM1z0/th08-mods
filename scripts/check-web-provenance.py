@@ -79,6 +79,20 @@ def save_boundary_violations() -> list[str]:
     if not has_save_mount:
         violations.append("the browser save filesystem must be isolated at /save")
 
+    namespace_match = re.search(
+        r'const\s+modStorageNamespace\s*=\s*["\']([^"\']+)["\']', source
+    )
+    has_namespaced_database = re.search(
+        r'Module\.IDBFS\.getDB\s*=\s*\(name,\s*callback\)\s*=>\s*\{.*?'
+        r'`\$\{modStorageNamespace\}:\$\{name\}`',
+        source,
+        re.DOTALL,
+    )
+    if namespace_match is None or namespace_match.group(1) != "th08-mods-v1":
+        violations.append("the modifier save database namespace must be th08-mods-v1")
+    if not has_namespaced_database:
+        violations.append("every modifier IDBFS database must use the dedicated namespace")
+
     if r"th08-web-firefox(?:\.html)?$" not in source:
         violations.append(
             "the Firefox launcher route must accept both .html and extensionless Pages paths"

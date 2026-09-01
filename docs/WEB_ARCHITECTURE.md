@@ -96,9 +96,12 @@ close operations retain their synchronous authored-facing behavior.
   IDBFS mount. The `replay/`, `backup/`, and `snapshot/` directories are
   separate IDBFS mounts at their original `/game` paths, preserving authored
   `chdir("directory")` followed by `chdir("../")` semantics. The launcher
-  restores all four mounts before `main()`, and IDBFS `autoPersist` writes
-  changes back asynchronously. Diagnostics and the two empty retail-name
-  entries remain in `/game`'s volatile MEMFS root.
+  prefixes every underlying IndexedDB database name with `th08-mods-v1:` so
+  the modifier profile cannot overwrite vanilla TH08 Web storage while the
+  authored filesystem paths remain unchanged. It restores all four mounts
+  before `main()`, and IDBFS `autoPersist` writes changes back asynchronously.
+  Diagnostics and the two empty retail-name entries remain in `/game`'s
+  volatile MEMFS root.
 - The launcher recursively removes any `th08.dat` or `thbgm.dat` entry found
   in any persistent mount before starting the game. This is a
   defense-in-depth invariant; the authored game has no mapped path capable of

@@ -127,7 +127,7 @@ data directory for writable state.
 - [x] Link the no-op boundary into Web and Linux builds behind
   `TH08_MOD_BUILD`.
 - [ ] Prove that the default configuration leaves authored behavior untouched.
-- [ ] Define a separate save namespace before modified state is persisted.
+- [x] Define a separate save namespace before modified state is persisted.
 
 ### Phase 1: first playable vertical slice
 

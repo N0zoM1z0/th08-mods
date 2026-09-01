@@ -71,7 +71,7 @@
           </div>
         </div>
         <p class="policy">Select <code>th08.dat</code> and <code>thbgm.dat</code> from a legally obtained TH08 installation. The game archive is copied only into volatile session memory, while the music archive is range-read from its browser <code>File</code> object. Neither file is uploaded, bundled, or persisted by this page.</p>
-        <p class="policy">Settings, scores, replays, backups, and snapshots are stored separately in this browser so they survive a page reload. Clearing this site's browser data removes them.</p>
+        <p class="policy">Modifier settings, scores, replays, backups, and snapshots use a dedicated browser-storage namespace so they do not overwrite a vanilla TH08 Web profile. Clearing this site's browser data removes them.</p>
         <p class="controls"><strong>Keyboard:</strong> arrow keys move, <code>Z</code> confirms/fires, <code>X</code> cancels/bombs, <code>Shift</code> focuses, and <code>Esc</code> pauses.</p>
         <label>Game data
           <input id="game-data" type="file" accept=".dat,application/octet-stream">
@@ -138,6 +138,7 @@
 
       const persistentFiles = ["th08.cfg", "score.dat", "score.txt"];
       const persistentDirectories = ["replay", "backup", "snapshot"];
+      const modStorageNamespace = "th08-mods-v1";
       const retailArchiveNames = new Set(["th08.dat", "thbgm.dat"]);
 
       function createTimingMetric() {
@@ -332,6 +333,18 @@
         Module.FS.symlink(savePath, gamePath);
       }
 
+      function installModPersistenceNamespace() {
+        if (Module.IDBFS.th08ModNamespaceInstalled) return;
+        // IDBFS normally uses each mount point as its IndexedDB database name.
+        // Prefix only that database identity so authored /game chdir semantics
+        // remain intact while this fork stays isolated from vanilla storage.
+        const openDatabase = Module.IDBFS.getDB.bind(Module.IDBFS);
+        Module.IDBFS.getDB = (name, callback) => {
+          openDatabase(`${modStorageNamespace}:${name}`, callback);
+        };
+        Module.IDBFS.th08ModNamespaceInstalled = true;
+      }
+
       function installPresentation() {
         if (!useSecondaryPresentation) return;
         gameSection.classList.add("secondary-presentation");
@@ -383,6 +396,7 @@
         for (const directory of persistentDirectories) {
           ensureDirectory(`/game/${directory}`);
         }
+        installModPersistenceNamespace();
 
         let persistenceAvailable = false;
         const persistenceMounts = [
@@ -413,6 +427,7 @@
 
         Module.th08SavePersistence = {
           available: persistenceAvailable,
+          namespace: modStorageNamespace,
           mounts: persistenceMounts,
           files: [...persistentFiles],
           directories: [...persistentDirectories],
