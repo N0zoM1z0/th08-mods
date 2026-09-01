@@ -162,7 +162,7 @@ set(TH08_MOD_ADAPTER_SOURCES)
 if(TH08_MOD_BUILD)
     list(APPEND TH08_MOD_ADAPTER_SOURCES
         src/mod/games/th08/Th08ModAdapter.cpp
-        src/mod/modifiers/autoshot/th08/Th08Autoshot.cpp
+        src/mod/games/th08/Th08InputAdapter.cpp
         src/mod/modifiers/flashlight/th08/Th08Flashlight.cpp
         src/mod/modifiers/hidden/th08/Th08Hidden.cpp
     )
