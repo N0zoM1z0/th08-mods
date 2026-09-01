@@ -157,7 +157,7 @@ data directory for writable state.
   persistent animation state.
 - [x] Compose Flashlight with the native Stage 2 darkness overlay.
 - [x] Display the frozen active modifier set.
-- [ ] Display the canonical manifest identifier.
+- [x] Display the canonical manifest identifier.
 - [ ] Run browser smoke coverage and Linux compile coverage.
 
 ### Phase 2: composition and replay identity
@@ -270,6 +270,13 @@ Flashlight reuses the native four-rectangle mask and ANM script 105 at the same
 Ascii high-priority draw point. It owns a separate mask VM and draws after the
 native Stage 2 layer, so standard alpha blending composes both visibility
 constraints without rewriting the stage-controlled radius or opacity fields.
+
+The portable core now emits a canonical, human-readable manifest in fixed
+modifier order. It identifies TH08 v1.00d, the modern engine and source
+baseline, the C API version, each enabled modifier ruleset, and normalized
+options. The Web launcher asks Wasm for this value on every pre-launch
+selection change and displays the exact frozen value instead of maintaining a
+parallel JavaScript manifest implementation.
 
 ### Prototype debt gate
 

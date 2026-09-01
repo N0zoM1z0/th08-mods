@@ -240,7 +240,7 @@ if(EMSCRIPTEN)
         --use-port=sdl2_ttf
         "--shell-file=${CMAKE_SOURCE_DIR}/src/modern/web/shell.html"
         -sINVOKE_RUN=0
-        -sEXPORTED_FUNCTIONS=_main,_malloc,_free,_th_mod_config_v1_size,_th_mod_get_default_config_v1,_th_mod_configure_v1
+        -sEXPORTED_FUNCTIONS=_main,_malloc,_free,_th_mod_config_v1_size,_th_mod_get_default_config_v1,_th_mod_configure_v1,_th_mod_manifest_v1_size,_th_mod_write_manifest_v1
         -sEXPORTED_RUNTIME_METHODS=FS,IDBFS,callMain,HEAPU8
         -sFORCE_FILESYSTEM
         -lidbfs.js

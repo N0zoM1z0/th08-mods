@@ -45,6 +45,7 @@
       .modifier strong, .modifier small { display: block; }
       .modifier small { margin-top: .15rem; color: #aaa3bc; font-weight: 450; line-height: 1.35; }
       #mod-summary { margin: -.35rem 0 1rem; color: #d6c8ff; font-size: .85rem; }
+      #mod-manifest { margin: -.45rem 0 1rem; color: #8f899f; font: .72rem/1.4 ui-monospace, monospace; overflow-wrap: anywhere; }
       button { width: 100%; padding: .8rem 1rem; border: 0; border-radius: .55rem; background: #a98cff; color: #100b1d; font-weight: 800; cursor: pointer; }
       button:disabled { cursor: not-allowed; opacity: .45; }
       #status { min-height: 2.8rem; margin: 1rem 0 0; padding: .8rem; border-radius: .5rem; background: #0a0b12; color: #ddd5f5; }
@@ -95,6 +96,7 @@
           </label>
         </fieldset>
         <div id="mod-summary">Active modifiers: None</div>
+        <div id="mod-manifest">Run manifest: waiting for the WebAssembly runtime…</div>
         <button id="start" disabled>Start TH08</button>
         <div id="status" role="status" aria-live="polite">Loading the WebAssembly runtime…</div>
         <pre id="log" aria-label="Runtime log"></pre>
@@ -110,6 +112,7 @@
       const startButton = document.querySelector("#start");
       const modifierFieldset = document.querySelector("#modifiers");
       const modifierSummary = document.querySelector("#mod-summary");
+      const modifierManifest = document.querySelector("#mod-manifest");
       const statusElement = document.querySelector("#status");
       const logElement = document.querySelector("#log");
       const canvas = document.querySelector("#canvas");
@@ -129,6 +132,7 @@
       let runtimeReady = false;
       let started = false;
       let gameFileSystemReady = false;
+      let currentModifierManifest;
 
       const modifierControls = [
         { element: document.querySelector("#mod-hidden"), bit: 1 << 0, code: "HD" },
@@ -228,6 +232,39 @@
 
       function updateModifierSummary() {
         modifierSummary.textContent = `Active modifiers: ${selectedModifierLabel()}`;
+        if (!runtimeReady || started) return;
+
+        try {
+          currentModifierManifest = configureModifierRuntime();
+          modifierManifest.textContent = `Run manifest: ${currentModifierManifest}`;
+        } catch (error) {
+          currentModifierManifest = undefined;
+          modifierManifest.textContent = `Run manifest unavailable: ${error.message}`;
+        }
+      }
+
+      function readModifierManifest() {
+        const manifestSize = Module._th_mod_manifest_v1_size();
+        if (manifestSize < 2 || manifestSize > 4096) {
+          throw new Error(`Unsupported modifier manifest size: ${manifestSize}.`);
+        }
+
+        const manifestPointer = Module._malloc(manifestSize);
+        if (!manifestPointer) {
+          throw new Error("Unable to allocate modifier manifest memory.");
+        }
+
+        try {
+          const result = Module._th_mod_write_manifest_v1(manifestPointer, manifestSize);
+          if (result !== 0) {
+            throw new Error(`Unable to read the modifier manifest (${result}).`);
+          }
+          return new TextDecoder().decode(
+            Module.HEAPU8.subarray(manifestPointer, manifestPointer + manifestSize - 1),
+          );
+        } finally {
+          Module._free(manifestPointer);
+        }
       }
 
       function configureModifierRuntime() {
@@ -252,12 +289,14 @@
           if (result !== 0) {
             throw new Error(`Modifier configuration was rejected (${result}).`);
           }
+          return readModifierManifest();
         } finally {
           Module._free(configPointer);
         }
       }
 
       window.th08GetSelectedModifierMask = selectedModifierMask;
+      window.th08GetModifierManifest = () => currentModifierManifest;
 
       function selectionIsValid() {
         const [game, bgm] = selectedFiles();
@@ -485,6 +524,7 @@
           installPresentation();
           appendLog(`th08-web: presentation mode: ${presentationMode}`);
           runtimeReady = true;
+          updateModifierSummary();
           updateStartState();
         },
       };
@@ -496,8 +536,10 @@
         modifierFieldset.disabled = true;
         updateStartState();
         try {
-          configureModifierRuntime();
+          currentModifierManifest = configureModifierRuntime();
+          modifierManifest.textContent = `Run manifest: ${currentModifierManifest}`;
           appendLog(`th08-mod: selected ${selectedModifierLabel()}`);
+          appendLog(`th08-mod: manifest ${currentModifierManifest}`);
           statusElement.textContent = "Loading local retail data and restoring browser-local saves…";
           const [gameBuffer] = await Promise.all([
             game.arrayBuffer(),
