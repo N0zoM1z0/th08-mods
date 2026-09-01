@@ -112,6 +112,34 @@ throttle the display refresh rate.
 | `Shift` | Focus movement and show the hitbox |
 | `Esc` | Pause |
 
+## Modifier prototype
+
+The Web launcher exposes **Hidden (`HD`)**, **Flashlight (`FL`)**, and
+**Autoshot (`AT`)** as independent pre-launch selections. The Wasm core shows
+the canonical run manifest before retail data is loaded.
+
+The native Linux build accepts the same modifier codes:
+
+```bash
+scripts/build-modern-linux.sh
+build/modern-linux/th08-modern \
+  --data-dir /path/to/legal/th08/files \
+  --mods=HD,FL,AT
+```
+
+Inspect a selection without starting the game or supplying DAT files:
+
+```bash
+build/modern-linux/th08-modern --mods=HD,FL,AT --mod-manifest
+build/modern-linux/th08-modern --mod-help
+```
+
+Gameplay code is organized by modifier, not by host. Each directory under
+`src/mod/modifiers/` owns its portable policy and a thin `th08/` translation;
+Web and Linux only select a configuration through the shared C ABI. See the
+[modifier implementation plan](docs/MOD_PLAN.md) for the exact source layout,
+determinism contract, and TH06/TH07 adapter boundary.
+
 ## Inside the spell circle
 
 - The reconstructed authored C++ game and PBG archive code compile to
@@ -244,6 +272,8 @@ Never write deployment credentials into this repository or command logs.
 | Path | Purpose |
 | --- | --- |
 | `src/` | Reconstructed authored game code and modern host adapters |
+| `src/mod/modifiers/` | Independent portable modifier policies and per-game translations |
+| `src/mod/hosts/` | Reusable native configuration adapters with no gameplay rules |
 | `src/modern/web/` | Browser launcher, Web compatibility boundary, and Pages metadata |
 | `scripts/build-web-game.sh` | Digest-pinned Emscripten Release build and exact staging |
 | `scripts/package-web-release.sh` | Deterministic nine-file release archive and SHA-256 manifest |

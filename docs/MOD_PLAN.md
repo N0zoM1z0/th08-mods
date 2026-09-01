@@ -89,8 +89,10 @@ inside each modifier without copying its portable policy.
 ### Host bridge
 
 The Web launcher passes one validated configuration to an exported C function
-before `main`. The Linux host accepts the same logical configuration through a
-CLI or a file. Host code never advances simulation or evaluates modifier rules.
+before `main`. The Linux host accepts the same logical selection with
+`--mods=HD,FL,AT`; `--mod-manifest` prints its normalized identity without
+requiring retail data. Host code never advances simulation or evaluates
+modifier rules.
 
 ## Initial modifier contract
 
@@ -158,7 +160,8 @@ data directory for writable state.
 - [x] Compose Flashlight with the native Stage 2 darkness overlay.
 - [x] Display the frozen active modifier set.
 - [x] Display the canonical manifest identifier.
-- [ ] Run browser smoke coverage and Linux compile coverage.
+- [x] Run Linux compile and CLI coverage.
+- [ ] Run Chromium and Firefox gameplay smoke coverage with retail data.
 
 ### Phase 2: composition and replay identity
 
@@ -277,6 +280,14 @@ baseline, the C API version, each enabled modifier ruleset, and normalized
 options. The Web launcher asks Wasm for this value on every pre-launch
 selection change and displays the exact frozen value instead of maintaining a
 parallel JavaScript manifest implementation.
+
+The same selection is available to native hosts through the reusable C++98
+CLI bridge. Its parser is covered independently from the game, the complete
+32-bit Linux target links it, and `--mod-manifest` exercises configuration and
+identity output before any retail-data check. The final Chromium Wasm artifact
+also loads under Node and returns the expected `HD+FL+AT` manifest through the
+same exported functions used by the launcher. This is a Wasm host smoke, not a
+substitute for the pending real-browser gameplay and rendering checks.
 
 ### Prototype debt gate
 

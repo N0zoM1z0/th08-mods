@@ -63,6 +63,22 @@ if(TH08_MODCORE_ONLY)
     )
     target_link_libraries(th08-mod-api-cxx98-tests PRIVATE th08-mod-core)
     add_test(NAME th08-mod-api-cxx98-tests COMMAND th08-mod-api-cxx98-tests)
+
+    add_executable(th08-mod-cli-cxx98-tests
+        src/mod/hosts/cli/ModCli.cpp
+        tests/mod/hosts/cli/ModCliTests.cpp
+    )
+    set_target_properties(th08-mod-cli-cxx98-tests PROPERTIES
+        CXX_STANDARD 98
+        CXX_STANDARD_REQUIRED YES
+        CXX_EXTENSIONS OFF
+    )
+    target_include_directories(th08-mod-cli-cxx98-tests PRIVATE
+        "${CMAKE_SOURCE_DIR}/src"
+        "${CMAKE_SOURCE_DIR}/tests/mod"
+    )
+    target_link_libraries(th08-mod-cli-cxx98-tests PRIVATE th08-mod-core)
+    add_test(NAME th08-mod-cli-cxx98-tests COMMAND th08-mod-cli-cxx98-tests)
     return()
 endif()
 
@@ -271,6 +287,9 @@ if(WIN32)
     list(APPEND TH08_GAME_SOURCES src/modern/windows_runtime.cpp)
     add_executable(th08-modern WIN32 ${TH08_GAME_SOURCES})
 elseif(UNIX AND NOT APPLE)
+    if(TH08_MOD_BUILD)
+        list(APPEND TH08_GAME_SOURCES src/mod/hosts/cli/ModCli.cpp)
+    endif()
     list(APPEND TH08_GAME_SOURCES
         ${TH08_MOD_ADAPTER_SOURCES}
         src/modern/linux/d3d8_compat.cpp

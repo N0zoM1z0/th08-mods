@@ -1,4 +1,7 @@
 #include "modern/windows_runtime.hpp"
+#if defined(TH08_MOD_BUILD) && !defined(TH08_MODERN_WEB)
+#include "mod/hosts/cli/ModCli.hpp"
+#endif
 #ifdef TH08_MOD_BUILD
 #include "mod/games/th08/Th08ModAdapter.hpp"
 #endif
@@ -334,6 +337,14 @@ void SetArguments(int argc, char **argv)
 int main(int argc, char **argv)
 {
     th08::modern::SetArguments(argc, argv);
+#if defined(TH08_MOD_BUILD) && !defined(TH08_MODERN_WEB)
+    const th_mod::cli::Result cliResult =
+        th_mod::cli::ConfigureFromArguments(argc, argv, stdout, stderr);
+    if (cliResult != th_mod::cli::kRunGame)
+    {
+        return cliResult == th_mod::cli::kExitSuccess ? 0 : 2;
+    }
+#endif
 #ifdef TH08_MOD_BUILD
     if (!th08::mods::Initialize())
     {
