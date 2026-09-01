@@ -290,9 +290,11 @@
           if (result !== 0) {
             throw new Error(`Unable to read the modifier manifest (${result}).`);
           }
-          return new TextDecoder().decode(
+          const manifestBytes = new Uint8Array(manifestSize - 1);
+          manifestBytes.set(
             Module.HEAPU8.subarray(manifestPointer, manifestPointer + manifestSize - 1),
           );
+          return new TextDecoder().decode(manifestBytes);
         } finally {
           Module._free(manifestPointer);
         }
