@@ -333,6 +333,10 @@ All Web builds use
   measured 301 callbacks and 301 calculations (1.00000x), confirming that
   simulation acceleration stays inside gameplay while presentation remains
   display-paced. Both retail DATs stayed local browser `File` inputs.
+- Firefox 153 repeated the modifier smoke with its dedicated proxy artifact.
+  Ten seconds produced 591 callbacks and 882 authored calculations (1.49239x);
+  pause produced 354 callbacks and 350 calculations (0.98870x). The software
+  renderer displayed the pause scene without a page, worker, or Wasm error.
 - A Chromium Lunatic Border Team Final-B endurance run crossed all six route
   stages, credits, result/score writing, title reconstruction, and a second
   start without a runtime trap. Per-stage spell observations were 1, 5, 9,

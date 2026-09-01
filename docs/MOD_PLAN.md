@@ -164,7 +164,7 @@ data directory for writable state.
 - [x] Run Linux compile and CLI coverage.
 - [x] Run Linux gameplay smoke coverage with retail data.
 - [x] Run Chromium gameplay smoke coverage with retail data.
-- [ ] Run Firefox gameplay smoke coverage with retail data.
+- [x] Run Firefox gameplay smoke coverage with retail data.
 
 ### Phase 2: composition and replay identity
 
@@ -180,7 +180,8 @@ data directory for writable state.
 - [x] Advance sound queues per simulation tick and scale the shared mixer rate.
 - [x] Validate authored-tick/present ratios on Chromium and Linux.
 - [x] Validate Linux mixer-rate transitions across gameplay and pause.
-- [ ] Validate Firefox gameplay and audible audio duration/pitch on hardware.
+- [x] Validate the authored-tick/present ratio on Firefox.
+- [ ] Validate audible audio duration/pitch on hardware.
 - [x] Define an overload policy that never silently drops deterministic ticks.
 
 ### Phase 4: gameplay policies
@@ -405,22 +406,30 @@ out of Wasm shared memory before `TextDecoder` receives it. The selected retail
 files remained browser-local, and the generated screenshot and profile stayed
 under `/tmp`.
 
+Firefox 153 exercised its dedicated main-thread proxy presentation artifact
+with the same files and manifest. A ten-second Stage 1 sample recorded 591
+callbacks and 882 authored calculations, a ratio of 1.49239x. Its paused sample
+recorded 354 callbacks and 350 calculations, or 0.98870x; the small difference
+is expected because four browser callbacks did not cross the authored 60 Hz
+timestamp gate. The proxy canvas rendered the pause scene without a page,
+worker, or Wasm error.
+
 After the No Fail seam was linked, target-independent core/C++98 tests, both
 mod-enabled and mod-disabled fixed-address Linux builds, the Linux layout
 verifier, both Emscripten presentation variants, Wasm manifest smoke tests, and
 the Web retail-data provenance check all passed.
 
 All retail-derived screenshots and generated state stayed under `/tmp` and
-were not added to Git. Firefox modifier gameplay and an audible hardware audio
-duration/pitch comparison remain pending; Node/Wasm smoke continues to cover
-both browser artifacts' selection, ABI, manifest, and provenance behavior.
+were not added to Git. An audible hardware audio duration/pitch comparison
+remains pending; Node/Wasm smoke continues to cover both browser artifacts'
+selection, ABI, manifest, and provenance behavior.
 
 ### Prototype debt gate
 
 Before calling the slice production-ready, replace temporary configuration
 plumbing, add explicit validation errors, isolate writable state, settle replay
 manifest persistence, cover lasers and Stage 2 darkness composition, and run
-the remaining Firefox modifier gameplay check.
+the remaining audible hardware audio check.
 
 ## Verification matrix
 
