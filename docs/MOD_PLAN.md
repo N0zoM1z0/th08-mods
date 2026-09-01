@@ -169,7 +169,7 @@ data directory for writable state.
 
 - [x] Add all five Mirror modes through a scoped playfield transform and input
   remap.
-- [ ] Freeze modifier ordering and conflict validation.
+- [x] Freeze modifier ordering and conflict validation.
 - [ ] Persist and validate a canonical replay manifest.
 - [ ] Add cross-platform checkpoint and visual replay tests.
 
@@ -308,6 +308,15 @@ sampled input that the priority-17 recorder will publish as next frame's player
 snapshot; it preserves that already-transformed snapshot instead of applying
 an involutive Mirror mode twice. Playback and blocking UI remain unmodified.
 Dialogue keeps screen-relative directional mapping while suppressing Autoshot.
+
+The version-1 modifier registry is now the single owner of built-in bits,
+codes, ruleset versions, canonical manifest order, and conflict masks. Runtime
+validation rejects unknown bits and conflicts with distinct result codes, and
+tests pin the published `HD+FL+AT+MR` order plus the generic conflict branch.
+Effective-input composition is also fixed for version 1: geometric direction
+transforms run before assistance actions are injected. Modifier-specific
+options and behavior remain in their vertical slices instead of moving into
+the registry.
 
 ### Retail Linux gameplay smoke
 
