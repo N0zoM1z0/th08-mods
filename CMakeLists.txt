@@ -18,6 +18,7 @@ if(TH08_MOD_BUILD)
         src/mod/modifiers/doubletime/DoubleTimePolicy.cpp
         src/mod/modifiers/flashlight/FlashlightPolicy.cpp
         src/mod/modifiers/hidden/HiddenPolicy.cpp
+        src/mod/modifiers/hardrock/HardRockPolicy.cpp
         src/mod/modifiers/mirror/MirrorPolicy.cpp
         src/mod/modifiers/nofail/NoFailPolicy.cpp
         src/mod/registry/ModifierRegistryV1.cpp
@@ -52,6 +53,7 @@ if(TH08_MODCORE_ONLY)
         tests/mod/modifiers/doubletime/DoubleTimeTests.cpp
         tests/mod/modifiers/flashlight/FlashlightTests.cpp
         tests/mod/modifiers/hidden/HiddenTests.cpp
+        tests/mod/modifiers/hardrock/HardRockTests.cpp
         tests/mod/modifiers/mirror/MirrorTests.cpp
         tests/mod/modifiers/nofail/NoFailTests.cpp
         tests/mod/registry/ModifierRegistryTests.cpp

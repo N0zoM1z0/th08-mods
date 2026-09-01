@@ -6,6 +6,7 @@
 #include "modifiers/doubletime/DoubleTimeTests.hpp"
 #include "modifiers/flashlight/FlashlightTests.hpp"
 #include "modifiers/hidden/HiddenTests.hpp"
+#include "modifiers/hardrock/HardRockTests.hpp"
 #include "modifiers/mirror/MirrorTests.hpp"
 #include "modifiers/nofail/NoFailTests.hpp"
 #include "registry/ModifierRegistryTests.hpp"
@@ -131,6 +132,7 @@ int main()
     TestDoubleTimePolicy();
     TestFlashlightPolicy();
     TestHiddenPolicy();
+    TestHardRockPolicy();
     TestMirrorPolicy();
     TestNoFailPolicy();
 

@@ -3,6 +3,7 @@
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
 #include "modifiers/doubletime/DoubleTimePolicy.hpp"
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
+#include "modifiers/hardrock/HardRockPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
 #include "modifiers/mirror/MirrorPolicy.hpp"
 #include "modifiers/nofail/NoFailPolicy.hpp"
@@ -28,6 +29,8 @@ static_assert(sizeof(ThModNoFailDecisionV1) == 16,
               "ThModNoFailDecisionV1 must retain its version 1 ABI size.");
 static_assert(sizeof(ThModTimeScaleV1) == 16,
               "ThModTimeScaleV1 must retain its version 1 ABI size.");
+static_assert(sizeof(ThModDifficultyStateV1) == 64,
+              "ThModDifficultyStateV1 must retain its version 1 ABI size.");
 
 ThModRunConfigV1 MakeDefaultConfig()
 {
@@ -267,6 +270,19 @@ extern "C" ThModResult th_mod_get_time_scale_v1(
     }
 
     *out_state = th_mod::doubletime::GetTimeScale(
+        g_runtime.config, g_runtime.run_active);
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" ThModResult th_mod_get_difficulty_state_v1(
+    ThModDifficultyStateV1 *out_state)
+{
+    if (out_state == 0)
+    {
+        return TH_MOD_RESULT_NULL_ARGUMENT;
+    }
+
+    *out_state = th_mod::hardrock::GetState(
         g_runtime.config, g_runtime.run_active);
     return TH_MOD_RESULT_OK;
 }

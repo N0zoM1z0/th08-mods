@@ -25,7 +25,8 @@ int main()
                           TH_MOD_BUILTIN_FLASHLIGHT |
                           TH_MOD_BUILTIN_MIRROR |
                           TH_MOD_BUILTIN_NO_FAIL |
-                          TH_MOD_BUILTIN_DOUBLE_TIME;
+                          TH_MOD_BUILTIN_DOUBLE_TIME |
+                          TH_MOD_BUILTIN_HARD_ROCK;
     config.mirror_mode = TH_MOD_MIRROR_ROTATE_90;
     if (th_mod_configure_v1(&config) != TH_MOD_RESULT_OK)
     {
@@ -38,7 +39,7 @@ int main()
         strcmp(manifest,
                "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
                "api=1;mods=HD@1(45,45)+FL@1(96,224)+AT@1+"
-               "MR@1(rotate-90)+NF@1+DT@1") != 0)
+               "MR@1(rotate-90)+NF@1+DT@1+HR@1") != 0)
     {
         return 5;
     }
@@ -96,9 +97,18 @@ int main()
     {
         return 13;
     }
-    if (th_mod_end_run() != TH_MOD_RESULT_OK)
+    ThModDifficultyStateV1 difficulty;
+    if (th_mod_get_difficulty_state_v1(&difficulty) != TH_MOD_RESULT_OK ||
+        difficulty.struct_size != sizeof(difficulty) ||
+        difficulty.is_active != 1 ||
+        difficulty.projectile_speed_numerator != 23 ||
+        difficulty.projectile_speed_denominator != 20)
     {
         return 14;
+    }
+    if (th_mod_end_run() != TH_MOD_RESULT_OK)
+    {
+        return 15;
     }
 
     return 0;

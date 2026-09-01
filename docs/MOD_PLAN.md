@@ -104,12 +104,16 @@ simulation or evaluates modifier rules.
 | Mirror (`MR`) | The playfield supports horizontal/vertical reflection and 90°/180°/270° rotation. Direction input remains screen-relative, quarter turns aspect-fit without cropping, and HUD/UI remain upright. | Scoped vertex transform and effective-input filter | Ranked later |
 | No Fail (`NF`) | Misses, death count, penalties, and respawning remain active; at zero lives the final retry transition is suppressed without underflowing the life counter. | Miss-commit policy | Unranked |
 | Double Time (`DT`) | Simulation and authored audio advance at the configured rate while presentation stays display-paced. | Frame scheduler and mixer rate | Ranked later |
-| Hard Rock (`HR`) | A frozen policy changes movement, hurtbox, graze margin, projectile speed, and resources together. | Multiple gameplay policies | Unranked until balanced |
+| Hard Rock (`HR`) | Enemy projectile speed is `23/20`, player movement is `9/10`, the hurtbox is `5/4`, and the graze margin is `4/5`; resources and spell time remain vanilla. | Multiple gameplay policies | Unranked until balanced |
 | Easy (`EZ`) | A frozen assistance policy changes the same explicit dimensions in the easier direction. | Multiple gameplay policies | Unranked |
 
 `HR` and `EZ` conflict in version 1. `MR@1` records its selected transform in
 the manifest; 90° and 270° use deterministic letterboxing inside the original
 playfield rather than cropping or rotating the HUD.
+
+Difficulty transforms cross the C ABI as exact integer ratios. Game adapters
+apply those ratios at their native seams, avoiding platform-dependent policy
+constants and keeping the same `HR@1` identity portable to TH06 and TH07.
 
 ## Determinism and replay contract
 
