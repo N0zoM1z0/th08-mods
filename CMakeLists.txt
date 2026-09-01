@@ -151,6 +151,9 @@ if(EMSCRIPTEN)
         TH08_MODERN_WEB
         WIN32_LEAN_AND_MEAN
     )
+    if(TH08_MOD_BUILD)
+        target_compile_definitions(th08-web-authored-compile PRIVATE TH08_MOD_BUILD)
+    endif()
     target_include_directories(th08-web-authored-compile BEFORE PRIVATE
         "${CMAKE_SOURCE_DIR}/src/modern/linux/include"
         "${CMAKE_SOURCE_DIR}/src"

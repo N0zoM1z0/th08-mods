@@ -29,6 +29,9 @@
 #include "diffbuild.hpp"
 #include "i18n.hpp"
 #include "inttypes.hpp"
+#ifdef TH08_MOD_BUILD
+#include "mod/games/th08/Th08ModAdapter.hpp"
+#endif
 #ifdef TH08_MODERN_PORT
 #include "modern/windows_runtime.hpp"
 #endif
@@ -366,6 +369,13 @@ restart:
     }
 
     renderResult = Supervisor::RegisterChain();
+#ifdef TH08_MOD_BUILD
+    if (renderResult == RENDER_RESULT_KEEP_RUNNING && !mods::RegisterHooks())
+    {
+        fprintf(stderr, "th08-mod: unable to register gameplay hooks\n");
+        renderResult = RENDER_RESULT_EXIT_ERROR;
+    }
+#endif
     TH08_WEB_STARTUP_STAGE("main archive and initial chain processed");
 
     if (renderResult != RENDER_RESULT_KEEP_RUNNING)

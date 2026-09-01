@@ -133,7 +133,7 @@ data directory for writable state.
 
 - [x] Add pre-launch Web controls for Hidden, Flashlight, and Autoshot.
 - [x] Pass `RunConfigV1` into Wasm before the game entry point.
-- [ ] Filter gameplay input for Autoshot without changing menu input.
+- [x] Filter gameplay input for Autoshot without changing menu input.
 - [ ] Apply Hidden at the projectile rendering boundary without mutating
   persistent animation state.
 - [ ] Compose Flashlight with the native Stage 2 darkness overlay.

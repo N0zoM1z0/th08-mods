@@ -31,9 +31,14 @@ int main()
     {
         return 6;
     }
-    if (th_mod_end_run() != TH_MOD_RESULT_OK)
+    if (th_mod_filter_actions_v1(0, TH_MOD_INPUT_CONTEXT_GAMEPLAY) !=
+        TH_MOD_ACTION_SHOOT)
     {
         return 7;
+    }
+    if (th_mod_end_run() != TH_MOD_RESULT_OK)
+    {
+        return 8;
     }
 
     return 0;

@@ -25,6 +25,23 @@ typedef enum ThModBuiltinV1 {
     TH_MOD_BUILTIN_AUTOSHOT = 1u << 2
 } ThModBuiltinV1;
 
+typedef enum ThModActionV1 {
+    TH_MOD_ACTION_SHOOT = 1u << 0,
+    TH_MOD_ACTION_BOMB = 1u << 1,
+    TH_MOD_ACTION_FOCUS = 1u << 2,
+    TH_MOD_ACTION_MENU = 1u << 3,
+    TH_MOD_ACTION_UP = 1u << 4,
+    TH_MOD_ACTION_DOWN = 1u << 5,
+    TH_MOD_ACTION_LEFT = 1u << 6,
+    TH_MOD_ACTION_RIGHT = 1u << 7
+} ThModActionV1;
+
+typedef enum ThModInputContextV1 {
+    TH_MOD_INPUT_CONTEXT_GAMEPLAY = 1u << 0,
+    TH_MOD_INPUT_CONTEXT_REPLAY_PLAYBACK = 1u << 1,
+    TH_MOD_INPUT_CONTEXT_UI_BLOCKED = 1u << 2
+} ThModInputContextV1;
+
 typedef struct ThModRunConfigV1 {
     uint32_t struct_size;
     uint32_t api_version;
@@ -45,6 +62,7 @@ ThModResult th_mod_get_config_v1(ThModRunConfigV1 *out_config);
 ThModResult th_mod_begin_run(void);
 ThModResult th_mod_end_run(void);
 uint32_t th_mod_is_run_active(void);
+uint32_t th_mod_filter_actions_v1(uint32_t actions, uint32_t context);
 
 #ifdef __cplusplus
 }
