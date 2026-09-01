@@ -162,6 +162,7 @@ data directory for writable state.
 - [x] Display the frozen active modifier set.
 - [x] Display the canonical manifest identifier.
 - [x] Run Linux compile and CLI coverage.
+- [x] Run Linux gameplay smoke coverage with retail data.
 - [ ] Run Chromium and Firefox gameplay smoke coverage with retail data.
 
 ### Phase 2: composition and replay identity
@@ -268,9 +269,9 @@ input stream later consumed by the replay recorder. Hidden uses an
 allocation-free integer fade, observes bullet transitions and complete laser
 phase age, and restores each `AnmVm` color immediately after drawing. Core,
 strict C++98 ABI, mod-enabled Linux, mod-disabled Linux, Chromium Wasm, Firefox
-Wasm, JavaScript syntax, and Web provenance checks pass. Replay, screenshot,
-and real-browser gameplay parity remain runtime gates because retail game data
-is not present in this repository.
+Wasm, JavaScript syntax, and Web provenance checks pass. Controlled replay,
+mod-off screenshot parity, and real-browser gameplay remain runtime gates;
+retail data is intentionally absent from the repository and build artifacts.
 
 Flashlight reuses the native four-rectangle mask and ANM script 105 at the same
 Ascii high-priority draw point. It owns a separate mask VM and draws after the
@@ -302,15 +303,51 @@ upright. Horizontal, vertical, and 180° modes retain the native playfield size;
 90° and 270° use a 6/7 scale inside the 384×448 region and draw deterministic
 black letterbox bars. A priority-3 reset sentinel prevents transform state from
 leaking across an early draw-chain break. The shared priority-8 input adapter
-now serves both Autoshot and Mirror and stores the transformed effective input
-for replay recording while bypassing replay playback and UI input.
+now serves both Autoshot and Mirror. On live runs it transforms only the newly
+sampled input that the priority-17 recorder will publish as next frame's player
+snapshot; it preserves that already-transformed snapshot instead of applying
+an involutive Mirror mode twice. Playback and blocking UI remain unmodified.
+Dialogue keeps screen-relative directional mapping while suppressing Autoshot.
+
+### Retail Linux gameplay smoke
+
+On 2026-09-01, a locally supplied Japanese retail archive was extracted into a
+temporary directory outside the repository. Its `th08.exe` SHA-256 was
+`330fbdbf58a710829d65277b4f312cfbb38d5448b3df523e79350b879213d924`,
+matching the canonical 1.00d target. The two runtime DAT files had the expected
+sizes of 46,838,025 and 449,961,024 bytes. Each run used a fresh temporary data
+directory containing only symlinks to those DAT files, so generated config and
+score state never touched the source archive.
+
+The 32-bit Linux build ran through the title, difficulty, team, and Stage 1
+paths under Xvfb with the software OpenGL renderer. All five Mirror modes were
+observed in gameplay. Horizontal, vertical, and 180° retained the complete
+playfield; 90° and 270° showed the expected aspect-fit bars; and the HUD stayed
+upright in every case. Physical screen-direction probes also moved in the same
+visible direction: Right for horizontal, 90°, and 180°, Down for vertical, and
+Left for 270°.
+
+The first horizontal probe exposed a two-frame input feedback bug: a sampled
+Right became Left correctly, but the following frame treated that stored Left
+as raw input and transformed it back to Right. A debugger trace pinned the
+native values to `0x80 -> 0x40 -> 0x80`. The adapter now models the player and
+recorder timelines explicitly, and a deterministic two-frame regression plus
+the five runtime direction probes confirm the correction. A combined
+`HD+FL+AT+MR` run also reached active Stage 1; Autoshot, Flashlight, and Mirror
+were visibly active together. Hidden's time-based fade still needs a controlled
+paired capture rather than relying on that composition smoke.
+
+All retail-derived screenshots and generated state stayed under `/tmp` and
+were not added to Git. Chromium and Firefox gameplay coverage remains pending;
+the existing Wasm/Node smoke covers selection, ABI, and manifest behavior but
+not browser rendering or input.
 
 ### Prototype debt gate
 
 Before calling the slice production-ready, replace temporary configuration
 plumbing, add explicit validation errors, isolate writable state, settle replay
 manifest persistence, cover lasers and Stage 2 darkness composition, and run
-real Chromium, Firefox, and Linux gameplay checks.
+real Chromium and Firefox gameplay checks.
 
 ## Verification matrix
 
