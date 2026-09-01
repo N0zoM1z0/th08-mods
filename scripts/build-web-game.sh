@@ -81,4 +81,15 @@ for metadata in _headers _redirects; do
 done
 
 python3 "${repo_root}/scripts/check-web-provenance.py" --artifact "${dist_dir}"
+
+for web_runtime in th08-web.js th08-web-firefox.js; do
+    docker run --rm \
+        --volume "${repo_root}:/src" \
+        --workdir /src \
+        --user "$(id -u):$(id -g)" \
+        "${image}" \
+        node /src/tests/mod/hosts/web/ManifestSmoke.cjs \
+            "/src/build/web-dist/${web_runtime}"
+done
+
 echo "Staged ${dist_dir}"

@@ -284,10 +284,12 @@ parallel JavaScript manifest implementation.
 The same selection is available to native hosts through the reusable C++98
 CLI bridge. Its parser is covered independently from the game, the complete
 32-bit Linux target links it, and `--mod-manifest` exercises configuration and
-identity output before any retail-data check. The final Chromium Wasm artifact
-also loads under Node and returns the expected `HD+FL+AT` manifest through the
-same exported functions used by the launcher. This is a Wasm host smoke, not a
-substitute for the pending real-browser gameplay and rendering checks.
+identity output before any retail-data check. Both final Wasm artifacts are
+loaded under Node during the Web release build and must return the expected
+manifests for no modifiers, every individual modifier, and the complete
+`HD+FL+AT` set through the same exported functions used by the launcher. This
+is a Wasm host smoke, not a substitute for the pending real-browser gameplay
+and rendering checks.
 
 ### Prototype debt gate
 
