@@ -114,9 +114,13 @@ throttle the display refresh rate.
 
 ## Modifier prototype
 
-The Web launcher exposes **Hidden (`HD`)**, **Flashlight (`FL`)**, and
-**Autoshot (`AT`)** as independent pre-launch selections. The Wasm core shows
-the canonical run manifest before retail data is loaded.
+The Web launcher exposes **Hidden (`HD`)**, **Flashlight (`FL`)**,
+**Autoshot (`AT`)**, and **Mirror (`MR`)** as independent pre-launch
+selections. Mirror supports horizontal and vertical reflection plus 90°, 180°,
+and 270° rotation. Quarter turns preserve the complete 384×448 playfield with
+aspect-fit letterboxing; movement remains relative to the transformed screen
+and the HUD stays upright. The Wasm core shows the canonical run manifest
+before retail data is loaded.
 
 The native Linux build accepts the same modifier codes:
 
@@ -124,13 +128,14 @@ The native Linux build accepts the same modifier codes:
 scripts/build-modern-linux.sh
 build/modern-linux/th08-modern \
   --data-dir /path/to/legal/th08/files \
-  --mods=HD,FL,AT
+  --mods=HD,FL,AT,MR \
+  --mirror=90
 ```
 
 Inspect a selection without starting the game or supplying DAT files:
 
 ```bash
-build/modern-linux/th08-modern --mods=HD,FL,AT --mod-manifest
+build/modern-linux/th08-modern --mods=HD,FL,AT,MR --mirror=vertical --mod-manifest
 build/modern-linux/th08-modern --mod-help
 ```
 

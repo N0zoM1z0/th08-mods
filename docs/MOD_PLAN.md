@@ -90,9 +90,9 @@ inside each modifier without copying its portable policy.
 
 The Web launcher passes one validated configuration to an exported C function
 before `main`. The Linux host accepts the same logical selection with
-`--mods=HD,FL,AT`; `--mod-manifest` prints its normalized identity without
-requiring retail data. Host code never advances simulation or evaluates
-modifier rules.
+`--mods=HD,FL,AT,MR` and `--mirror=90`; `--mod-manifest` prints its normalized
+identity without requiring retail data. Host code never advances simulation
+or evaluates modifier rules.
 
 ## Initial modifier contract
 
@@ -101,14 +101,15 @@ modifier rules.
 | Hidden (`HD`) | Bullets remain visible for a delay and then fade by active age. Lasers and transition states are included. | Projectile draw observation | Ranked later |
 | Flashlight (`FL`) | A configurable circular visible area follows the player while the playfield outside it is obscured. Native Stage 2 darkness composes with it. | High-priority playfield overlay | Ranked later |
 | Autoshot (`AT`) | Shoot is held during active gameplay; menus retain vanilla input. | Effective-input filter | Unranked |
-| Mirror (`MR`) | The playfield is mirrored horizontally and left/right input is exchanged. HUD is not mirrored. | Playfield post-process and input filter | Ranked later |
+| Mirror (`MR`) | The playfield supports horizontal/vertical reflection and 90°/180°/270° rotation. Direction input remains screen-relative, quarter turns aspect-fit without cropping, and HUD/UI remain upright. | Scoped vertex transform and effective-input filter | Ranked later |
 | No Fail (`NF`) | Misses and death animation still occur, but the final game-over transition is suppressed. | Miss-commit policy | Unranked |
 | Double Time (`DT`) | Simulation and authored audio advance at the configured rate while presentation stays display-paced. | Frame scheduler and mixer rate | Ranked later |
 | Hard Rock (`HR`) | A frozen policy changes movement, hurtbox, graze margin, projectile speed, and resources together. | Multiple gameplay policies | Unranked until balanced |
 | Easy (`EZ`) | A frozen assistance policy changes the same explicit dimensions in the easier direction. | Multiple gameplay policies | Unranked |
 
-`HR` and `EZ` conflict in version 1. Ninety-degree rotation is not part of
-`MR@1` because the playfield aspect ratio and HUD make it a different feature.
+`HR` and `EZ` conflict in version 1. `MR@1` records its selected transform in
+the manifest; 90° and 270° use deterministic letterboxing inside the original
+playfield rather than cropping or rotating the HUD.
 
 ## Determinism and replay contract
 
@@ -152,7 +153,7 @@ data directory for writable state.
 
 ### Phase 1: first playable vertical slice
 
-- [x] Add pre-launch Web controls for Hidden, Flashlight, and Autoshot.
+- [x] Add pre-launch Web controls for Hidden, Flashlight, Autoshot, and Mirror.
 - [x] Pass `RunConfigV1` into Wasm before the game entry point.
 - [x] Filter gameplay input for Autoshot without changing menu input.
 - [x] Apply Hidden at the projectile rendering boundary without mutating
@@ -165,7 +166,8 @@ data directory for writable state.
 
 ### Phase 2: composition and replay identity
 
-- [ ] Add horizontal Mirror through a playfield post-process and input remap.
+- [x] Add all five Mirror modes through a scoped playfield transform and input
+  remap.
 - [ ] Freeze modifier ordering and conflict validation.
 - [ ] Persist and validate a canonical replay manifest.
 - [ ] Add cross-platform checkpoint and visual replay tests.
@@ -287,10 +289,21 @@ CLI bridge. Its parser is covered independently from the game, the complete
 32-bit Linux target links it, and `--mod-manifest` exercises configuration and
 identity output before any retail-data check. Both final Wasm artifacts are
 loaded under Node during the Web release build and must return the expected
-manifests for no modifiers, every individual modifier, and the complete
-`HD+FL+AT` set through the same exported functions used by the launcher. This
-is a Wasm host smoke, not a substitute for the pending real-browser gameplay
-and rendering checks.
+manifests for no modifiers, every individual modifier, all five Mirror modes,
+and the complete `HD+FL+AT+MR` set through the same exported functions used by
+the launcher. This is a Wasm host smoke, not a substitute for the pending
+real-browser gameplay and rendering checks.
+
+Mirror is implemented as its own vertical slice. Its portable policy owns
+direction remapping, mode validation, geometry, state, and manifest identity.
+The TH08 translation brackets only draw priorities 6 through 14 with a final
+vertex transform, leaving Spellcard presentation and the priority-17 HUD
+upright. Horizontal, vertical, and 180° modes retain the native playfield size;
+90° and 270° use a 6/7 scale inside the 384×448 region and draw deterministic
+black letterbox bars. A priority-3 reset sentinel prevents transform state from
+leaking across an early draw-chain break. The shared priority-8 input adapter
+now serves both Autoshot and Mirror and stores the transformed effective input
+for replay recording while bypassing replay playback and UI input.
 
 ### Prototype debt gate
 
@@ -326,5 +339,4 @@ bounded step in this document or the relevant handoff.
 - An in-game modifier menu that replaces the host launcher.
 - Online leaderboards, accounts, anti-cheat, or server authority.
 - A generic serialized view of the entire game state.
-- Ninety-degree playfield rotation.
 - Final score multipliers before mechanics are stable and measured.
