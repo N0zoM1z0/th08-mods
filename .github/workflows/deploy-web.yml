@@ -11,7 +11,7 @@ permissions:
   deployments: write
 
 concurrency:
-  group: th08-web-production
+  group: th08-mods-production
   cancel-in-progress: true
 
 jobs:
