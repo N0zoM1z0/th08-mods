@@ -27,6 +27,7 @@ reccmp-build.yml
 /reference/
 
 # Local adjacent-version sources and reverse-engineering state.
+/references/
 /_references/
 /.analysis/
 /.tools/

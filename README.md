@@ -12,6 +12,13 @@
   <em>Touhou Eiyashou ~ Imperishable Night, source-built for the Web.</em>
 </p>
 
+> [!NOTE]
+> This repository is now the Web-first development home for a deterministic,
+> portable TH08 modifier runtime. The preserved TH08 Web port remains the
+> execution baseline. See the [modifier implementation plan](docs/MOD_PLAN.md)
+> for architecture, milestones, replay requirements, and the TH06/TH07 porting
+> boundary.
+
 <p align="center">
   <a href="https://th08-web.pages.dev/"><strong>Enter the endless night</strong></a>
   ·
