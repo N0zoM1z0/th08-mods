@@ -14,6 +14,7 @@ if(TH08_MOD_BUILD)
     add_library(th08-mod-core STATIC
         src/mod/core/ModRuntime.cpp
         src/mod/modifiers/autoshot/AutoshotPolicy.cpp
+        src/mod/modifiers/hidden/HiddenPolicy.cpp
     )
     target_compile_features(th08-mod-core PUBLIC cxx_std_17)
     target_include_directories(th08-mod-core PUBLIC
@@ -39,6 +40,7 @@ if(TH08_MODCORE_ONLY)
     add_executable(th08-mod-core-tests
         tests/mod/ModRuntimeTests.cpp
         tests/mod/modifiers/autoshot/AutoshotTests.cpp
+        tests/mod/modifiers/hidden/HiddenTests.cpp
     )
     target_compile_features(th08-mod-core-tests PRIVATE cxx_std_17)
     target_include_directories(th08-mod-core-tests PRIVATE
@@ -139,6 +141,7 @@ if(TH08_MOD_BUILD)
     list(APPEND TH08_MOD_ADAPTER_SOURCES
         src/mod/games/th08/Th08ModAdapter.cpp
         src/mod/modifiers/autoshot/th08/Th08Autoshot.cpp
+        src/mod/modifiers/hidden/th08/Th08Hidden.cpp
     )
 endif()
 

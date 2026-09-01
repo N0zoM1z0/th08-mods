@@ -18,7 +18,7 @@ int main()
         return 3;
     }
 
-    config.enabled_mods = TH_MOD_BUILTIN_AUTOSHOT;
+    config.enabled_mods = TH_MOD_BUILTIN_AUTOSHOT | TH_MOD_BUILTIN_HIDDEN;
     if (th_mod_configure_v1(&config) != TH_MOD_RESULT_OK)
     {
         return 4;
@@ -36,9 +36,13 @@ int main()
     {
         return 7;
     }
-    if (th_mod_end_run() != TH_MOD_RESULT_OK)
+    if (th_mod_hidden_alpha_v1(255, 1000) != 0)
     {
         return 8;
+    }
+    if (th_mod_end_run() != TH_MOD_RESULT_OK)
+    {
+        return 9;
     }
 
     return 0;

@@ -63,6 +63,8 @@ ThModResult th_mod_begin_run(void);
 ThModResult th_mod_end_run(void);
 uint32_t th_mod_is_run_active(void);
 uint32_t th_mod_filter_actions_v1(uint32_t actions, uint32_t context);
+uint32_t th_mod_hidden_alpha_v1(uint32_t base_alpha,
+                                uint32_t active_age_ticks);
 
 #ifdef __cplusplus
 }

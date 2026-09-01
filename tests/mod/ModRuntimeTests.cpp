@@ -1,6 +1,7 @@
 #include "ModApi.h"
 #include "TestHarness.hpp"
 #include "modifiers/autoshot/AutoshotTests.hpp"
+#include "modifiers/hidden/HiddenTests.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -112,6 +113,7 @@ int main()
     TestValidation();
     TestConfigurationCopyAndFreeze();
     TestAutoshotPolicy();
+    TestHiddenPolicy();
 
     if (g_failures != 0)
     {

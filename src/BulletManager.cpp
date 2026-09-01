@@ -8,6 +8,9 @@
 #include "ReplayManager.hpp"
 #include "SoundPlayer.hpp"
 #include "Supervisor.hpp"
+#ifdef TH08_MOD_BUILD
+#include "mod/modifiers/hidden/th08/Th08Hidden.hpp"
+#endif
 
 namespace th08
 {
@@ -1505,7 +1508,11 @@ ChainCallbackResult BulletManager::OnDraw(BulletManager *bulletManager)
             (*reinterpret_cast<i16 *>(reinterpret_cast<u8 *>(laser) + 0x596) & 0xff000000) | 0xffffff;
         laser->vm0.pos.x += g_GameManager.arcadeRegionTopLeftPos.x;
         laser->vm0.pos.y += g_GameManager.arcadeRegionTopLeftPos.y;
+#ifdef TH08_MOD_BUILD
+        mods::hidden::DrawLaser(laser->vm0, *laser);
+#else
         g_AnmManager->Draw2D(&laser->vm0);
+#endif
 
         if (*reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(laser) + 0x558) < 16.0f ||
             *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(laser) + 0x56c) == 0.0f)
@@ -1536,7 +1543,11 @@ ChainCallbackResult BulletManager::OnDraw(BulletManager *bulletManager)
                 }
                 laser->vm1.pos.x += g_GameManager.arcadeRegionTopLeftPos.x;
                 laser->vm1.pos.y += g_GameManager.arcadeRegionTopLeftPos.y;
+#ifdef TH08_MOD_BUILD
+                mods::hidden::DrawLaser(laser->vm1, *laser);
+#else
                 g_AnmManager->Draw2D(&laser->vm1);
+#endif
             }
         }
     }
@@ -1595,7 +1606,11 @@ ZunResult Bullet::DrawSingleBullet()
             ZUN_PI / 2.0f + *reinterpret_cast<f32 *>(reinterpret_cast<u8 *>(this) + 0xd74), 0.0f));
     }
 
+#ifdef TH08_MOD_BUILD
+    return mods::hidden::DrawBullet(*vm, *this);
+#else
     return g_AnmManager->Draw2D(vm);
+#endif
 }
 
 // FUNCTION: th08 0x433070

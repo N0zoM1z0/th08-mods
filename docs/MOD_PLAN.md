@@ -153,7 +153,7 @@ data directory for writable state.
 - [x] Add pre-launch Web controls for Hidden, Flashlight, and Autoshot.
 - [x] Pass `RunConfigV1` into Wasm before the game entry point.
 - [x] Filter gameplay input for Autoshot without changing menu input.
-- [ ] Apply Hidden at the projectile rendering boundary without mutating
+- [x] Apply Hidden at the projectile rendering boundary without mutating
   persistent animation state.
 - [ ] Compose Flashlight with the native Stage 2 darkness overlay.
 - [x] Display the frozen active modifier set.
@@ -251,10 +251,20 @@ Emscripten presentation variants. `scripts/build-modern-linux.sh` completed a
 Wasm artifacts before passing the Web provenance allowlist. Starting the Linux
 binary without retail data printed the initialized API version and zero
 modifier mask, then followed the expected missing-DAT error path. No gameplay
-hook is registered at this checkpoint, so the runtime is structurally a no-op;
-replay and screenshot parity remain a later runtime gate. A separate complete
-Linux build with `-DTH08_MOD_BUILD=OFF` also linked successfully and omitted the
-core and adapter targets.
+hook was registered at that boundary checkpoint, so it was structurally a
+no-op. A separate complete Linux build with `-DTH08_MOD_BUILD=OFF` also linked
+successfully and omitted the core and adapter targets.
+
+The first gameplay checkpoints now add Autoshot at calculation priority 8 and
+Hidden at the final bullet/laser draw boundary. Autoshot excludes replay
+playback, menus, retry UI, and dialogue, and writes the effective action to the
+input stream later consumed by the replay recorder. Hidden uses an
+allocation-free integer fade, observes bullet transitions and complete laser
+phase age, and restores each `AnmVm` color immediately after drawing. Core,
+strict C++98 ABI, mod-enabled Linux, mod-disabled Linux, Chromium Wasm, Firefox
+Wasm, JavaScript syntax, and Web provenance checks pass. Replay, screenshot,
+and real-browser gameplay parity remain runtime gates because retail game data
+is not present in this repository.
 
 ### Prototype debt gate
 

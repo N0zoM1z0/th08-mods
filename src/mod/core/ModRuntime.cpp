@@ -1,5 +1,6 @@
 #include "ModApi.h"
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
+#include "modifiers/hidden/HiddenPolicy.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -163,4 +164,11 @@ extern "C" uint32_t th_mod_filter_actions_v1(uint32_t actions,
 {
     return th_mod::autoshot::FilterActions(
         g_runtime.config, g_runtime.run_active, actions, context);
+}
+
+extern "C" uint32_t th_mod_hidden_alpha_v1(uint32_t base_alpha,
+                                             uint32_t active_age_ticks)
+{
+    return th_mod::hidden::ComputeAlpha(
+        g_runtime.config, g_runtime.run_active, base_alpha, active_age_ticks);
 }
