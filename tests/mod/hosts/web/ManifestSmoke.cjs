@@ -32,9 +32,9 @@ function finish(exitCode, message) {
   stream.write(`${message}\n`, () => process.exit(exitCode));
 }
 
-function configure(mask) {
+function configure(mask, mirrorMode = 0) {
   const size = runtime._th_mod_config_v1_size();
-  if (size < 28 || size > 4096 || size % 4 !== 0) {
+  if (size < 32 || size > 4096 || size % 4 !== 0) {
     throw new Error(`Invalid configuration size ${size}.`);
   }
 
@@ -44,7 +44,9 @@ function configure(mask) {
     if (runtime._th_mod_get_default_config_v1(pointer) !== 0) {
       throw new Error("Unable to read configuration defaults.");
     }
-    new DataView(runtime.HEAPU8.buffer, pointer, size).setUint32(8, mask, true);
+    const config = new DataView(runtime.HEAPU8.buffer, pointer, size);
+    config.setUint32(8, mask, true);
+    config.setUint32(28, mirrorMode, true);
     if (runtime._th_mod_configure_v1(pointer) !== 0) {
       throw new Error(`Configuration mask ${mask} was rejected.`);
     }
@@ -82,19 +84,26 @@ runtime.onRuntimeInitialized = () => {
     const prefix =
       "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;api=1;mods=";
     const cases = [
-      [0, "none"],
-      [1, "HD@1(45,45)"],
-      [2, "FL@1(96,224)"],
-      [4, "AT@1"],
-      [7, "HD@1(45,45)+FL@1(96,224)+AT@1"],
+      [0, 0, "none"],
+      [1, 0, "HD@1(45,45)"],
+      [2, 0, "FL@1(96,224)"],
+      [4, 0, "AT@1"],
+      [8, 0, "MR@1(horizontal)"],
+      [8, 1, "MR@1(vertical)"],
+      [8, 2, "MR@1(rotate-90)"],
+      [8, 3, "MR@1(rotate-180)"],
+      [8, 4, "MR@1(rotate-270)"],
+      [15, 4, "HD@1(45,45)+FL@1(96,224)+AT@1+MR@1(rotate-270)"],
     ];
 
-    for (const [mask, suffix] of cases) {
-      configure(mask);
+    for (const [mask, mirrorMode, suffix] of cases) {
+      configure(mask, mirrorMode);
       const actual = readManifest();
       const expected = prefix + suffix;
       if (actual !== expected) {
-        throw new Error(`Mask ${mask}: expected ${expected}, received ${actual}.`);
+        throw new Error(
+          `Mask ${mask}, Mirror ${mirrorMode}: expected ${expected}, received ${actual}.`,
+        );
       }
     }
     finish(0, `Wasm modifier manifest smoke passed: ${path.basename(runtimePath)}`);

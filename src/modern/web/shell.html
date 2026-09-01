@@ -44,6 +44,8 @@
       .modifier input { width: 1rem; height: 1rem; margin: .2rem 0 0; accent-color: #a98cff; }
       .modifier strong, .modifier small { display: block; }
       .modifier small { margin-top: .15rem; color: #aaa3bc; font-weight: 450; line-height: 1.35; }
+      .modifier-setting { margin: -.25rem 0 .8rem 1.65rem; color: #aaa3bc; font-size: .78rem; font-weight: 600; }
+      .modifier-setting select { display: block; width: 100%; margin-top: .35rem; padding: .45rem; border: 1px solid #49435e; border-radius: .4rem; background: #0a0b12; color: #ded8ef; }
       #mod-summary { margin: -.35rem 0 1rem; color: #d6c8ff; font-size: .85rem; }
       #mod-manifest { margin: -.45rem 0 1rem; color: #8f899f; font: .72rem/1.4 ui-monospace, monospace; overflow-wrap: anywhere; }
       button { width: 100%; padding: .8rem 1rem; border: 0; border-radius: .55rem; background: #a98cff; color: #100b1d; font-weight: 800; cursor: pointer; }
@@ -94,6 +96,19 @@
             <input id="mod-autoshot" type="checkbox">
             <span><strong>AT — Autoshot</strong><small>Shooting is held automatically during gameplay.</small></span>
           </label>
+          <label class="modifier">
+            <input id="mod-mirror" type="checkbox">
+            <span><strong>MR — Mirror</strong><small>Transform the playfield while keeping movement screen-relative and the HUD upright.</small></span>
+          </label>
+          <label class="modifier-setting" for="mod-mirror-mode">Mirror mode
+            <select id="mod-mirror-mode" disabled>
+              <option value="0">Horizontal mirror</option>
+              <option value="1">Vertical mirror</option>
+              <option value="2">Rotate 90° clockwise</option>
+              <option value="3">Rotate 180°</option>
+              <option value="4">Rotate 270° clockwise</option>
+            </select>
+          </label>
         </fieldset>
         <div id="mod-summary">Active modifiers: None</div>
         <div id="mod-manifest">Run manifest: waiting for the WebAssembly runtime…</div>
@@ -133,11 +148,14 @@
       let started = false;
       let gameFileSystemReady = false;
       let currentModifierManifest;
+      const mirrorCheckbox = document.querySelector("#mod-mirror");
+      const mirrorModeControl = document.querySelector("#mod-mirror-mode");
 
       const modifierControls = [
         { element: document.querySelector("#mod-hidden"), bit: 1 << 0, code: "HD" },
         { element: document.querySelector("#mod-flashlight"), bit: 1 << 1, code: "FL" },
         { element: document.querySelector("#mod-autoshot"), bit: 1 << 2, code: "AT" },
+        { element: mirrorCheckbox, bit: 1 << 3, code: "MR" },
       ];
 
       const persistentFiles = ["th08.cfg", "score.dat", "score.txt"];
@@ -226,11 +244,14 @@
       function selectedModifierLabel() {
         const selected = modifierControls
           .filter((modifier) => modifier.element.checked)
-          .map((modifier) => modifier.code);
+          .map((modifier) => modifier.code === "MR"
+            ? `MR (${mirrorModeControl.selectedOptions[0].textContent})`
+            : modifier.code);
         return selected.length ? selected.join(" + ") : "None";
       }
 
       function updateModifierSummary() {
+        mirrorModeControl.disabled = !mirrorCheckbox.checked;
         modifierSummary.textContent = `Active modifiers: ${selectedModifierLabel()}`;
         if (!runtimeReady || started) return;
 
@@ -269,7 +290,7 @@
 
       function configureModifierRuntime() {
         const configSize = Module._th_mod_config_v1_size();
-        if (configSize < 28 || configSize > 4096 || configSize % 4 !== 0) {
+        if (configSize < 32 || configSize > 4096 || configSize % 4 !== 0) {
           throw new Error(`Unsupported modifier configuration size: ${configSize}.`);
         }
 
@@ -285,6 +306,7 @@
           }
           const config = new DataView(Module.HEAPU8.buffer, configPointer, configSize);
           config.setUint32(8, selectedModifierMask(), true);
+          config.setUint32(28, Number(mirrorModeControl.value), true);
           result = Module._th_mod_configure_v1(configPointer);
           if (result !== 0) {
             throw new Error(`Modifier configuration was rejected (${result}).`);
@@ -296,6 +318,7 @@
       }
 
       window.th08GetSelectedModifierMask = selectedModifierMask;
+      window.th08GetSelectedMirrorMode = () => Number(mirrorModeControl.value);
       window.th08GetModifierManifest = () => currentModifierManifest;
 
       function selectionIsValid() {
@@ -482,6 +505,10 @@
           updateStartState();
         });
       }
+      mirrorModeControl.addEventListener("change", () => {
+        updateModifierSummary();
+        updateStartState();
+      });
       updateModifierSummary();
 
       const gameKeyCodes = new Map([
