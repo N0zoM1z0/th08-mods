@@ -44,7 +44,7 @@ jobs:
           wranglerVersion: "4.125.0"
           command: >-
             pages deploy build/web-dist
-            --project-name=th08-web
+            --project-name=th08-mods
             --branch=main
             --commit-hash=${{ github.sha }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}

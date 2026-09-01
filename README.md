@@ -20,7 +20,7 @@
 > boundary.
 
 <p align="center">
-  <a href="https://th08-web.pages.dev/"><strong>Enter the endless night</strong></a>
+  <a href="https://th08-mods.pages.dev/"><strong>Enter the modified night</strong></a>
   ·
   <a href="https://github.com/N0zoM1z0/th08-web/releases/latest">Latest release</a>
   ·
@@ -55,7 +55,7 @@ an executable running inside an emulator.
 
 ## Enter the night
 
-1. Open **[th08-web.pages.dev](https://th08-web.pages.dev/)** in a desktop
+1. Open **[th08-mods.pages.dev](https://th08-mods.pages.dev/)** in a desktop
    browser. Current desktop Chrome is recommended.
 2. Select `th08.dat` and `thbgm.dat` from your legally obtained TH08
    installation.
@@ -69,7 +69,7 @@ in browser persistence.
 
 Settings, scores, replays, backups, and snapshots are stored separately in the
 browser's IndexedDB storage. They survive a normal reload and remain private to
-that browser profile. Clearing site data for `th08-web.pages.dev` removes them.
+that browser profile. Clearing site data for `th08-mods.pages.dev` removes them.
 
 Replay recording and playback are supported. Complete the original save flow
 by choosing a replay slot and confirming **End** on the name-entry screen; the
@@ -273,7 +273,7 @@ For an authorized manual deployment:
 ```bash
 export CLOUDFLARE_ACCOUNT_ID=<account-id>
 export CLOUDFLARE_API_TOKEN=<token-with-pages-edit>
-npx wrangler@4.125.0 pages deploy build/web-dist --project-name=th08-web --branch=main
+npx wrangler@4.125.0 pages deploy build/web-dist --project-name=th08-mods --branch=main
 ```
 
 Never write deployment credentials into this repository or command logs.

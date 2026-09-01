@@ -671,7 +671,7 @@ upload only the checked artifact directory:
 
 ```bash
 npx wrangler@4.125.0 pages deploy build/web-dist \
-  --project-name=th08-web \
+  --project-name=th08-mods \
   --branch=main
 ```
 
