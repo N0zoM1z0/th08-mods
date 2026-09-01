@@ -40,6 +40,15 @@ void TestIndependentInputTimelines()
     CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(th_mod_begin_run() == TH_MOD_RESULT_OK);
 
+    const th08::mods::input::ActionTimeline gameplay =
+        th08::mods::input::AdvanceLiveInputTimeline(
+            0,
+            TH_MOD_ACTION_LEFT,
+            TH_MOD_INPUT_CONTEXT_GAMEPLAY);
+    CHECK(gameplay.player_actions == 0);
+    CHECK(gameplay.recorder_actions ==
+          (TH_MOD_ACTION_RIGHT | TH_MOD_ACTION_SHOOT));
+
     const th08::mods::input::ActionTimeline dialogue =
         th08::mods::input::AdvanceLiveInputTimeline(
             TH_MOD_ACTION_RIGHT,

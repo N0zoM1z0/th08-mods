@@ -195,6 +195,7 @@ extern "C" uint32_t th_mod_is_run_active(void)
 extern "C" uint32_t th_mod_filter_actions_v1(uint32_t actions,
                                                 uint32_t context)
 {
+    // V1 replay identity fixes geometry transforms before action injection.
     actions = th_mod::mirror::FilterActions(
         g_runtime.config, g_runtime.run_active, actions, context);
     return th_mod::autoshot::FilterActions(
