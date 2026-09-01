@@ -134,6 +134,12 @@ void TestModifierSelection()
     CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(config.enabled_mods == TH_MOD_BUILTIN_RELAX);
 
+    char blindSpotOption[] = "--mods=blind-spot";
+    char *blindSpotArguments[] = {executable, blindSpotOption};
+    CHECK(RunCli(2, blindSpotArguments, NULL) == th_mod::cli::kRunGame);
+    CHECK(th_mod_get_config_v1(&config) == TH_MOD_RESULT_OK);
+    CHECK(config.enabled_mods == TH_MOD_BUILTIN_BLIND_SPOT);
+
     char modsOption[] = "--mods";
     char none[] = "none";
     char *noneArguments[] = {executable, modsOption, none};
@@ -195,7 +201,7 @@ void TestHelpAndManifestOutput()
     char *helpArguments[] = {executable, help};
     std::string output;
     CHECK(RunCli(2, helpArguments, &output) == th_mod::cli::kExitSuccess);
-    CHECK(output.find("--mods=HD,FL,AT,MR,NF,DT,HR,EZ,RX") !=
+    CHECK(output.find("--mods=HD,FL,AT,MR,NF,DT,HR,EZ,RX,BS") !=
           std::string::npos);
     CHECK(output.find("--mirror=MODE") != std::string::npos);
 
@@ -260,6 +266,15 @@ void TestHelpAndManifestOutput()
     CHECK(output ==
           "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
           "api=1;mods=RX@1\n");
+
+    char blindSpotMods[] = "--mods=BS";
+    char *blindSpotManifestArguments[] = {
+        executable, blindSpotMods, manifest};
+    CHECK(RunCli(3, blindSpotManifestArguments, &output) ==
+          th_mod::cli::kExitSuccess);
+    CHECK(output ==
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "api=1;mods=BS@1\n");
 }
 
 } // namespace
