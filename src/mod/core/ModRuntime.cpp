@@ -3,6 +3,7 @@
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
+#include "modifiers/mirror/MirrorPolicy.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -13,7 +14,8 @@ namespace {
 constexpr uint32_t kKnownModifierMask =
     TH_MOD_BUILTIN_HIDDEN |
     TH_MOD_BUILTIN_FLASHLIGHT |
-    TH_MOD_BUILTIN_AUTOSHOT;
+    TH_MOD_BUILTIN_AUTOSHOT |
+    TH_MOD_BUILTIN_MIRROR;
 constexpr uint32_t kMaximumTickOption = 60u * 60u * 10u;
 constexpr uint32_t kMaximumFlashlightRadius = 4096u;
 
@@ -22,6 +24,8 @@ static_assert(sizeof(ThModRunConfigV1) == 60,
               "ThModRunConfigV1 must retain its version 1 ABI size.");
 static_assert(sizeof(ThModFlashlightStateV1) == 16,
               "ThModFlashlightStateV1 must retain its version 1 ABI size.");
+static_assert(sizeof(ThModMirrorStateV1) == 16,
+              "ThModMirrorStateV1 must retain its version 1 ABI size.");
 
 ThModRunConfigV1 MakeDefaultConfig()
 {
@@ -100,6 +104,7 @@ extern "C" ThModResult th_mod_validate_config_v1(
         config->flashlight_radius_pixels == 0 ||
         config->flashlight_radius_pixels > kMaximumFlashlightRadius ||
         config->flashlight_opacity > 255 ||
+        config->mirror_mode > TH_MOD_MIRROR_ROTATE_270 ||
         !ReservedFieldsAreZero(*config))
     {
         return TH_MOD_RESULT_INVALID_OPTION;
@@ -192,6 +197,8 @@ extern "C" uint32_t th_mod_is_run_active(void)
 extern "C" uint32_t th_mod_filter_actions_v1(uint32_t actions,
                                                 uint32_t context)
 {
+    actions = th_mod::mirror::FilterActions(
+        g_runtime.config, g_runtime.run_active, actions, context);
     return th_mod::autoshot::FilterActions(
         g_runtime.config, g_runtime.run_active, actions, context);
 }
@@ -212,6 +219,19 @@ extern "C" ThModResult th_mod_get_flashlight_state_v1(
     }
 
     *out_state = th_mod::flashlight::GetState(
+        g_runtime.config, g_runtime.run_active);
+    return TH_MOD_RESULT_OK;
+}
+
+extern "C" ThModResult th_mod_get_mirror_state_v1(
+    ThModMirrorStateV1 *out_state)
+{
+    if (out_state == 0)
+    {
+        return TH_MOD_RESULT_NULL_ARGUMENT;
+    }
+
+    *out_state = th_mod::mirror::GetState(
         g_runtime.config, g_runtime.run_active);
     return TH_MOD_RESULT_OK;
 }

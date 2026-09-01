@@ -17,6 +17,7 @@ if(TH08_MOD_BUILD)
         src/mod/modifiers/autoshot/AutoshotPolicy.cpp
         src/mod/modifiers/flashlight/FlashlightPolicy.cpp
         src/mod/modifiers/hidden/HiddenPolicy.cpp
+        src/mod/modifiers/mirror/MirrorPolicy.cpp
     )
     target_compile_features(th08-mod-core PUBLIC cxx_std_17)
     target_include_directories(th08-mod-core PUBLIC
@@ -45,6 +46,7 @@ if(TH08_MODCORE_ONLY)
         tests/mod/modifiers/autoshot/AutoshotTests.cpp
         tests/mod/modifiers/flashlight/FlashlightTests.cpp
         tests/mod/modifiers/hidden/HiddenTests.cpp
+        tests/mod/modifiers/mirror/MirrorTests.cpp
     )
     target_compile_features(th08-mod-core-tests PRIVATE cxx_std_17)
     target_include_directories(th08-mod-core-tests PRIVATE

@@ -38,15 +38,39 @@ void TestManifestV1()
     CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
     config.enabled_mods = TH_MOD_BUILTIN_AUTOSHOT |
                           TH_MOD_BUILTIN_FLASHLIGHT |
-                          TH_MOD_BUILTIN_HIDDEN;
+                          TH_MOD_BUILTIN_HIDDEN |
+                          TH_MOD_BUILTIN_MIRROR;
     config.hidden_visible_ticks = 60;
     config.hidden_fade_ticks = 30;
     config.flashlight_radius_pixels = 120;
     config.flashlight_opacity = 192;
+    config.mirror_mode = TH_MOD_MIRROR_ROTATE_90;
     CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(ReadManifest() ==
           "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
-          "api=1;mods=HD@1(60,30)+FL@1(120,192)+AT@1");
+          "api=1;mods=HD@1(60,30)+FL@1(120,192)+AT@1+MR@1(rotate-90)");
+
+    const uint32_t modes[] = {
+        TH_MOD_MIRROR_HORIZONTAL,
+        TH_MOD_MIRROR_VERTICAL,
+        TH_MOD_MIRROR_ROTATE_90,
+        TH_MOD_MIRROR_ROTATE_180,
+        TH_MOD_MIRROR_ROTATE_270,
+    };
+    const char *identifiers[] = {
+        "horizontal", "vertical", "rotate-90", "rotate-180", "rotate-270",
+    };
+    for (std::size_t index = 0; index < 5; ++index)
+    {
+        CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
+        config.enabled_mods = TH_MOD_BUILTIN_MIRROR;
+        config.mirror_mode = modes[index];
+        CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
+        CHECK(ReadManifest() ==
+              std::string("game=th08@1.00d;engine=th08-mods@1;"
+                          "base=th08-web@3f926db;api=1;mods=MR@1(") +
+                  identifiers[index] + ")");
+    }
 
     CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
     config.hidden_visible_ticks = 999;

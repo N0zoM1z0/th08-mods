@@ -4,6 +4,7 @@
 #include "modifiers/autoshot/AutoshotTests.hpp"
 #include "modifiers/flashlight/FlashlightTests.hpp"
 #include "modifiers/hidden/HiddenTests.hpp"
+#include "modifiers/mirror/MirrorTests.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -38,6 +39,7 @@ void TestDefaults()
     CHECK(config.hidden_fade_ticks == 45);
     CHECK(config.flashlight_radius_pixels == 96);
     CHECK(config.flashlight_opacity == 224);
+    CHECK(config.mirror_mode == TH_MOD_MIRROR_HORIZONTAL);
     for (std::size_t index = 0;
          index < sizeof(config.reserved) / sizeof(config.reserved[0]);
          ++index)
@@ -73,6 +75,10 @@ void TestValidation()
     CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
 
     config.flashlight_opacity = 256;
+    CHECK(th_mod_validate_config_v1(&config) == TH_MOD_RESULT_INVALID_OPTION);
+    CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
+
+    config.mirror_mode = TH_MOD_MIRROR_ROTATE_270 + 1;
     CHECK(th_mod_validate_config_v1(&config) == TH_MOD_RESULT_INVALID_OPTION);
     CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
 
@@ -118,6 +124,7 @@ int main()
     TestAutoshotPolicy();
     TestFlashlightPolicy();
     TestHiddenPolicy();
+    TestMirrorPolicy();
 
     if (g_failures != 0)
     {

@@ -3,6 +3,7 @@
 #include "modifiers/autoshot/AutoshotPolicy.hpp"
 #include "modifiers/flashlight/FlashlightPolicy.hpp"
 #include "modifiers/hidden/HiddenPolicy.hpp"
+#include "modifiers/mirror/MirrorPolicy.hpp"
 
 #include <cstdint>
 
@@ -73,6 +74,13 @@ std::string BuildV1(const ThModRunConfigV1 &config)
     if ((config.enabled_mods & TH_MOD_BUILTIN_AUTOSHOT) != 0)
     {
         BeginModifier(output, hasModifier, "AT", autoshot::kRulesetVersion);
+    }
+    if ((config.enabled_mods & TH_MOD_BUILTIN_MIRROR) != 0)
+    {
+        BeginModifier(output, hasModifier, "MR", mirror::kRulesetVersion);
+        output += '(';
+        output += mirror::ModeIdentifier(config.mirror_mode);
+        output += ')';
     }
 
     if (!hasModifier)

@@ -23,8 +23,17 @@ typedef enum ThModResult {
 typedef enum ThModBuiltinV1 {
     TH_MOD_BUILTIN_HIDDEN = 1u << 0,
     TH_MOD_BUILTIN_FLASHLIGHT = 1u << 1,
-    TH_MOD_BUILTIN_AUTOSHOT = 1u << 2
+    TH_MOD_BUILTIN_AUTOSHOT = 1u << 2,
+    TH_MOD_BUILTIN_MIRROR = 1u << 3
 } ThModBuiltinV1;
+
+typedef enum ThModMirrorModeV1 {
+    TH_MOD_MIRROR_HORIZONTAL = 0,
+    TH_MOD_MIRROR_VERTICAL = 1,
+    TH_MOD_MIRROR_ROTATE_90 = 2,
+    TH_MOD_MIRROR_ROTATE_180 = 3,
+    TH_MOD_MIRROR_ROTATE_270 = 4
+} ThModMirrorModeV1;
 
 typedef enum ThModActionV1 {
     TH_MOD_ACTION_SHOOT = 1u << 0,
@@ -51,7 +60,8 @@ typedef struct ThModRunConfigV1 {
     uint32_t hidden_fade_ticks;
     uint32_t flashlight_radius_pixels;
     uint32_t flashlight_opacity;
-    uint32_t reserved[8];
+    uint32_t mirror_mode;
+    uint32_t reserved[7];
 } ThModRunConfigV1;
 
 typedef struct ThModFlashlightStateV1 {
@@ -60,6 +70,13 @@ typedef struct ThModFlashlightStateV1 {
     uint32_t radius_pixels;
     uint32_t opacity;
 } ThModFlashlightStateV1;
+
+typedef struct ThModMirrorStateV1 {
+    uint32_t struct_size;
+    uint32_t is_active;
+    uint32_t mode;
+    uint32_t reserved;
+} ThModMirrorStateV1;
 
 uint32_t th_mod_config_v1_size(void);
 ThModResult th_mod_get_default_config_v1(ThModRunConfigV1 *out_config);
@@ -78,6 +95,7 @@ uint32_t th_mod_hidden_alpha_v1(uint32_t base_alpha,
                                 uint32_t active_age_ticks);
 ThModResult th_mod_get_flashlight_state_v1(
     ThModFlashlightStateV1 *out_state);
+ThModResult th_mod_get_mirror_state_v1(ThModMirrorStateV1 *out_state);
 
 #ifdef __cplusplus
 }
