@@ -1,4 +1,5 @@
 #include "ModApi.h"
+#include "modifiers/autoshot/AutoshotPolicy.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -160,18 +161,6 @@ extern "C" uint32_t th_mod_is_run_active(void)
 extern "C" uint32_t th_mod_filter_actions_v1(uint32_t actions,
                                                 uint32_t context)
 {
-    const bool activeGameplay =
-        (context & TH_MOD_INPUT_CONTEXT_GAMEPLAY) != 0;
-    const bool playback =
-        (context & TH_MOD_INPUT_CONTEXT_REPLAY_PLAYBACK) != 0;
-    const bool uiBlocked =
-        (context & TH_MOD_INPUT_CONTEXT_UI_BLOCKED) != 0;
-
-    if (g_runtime.run_active && activeGameplay && !playback && !uiBlocked &&
-        (g_runtime.config.enabled_mods & TH_MOD_BUILTIN_AUTOSHOT) != 0)
-    {
-        actions |= TH_MOD_ACTION_SHOOT;
-    }
-
-    return actions;
+    return th_mod::autoshot::FilterActions(
+        g_runtime.config, g_runtime.run_active, actions, context);
 }

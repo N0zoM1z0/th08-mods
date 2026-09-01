@@ -67,6 +67,25 @@ playfield overlay. Later hooks add simulation scheduling, audio rate, miss
 commit, collision policy, and starting resources only when a modifier proves
 that it needs them.
 
+### Modifier source layout
+
+Modifier behavior is organized as a vertical slice instead of accumulating in
+the runtime or game adapter:
+
+```text
+src/mod/modifiers/<modifier>/
+    <Modifier>Policy.*          portable, game-independent rule
+    th08/Th08<Modifier>.*       TH08 state and hook translation
+tests/mod/modifiers/<modifier>/
+    <Modifier>Tests.*           black-box policy contract
+```
+
+`ModRuntime.cpp` owns only configuration, lifecycle, and stable C ABI dispatch.
+`Th08ModAdapter.cpp` owns only lifecycle translation and modifier registration.
+A shared helper is promoted out of a modifier directory only after at least two
+modifiers need the same contract. TH06 and TH07 add sibling adapter directories
+inside each modifier without copying its portable policy.
+
 ### Host bridge
 
 The Web launcher passes one validated configuration to an exported C function

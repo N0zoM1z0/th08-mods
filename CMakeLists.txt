@@ -13,10 +13,14 @@ endif()
 if(TH08_MOD_BUILD)
     add_library(th08-mod-core STATIC
         src/mod/core/ModRuntime.cpp
+        src/mod/modifiers/autoshot/AutoshotPolicy.cpp
     )
     target_compile_features(th08-mod-core PUBLIC cxx_std_17)
     target_include_directories(th08-mod-core PUBLIC
         "${CMAKE_SOURCE_DIR}/src/mod/api"
+    )
+    target_include_directories(th08-mod-core PRIVATE
+        "${CMAKE_SOURCE_DIR}/src/mod"
     )
 
     if(MSVC)
@@ -34,8 +38,12 @@ if(TH08_MODCORE_ONLY)
     enable_testing()
     add_executable(th08-mod-core-tests
         tests/mod/ModRuntimeTests.cpp
+        tests/mod/modifiers/autoshot/AutoshotTests.cpp
     )
     target_compile_features(th08-mod-core-tests PRIVATE cxx_std_17)
+    target_include_directories(th08-mod-core-tests PRIVATE
+        "${CMAKE_SOURCE_DIR}/tests/mod"
+    )
     target_link_libraries(th08-mod-core-tests PRIVATE th08-mod-core)
     add_test(NAME th08-mod-core-tests COMMAND th08-mod-core-tests)
 
@@ -130,6 +138,7 @@ set(TH08_MOD_ADAPTER_SOURCES)
 if(TH08_MOD_BUILD)
     list(APPEND TH08_MOD_ADAPTER_SOURCES
         src/mod/games/th08/Th08ModAdapter.cpp
+        src/mod/modifiers/autoshot/th08/Th08Autoshot.cpp
     )
 endif()
 
