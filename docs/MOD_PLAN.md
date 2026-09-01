@@ -90,7 +90,7 @@ inside each modifier without copying its portable policy.
 
 The Web launcher passes one validated configuration to an exported C function
 before `main`. The Linux host accepts the same logical selection with
-`--mods=HD,FL,AT,MR,NF,DT` and `--mirror=90`; `--mod-manifest` prints its
+`--mods=HD,FL,AT,MR,NF,DT,HR,EZ,RX` and `--mirror=90`; `--mod-manifest` prints its
 normalized identity without requiring retail data. Host code never advances
 simulation or evaluates modifier rules.
 
@@ -106,10 +106,12 @@ simulation or evaluates modifier rules.
 | Double Time (`DT`) | Simulation and authored audio advance at the configured rate while presentation stays display-paced. | Frame scheduler and mixer rate | Ranked later |
 | Hard Rock (`HR`) | Enemy projectile speed is `23/20`, player movement is `9/10`, the hurtbox is `5/4`, and the graze margin is `4/5`; resources and spell time remain vanilla. | Multiple gameplay policies | Unranked until balanced |
 | Easy (`EZ`) | Enemy projectile speed is `17/20`, the hurtbox is `3/4`, the graze margin is `5/4`, starting bombs gain `+2`, and spell time is `5/4`; player movement remains vanilla. | Multiple gameplay policies | Unranked |
+| Relax (`RX`) | Shoot and Focus are held during active gameplay; movement and bombing remain manual, while menus, dialogue, blocked UI, and replay playback retain vanilla input. | Effective-input filter | Unranked |
 
-`HR` and `EZ` conflict in version 1. `MR@1` records its selected transform in
-the manifest; 90° and 270° use deterministic letterboxing inside the original
-playfield rather than cropping or rotating the HUD.
+`HR` and `EZ` conflict in version 1. `AT` and `RX` also conflict because Relax
+is a strict superset of Autoshot's assistance. `MR@1` records its selected
+transform in the manifest; 90° and 270° use deterministic letterboxing inside
+the original playfield rather than cropping or rotating the HUD.
 
 Difficulty transforms cross the C ABI as exact integer ratios. Game adapters
 apply those ratios at their native seams, avoiding platform-dependent policy
@@ -195,6 +197,8 @@ data directory for writable state.
 - [x] Cover transformed bullets, lasers, collision, graze, and movement at
   their TH08 commit boundaries.
 - [x] Apply the Easy starting-bomb and spell-time resource policies.
+- [x] Add Relax as a portable effective-input policy and expose it to Web and
+  native hosts.
 - [ ] Balance score multipliers only after measured gameplay runs.
 
 ### Phase 5: additional games and native releases
@@ -299,9 +303,10 @@ CLI bridge. Its parser is covered independently from the game, the complete
 identity output before any retail-data check. Both final Wasm artifacts are
 loaded under Node during the Web release build and must return the expected
 manifests for no modifiers, every individual modifier, all five Mirror modes,
-and the complete `HD+FL+AT+MR+NF+DT` set through the same exported functions
-used by the launcher. This Wasm host smoke is supplemented by the bounded
-Chromium gameplay check below; Firefox modifier gameplay remains pending.
+and complete compatible sets using either Autoshot or Relax through the same
+exported functions used by the launcher. This Wasm host smoke is supplemented
+by the bounded Chromium gameplay check below; Firefox modifier gameplay
+remains pending.
 
 Mirror is implemented as its own vertical slice. Its portable policy owns
 direction remapping, mode validation, geometry, state, and manifest identity.
@@ -316,16 +321,19 @@ sampled input that the priority-17 recorder will publish as next frame's player
 snapshot; it preserves that already-transformed snapshot instead of applying
 an involutive Mirror mode twice. Playback and blocking UI remain unmodified.
 Dialogue keeps screen-relative directional mapping while suppressing Autoshot.
+Relax reuses the same effective-input seam, holding Shoot and Focus only during
+live, unblocked gameplay. It is isolated in its own modifier directory; the
+TH08 adapter merely registers the generic input hook when `RX` is selected.
 
 The version-1 modifier registry is now the single owner of built-in bits,
 codes, ruleset versions, canonical manifest order, and conflict masks. Runtime
 validation rejects unknown bits and conflicts with distinct result codes, and
-tests pin the published `HD+FL+AT+MR+NF+DT` order plus the generic conflict
-branch.
+tests pin the published `HD+FL+AT+MR+NF+DT+HR+EZ` order, append `RX` without
+renumbering earlier modifiers, and cover both conflict pairs.
 Effective-input composition is also fixed for version 1: geometric direction
-transforms run before assistance actions are injected. Modifier-specific
-options and behavior remain in their vertical slices instead of moving into
-the registry.
+transforms run before Relax or Autoshot assistance actions are injected.
+Modifier-specific options and behavior remain in their vertical slices instead
+of moving into the registry.
 
 No Fail is another complete vertical slice. Its portable policy returns two
 separate decisions for a committed miss: whether the run continues and whether
