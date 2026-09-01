@@ -244,9 +244,10 @@ cmake --build build/mod-core --parallel 2
 ctest --test-dir build/mod-core --output-on-failure
 ```
 
-The C++17 runtime tests passed. A separate executable compiled as strict C++98
-also linked against and exercised the same C ABI, which is the first direct
-signal that the authored game and modern core can remain language-separated.
+The C++17 runtime tests passed. Separate executables compiled as strict C++98
+also exercise the public C ABI and native CLI parser. These three test targets
+run in the repository's target-independent CI, providing a direct signal that
+the authored game and modern core remain language-separated.
 
 The same boundary then linked into the complete 32-bit Linux game and both
 Emscripten presentation variants. `scripts/build-modern-linux.sh` completed a

@@ -64,6 +64,27 @@ def main() -> int:
             "Enforce Web retail-data provenance boundary",
             [sys.executable, "scripts/check-web-provenance.py"],
         )
+        mod_build = ROOT / "build" / "mod-core-ci"
+        run(
+            "Configure portable modifier tests",
+            [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                str(mod_build),
+                "-DTH08_MODCORE_ONLY=ON",
+                "-DCMAKE_BUILD_TYPE=Debug",
+            ],
+        )
+        run(
+            "Build portable modifier tests",
+            ["cmake", "--build", str(mod_build), "--parallel", "2"],
+        )
+        run(
+            "Run portable modifier tests",
+            ["ctest", "--test-dir", str(mod_build), "--output-on-failure"],
+        )
         run(
             "Validate static reconstruction ledgers",
             [sys.executable, "scripts/validate-tracking.py", "--skip-target-bytes"],
