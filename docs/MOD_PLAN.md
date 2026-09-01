@@ -90,9 +90,9 @@ inside each modifier without copying its portable policy.
 
 The Web launcher passes one validated configuration to an exported C function
 before `main`. The Linux host accepts the same logical selection with
-`--mods=HD,FL,AT,MR` and `--mirror=90`; `--mod-manifest` prints its normalized
-identity without requiring retail data. Host code never advances simulation
-or evaluates modifier rules.
+`--mods=HD,FL,AT,MR,NF` and `--mirror=90`; `--mod-manifest` prints its
+normalized identity without requiring retail data. Host code never advances
+simulation or evaluates modifier rules.
 
 ## Initial modifier contract
 
@@ -102,7 +102,7 @@ or evaluates modifier rules.
 | Flashlight (`FL`) | A configurable circular visible area follows the player while the playfield outside it is obscured. Native Stage 2 darkness composes with it. | High-priority playfield overlay | Ranked later |
 | Autoshot (`AT`) | Shoot is held during active gameplay; menus retain vanilla input. | Effective-input filter | Unranked |
 | Mirror (`MR`) | The playfield supports horizontal/vertical reflection and 90°/180°/270° rotation. Direction input remains screen-relative, quarter turns aspect-fit without cropping, and HUD/UI remain upright. | Scoped vertex transform and effective-input filter | Ranked later |
-| No Fail (`NF`) | Misses and death animation still occur, but the final game-over transition is suppressed. | Miss-commit policy | Unranked |
+| No Fail (`NF`) | Misses, death count, penalties, and respawning remain active; at zero lives the final retry transition is suppressed without underflowing the life counter. | Miss-commit policy | Unranked |
 | Double Time (`DT`) | Simulation and authored audio advance at the configured rate while presentation stays display-paced. | Frame scheduler and mixer rate | Ranked later |
 | Hard Rock (`HR`) | A frozen policy changes movement, hurtbox, graze margin, projectile speed, and resources together. | Multiple gameplay policies | Unranked until balanced |
 | Easy (`EZ`) | A frozen assistance policy changes the same explicit dimensions in the easier direction. | Multiple gameplay policies | Unranked |
@@ -183,7 +183,7 @@ data directory for writable state.
 
 ### Phase 4: gameplay policies
 
-- [ ] Add No Fail at the miss/game-over commit boundary.
+- [x] Add No Fail at the miss/game-over commit boundary.
 - [ ] Freeze explicit `HR@1` and `EZ@1` policy values.
 - [ ] Cover bullet transformations, lasers, collision, graze, movement, and
   resources before enabling composite difficulty modifiers.
@@ -291,8 +291,8 @@ CLI bridge. Its parser is covered independently from the game, the complete
 identity output before any retail-data check. Both final Wasm artifacts are
 loaded under Node during the Web release build and must return the expected
 manifests for no modifiers, every individual modifier, all five Mirror modes,
-and the complete `HD+FL+AT+MR` set through the same exported functions used by
-the launcher. This is a Wasm host smoke, not a substitute for the pending
+and the complete `HD+FL+AT+MR+NF` set through the same exported functions used
+by the launcher. This is a Wasm host smoke, not a substitute for the pending
 real-browser gameplay and rendering checks.
 
 Mirror is implemented as its own vertical slice. Its portable policy owns
@@ -312,11 +312,22 @@ Dialogue keeps screen-relative directional mapping while suppressing Autoshot.
 The version-1 modifier registry is now the single owner of built-in bits,
 codes, ruleset versions, canonical manifest order, and conflict masks. Runtime
 validation rejects unknown bits and conflicts with distinct result codes, and
-tests pin the published `HD+FL+AT+MR` order plus the generic conflict branch.
+tests pin the published `HD+FL+AT+MR+NF` order plus the generic conflict branch.
 Effective-input composition is also fixed for version 1: geometric direction
 transforms run before assistance actions are injected. Modifier-specific
 options and behavior remain in their vertical slices instead of moving into
 the registry.
+
+No Fail is another complete vertical slice. Its portable policy returns two
+separate decisions for a committed miss: whether the run continues and whether
+a life is consumed. Positive-life behavior remains vanilla; at zero lives an
+active `NF@1` run continues without decrementing below zero. The TH08
+translation asks that policy only at the original power-drop and retry/respawn
+branches, so spell failure, death statistics, time-orb loss, rank loss, death
+animation, and bomb reset remain authored game behavior. The mod-disabled VC7
+lane still matches `Player::FUN_0044cbf0 @ 0x0044CBF0` exactly at 1,373 of
+1,373 bytes with all relocations, and the normal 52-object VC7 link also
+passes.
 
 ### Retail Linux gameplay smoke
 
@@ -345,6 +356,20 @@ the five runtime direction probes confirm the correction. A combined
 `HD+FL+AT+MR` run also reached active Stage 1; Autoshot, Flashlight, and Mirror
 were visibly active together. Hidden's time-based fade still needs a controlled
 paired capture rather than relying on that composition smoke.
+
+A separate No Fail A/B run used natural Stage 1 collisions rather than a
+patched control-flow result. With modifiers disabled, the third miss reached
+zero lives, incremented the death counter to 3, set `showRetryMenu` to 1, and
+disabled active gameplay while the retry menu was visible. With `NF@1`
+selected, the same unattended run reached 8 deaths while lives remained
+exactly 0, `showRetryMenu` remained 0, gameplay updates remained active, and
+bombs reset to 3 after respawn. This verifies repeated zero-life respawning and
+the no-underflow contract, not just modifier selection.
+
+After the No Fail seam was linked, target-independent core/C++98 tests, both
+mod-enabled and mod-disabled fixed-address Linux builds, the Linux layout
+verifier, both Emscripten presentation variants, Wasm manifest smoke tests, and
+the Web retail-data provenance check all passed.
 
 All retail-derived screenshots and generated state stayed under `/tmp` and
 were not added to Git. Chromium and Firefox gameplay coverage remains pending;
