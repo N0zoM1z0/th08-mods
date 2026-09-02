@@ -44,6 +44,24 @@ without becoming one enormous cursed patch.
 > and the public site do not contain the game executable, DAT archives, or
 > extracted retail assets. The browser never uploads your selected files.
 
+## Incident footage: seven modifiers, one very confused moon
+
+Seven modifiers. A vertical mirror. No bombs. No game over. Darkness hides the
+danmaku, the blind spot hides what remains, and up and down have quietly stopped
+meaning what they did five minutes ago. This is exactly why the launcher has
+checkboxes.
+
+<p align="center">
+  <a href="https://youtu.be/hKfWujQaGBc" title="Watch the TH08 Mods gameplay recording on YouTube">
+    <img src="https://i.ytimg.com/vi/hKfWujQaGBc/maxresdefault.jpg" width="960" alt="TH08 Mods gameplay with Hidden, Flashlight, Vertical Mirror, No Fail, Easy, Blind Spot, and No Bomb">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://youtu.be/hKfWujQaGBc"><img src="https://img.shields.io/badge/%E2%96%B6_WATCH_THE_INCIDENT-FF0033?style=for-the-badge&amp;logo=youtube&amp;logoColor=white" alt="Watch the incident on YouTube"></a><br>
+  <code>HD + FL + MR (Vertical) + NF + EZ + BS + NB</code>
+</p>
+
 ## Enter before dawn
 
 1. Visit **[th08-mods.pages.dev](https://th08-mods.pages.dev/)** in a current
