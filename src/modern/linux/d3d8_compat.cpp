@@ -1188,9 +1188,9 @@ class LinuxDevice : public IDirect3DDevice8
 
         PushRendererState();
 #ifdef TH08_MODERN_WEB
-        glBindTexture(GL_TEXTURE_2D, renderColorTexture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // DrawWebBlit owns the texture binding and sampler state. Avoid
+        // emitting three redundant commands per frame, especially on the
+        // Firefox build where each GL call crosses the pthread proxy.
         DrawWebBlit(renderColorTexture, drawableWidth, drawableHeight, true, true);
         if (WebMeasurementActive() && ++g_webMeasuredFrames == 600)
         {

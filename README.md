@@ -106,6 +106,16 @@ Everything else stacks. This is not necessarily an endorsement.
 | **Eirin's Prescription** | `EZ` + `NF` | A gentle way to tour patterns, stages, dialogue, and endings without the usual appointment with Continue. |
 | **The Moon Chose Violence** | `HD` + `FL` + `DT` + `HR` | Less light, less information, less time, and faster bullets. A flawless plan. |
 
+The Web build requires WebAssembly threads, `SharedArrayBuffer`, WebGL 2, Web
+Audio, and a cross-origin-isolated HTTPS page. The production site supplies the
+required COOP and COEP headers. The launcher checks isolation, shared memory,
+canvas transfer, and WebGL 2 before enabling Start and reports a missing
+requirement directly.
+
+For the smoothest bullet-hell input and pacing, close heavily loaded tabs,
+leave browser hardware acceleration enabled, and avoid power-saving modes that
+throttle the display refresh rate.
+
 ## The traditional controls still work
 
 | Key | Action |
@@ -182,8 +192,16 @@ python3 scripts/check-web-provenance.py --artifact build/web-dist
 scripts/serve-web.py --port 8000
 ```
 
-Open `http://127.0.0.1:8000/`. Use the repository server: Emscripten pthreads
-need its COOP, COEP, and CORP headers.
+The build is intentionally single-job and limits each Docker invocation to two
+CPUs and 4 GiB by default. Override the caps only when needed, for example:
+
+```bash
+TH08_WEB_BUILD_CPUS=1 TH08_WEB_BUILD_MEMORY=3g scripts/build-web-game.sh
+```
+
+Open `http://127.0.0.1:8000/`. Do not use a generic static server for this
+build: Emscripten pthreads require the COOP, COEP, and CORP headers supplied by
+`scripts/serve-web.py`.
 
 The deployment gate permits exactly these nine static files:
 
@@ -203,6 +221,14 @@ An extra file, missing file, symlink, executable, retail archive, or common
 archive container fails the build. Chrome uses a worker-owned canvas; Firefox
 uses a dedicated main-thread WebGL presentation path. Both execute the same
 authored game and modifier core.
+
+After packaging or testing, the generated trees can be reclaimed explicitly:
+
+```bash
+cmake -E remove_directory build/web-game
+cmake -E remove_directory build/web-dist
+cmake -E remove_directory build/emscripten-cache
+```
 
 ### Deployment
 
