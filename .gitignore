@@ -33,6 +33,7 @@ reccmp-build.yml
 /.tools/
 /local/
 /.venv/
+node_modules/
 /compile_commands.json
 *.gpr
 *.rep/
