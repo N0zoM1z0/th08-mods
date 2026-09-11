@@ -1,7 +1,6 @@
 {
   "name": "th08-mods-web-runtime-tests",
   "private": true,
-  "type": "module",
   "scripts": {
     "test:web-runtime": "node scripts/test-web-runtime.mjs"
   },
