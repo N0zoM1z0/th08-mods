@@ -203,6 +203,23 @@ Open `http://127.0.0.1:8000/`. Do not use a generic static server for this
 build: Emscripten pthreads require the COOP, COEP, and CORP headers supplied by
 `scripts/serve-web.py`.
 
+For a repeatable gameplay and pacing check, install the pinned browser driver
+without downloading another browser, then provide your own retail data and
+replay. This example also verifies the Double Time 3:2 simulation cadence and
+the selected Mirror transform in both browser presentation paths:
+
+```bash
+npm ci --ignore-scripts
+npm run test:web-runtime -- \
+  --artifact build/web-dist \
+  --game-data /path/to/th08.dat \
+  --bgm-data /path/to/thbgm.dat \
+  --replay /path/to/replay/th8_03.rpy \
+  --expected-stage 5 \
+  --mods HD,FL,MR,NF,DT,HR,BS,NB \
+  --mirror-mode 90
+```
+
 The deployment gate permits exactly these nine static files:
 
 ```text

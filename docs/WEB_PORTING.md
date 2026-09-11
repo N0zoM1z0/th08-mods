@@ -611,6 +611,16 @@ calculations. This preserves replay frame order and leaves native/VC7 behavior
 untouched. It does not pretend that rendering is 60 Hz: the visible diagnostic
 continues to report browser, worker, and calculation rates separately.
 
+That generic timing fix needed an explicit Mods integration. Double Time's
+portable scheduler must run inside every accumulated 60 Hz presentation step,
+where it emits its deterministic 3:2 simulation sequence; placing the Web
+accumulator outside the former native-only modifier loop would make the Web UI
+advertise `DT@1` while gameplay silently stayed at 1x. Sound queues now advance
+once per emitted simulation tick and redraw cadence advances once per
+presentation step. The retained replay harness asserts approximately 1.0 game
+tick per worker callback normally and 1.5 with DT, so this composition cannot
+regress unnoticed.
+
 The pinned build script deliberately favors predictable workstation load over
 maximum throughput. Compilation is single-job, and each Docker invocation
 defaults to two CPUs, 4 GiB of memory, and no memory beyond that limit through

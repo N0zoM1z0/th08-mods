@@ -251,10 +251,28 @@ The native/VC7 path is unchanged, and TH08 does not yet interpolate render
 state between calculations; worker rate remains separately visible so catch-up
 cannot disguise an actual 30--40 Hz presentation bottleneck.
 
-A short Chromium active-gameplay sample recorded 297 browser callbacks and 297
-authored calculation frames in five seconds. The renderer separately measured
-approximately 0.08--0.15 ms of CPU game submission and 0.01--0.03 ms of blit
-work per frame in representative direct-rendering scenes.
+The Mods build composes Double Time inside each accumulated 60 Hz presentation
+step. `SimulationTicksForPresentation()` deterministically emits the existing
+3:2 tick sequence, sound queues are processed for every actual simulation tick,
+and redraw cadence advances once per presentation-time step. This ordering is
+important: applying the generic Web accumulator outside the old native-only
+Double Time loop would silently reduce `DT@1` to normal speed. Diagnostics must
+therefore show a game/worker ratio near 1.0 without DT and 1.5 with DT; a 60 Hz
+game rate is a failure for an active Double Time gameplay sample, not a success.
+
+A replay-driven Chromium 150/SwiftShader check measured Stage 5 for 20 seconds
+after a separate 10-second warm-up. Without modifiers, direct and proxy
+presentation each recorded 1,200 worker callbacks and 1,200 authored
+calculations (59.99 and 59.99 Hz). With
+`HD+FL+MR(rotate-90)+NF+DT+HR+BS+NB`, each independently recorded 1,200
+callbacks and 1,808 calculations (59.99 and 90.38 Hz). All four runs kept the
+expected Stage 5 route, emitted the expected canonical modifier manifest,
+produced valid gameplay screenshots, and reported no test failure, page crash,
+or console error. Dense 600-frame windows submitted roughly 1,900--2,500
+vertices per frame; streaming-upload CPU averages were about 0.03--0.04 ms in
+direct presentation and 0.19--0.27 ms in proxy presentation. Prefetched BGM
+reads normally completed in roughly 1--3 ms. These are bounded
+software-renderer results, not a Mac hardware performance claim.
 
 Firefox pacing diagnostics isolate browser rAF, bitmap creation, message
 latency, bitmap presentation, worker callbacks, and authored calculations. In
@@ -476,6 +494,16 @@ All Web builds use
   20 ms. These are bounded software-renderer correctness/pacing observations,
   not a hardware GPU benchmark. Serving the same artifact without isolation
   headers kept Start disabled and displayed the expected COOP/COEP diagnostic.
+- The Mods performance artifact at commit `9a63638` passed repository
+  validation, both generated-runtime manifest smoke tests, and the strict
+  nine-file artifact boundary in GitHub Actions run `34562601682`; the
+  non-main workflow uploaded it and skipped deployment. The retained replay
+  harness then tested direct and proxy links both without modifiers and with
+  `HD+FL+MR(rotate-90)+NF+DT+HR+BS+NB`. The normal samples held 59.99 worker
+  and game Hz; the Double Time samples held 59.99 worker Hz and 90.38 game Hz.
+  All remained on Stage 5 with the expected manifest, visible gameplay, and no
+  recorded test or browser-console error. Test DATs, replay, screenshots, and
+  JSON remained outside the repository and uploaded artifact.
 
 Run the bounded probes with:
 
@@ -498,7 +526,9 @@ npm run test:web-runtime -- \
   --game-data /path/to/th08.dat \
   --bgm-data /path/to/thbgm.dat \
   --replay /path/to/replay/th8_03.rpy \
-  --expected-stage 5
+  --expected-stage 5 \
+  --mods HD,FL,MR,NF,DT,HR,BS,NB \
+  --mirror-mode 90
 ```
 
 The test starts an ephemeral isolated-header server, creates clean browser
@@ -509,7 +539,10 @@ and worker/calculation rates below `--minimum-fps`; screenshots and JSON go to
 an untracked temporary directory unless `--output-dir` is supplied. Chrome is
 auto-detected on macOS and common Linux paths. `--swiftshader --no-sandbox` is
 available for controlled headless environments and should not be used for a
-real-hardware performance claim.
+real-hardware performance claim. `--mods` accepts manifest codes in any input
+order and validates the runtime's canonical order. The test also validates the
+selected Mirror mode and derives the required calculation rate from Double
+Time's 1.5x simulation multiplier.
 
 ## Remaining work
 
