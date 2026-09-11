@@ -24,7 +24,7 @@ void TestManifestV1()
     ResetRuntime();
 
     const std::string defaultManifest =
-        "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+        "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
         "api=1;mods=none";
     CHECK(ReadManifest() == defaultManifest);
     CHECK(th_mod_manifest_v1_size() == defaultManifest.size() + 1);
@@ -50,7 +50,7 @@ void TestManifestV1()
     config.mirror_mode = TH_MOD_MIRROR_ROTATE_90;
     CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(ReadManifest() ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=HD@1(60,30)+FL@1(120,192)+AT@1+MR@1(rotate-90)+"
           "NF@1+DT@1+HR@1");
 
@@ -58,28 +58,28 @@ void TestManifestV1()
     config.enabled_mods = TH_MOD_BUILTIN_EASY;
     CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(ReadManifest() ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=EZ@1");
 
     CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
     config.enabled_mods = TH_MOD_BUILTIN_RELAX;
     CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(ReadManifest() ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=RX@1");
 
     CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
     config.enabled_mods = TH_MOD_BUILTIN_BLIND_SPOT;
     CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(ReadManifest() ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=BS@1");
 
     CHECK(th_mod_get_default_config_v1(&config) == TH_MOD_RESULT_OK);
     config.enabled_mods = TH_MOD_BUILTIN_NO_BOMB;
     CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
     CHECK(ReadManifest() ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=NB@1");
 
     const uint32_t modes[] = {
@@ -100,7 +100,7 @@ void TestManifestV1()
         CHECK(th_mod_configure_v1(&config) == TH_MOD_RESULT_OK);
         CHECK(ReadManifest() ==
               std::string("game=th08@1.00d;engine=th08-mods@1;"
-                          "base=th08-web@3f926db;api=1;mods=MR@1(") +
+                          "base=th08-web@e3485ab;api=1;mods=MR@1(") +
                   identifiers[index] + ")");
     }
 

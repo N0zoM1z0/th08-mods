@@ -1,5 +1,5 @@
 {
-  "name": "th08-web-runtime-tests",
+  "name": "th08-mods-web-runtime-tests",
   "private": true,
   "type": "module",
   "scripts": {

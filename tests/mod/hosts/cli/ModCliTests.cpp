@@ -217,7 +217,7 @@ void TestHelpAndManifestOutput()
     CHECK(RunCli(3, manifestArguments, &output) ==
           th_mod::cli::kExitSuccess);
     CHECK(output ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=FL@1(96,224)\n");
 
     char mirrorMods[] = "--mods=MR";
@@ -227,7 +227,7 @@ void TestHelpAndManifestOutput()
     CHECK(RunCli(4, mirrorManifestArguments, &output) ==
           th_mod::cli::kExitSuccess);
     CHECK(output ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=MR@1(rotate-270)\n");
 
     char noFailMods[] = "--mods=NF";
@@ -236,7 +236,7 @@ void TestHelpAndManifestOutput()
     CHECK(RunCli(3, noFailManifestArguments, &output) ==
           th_mod::cli::kExitSuccess);
     CHECK(output ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=NF@1\n");
 
     char doubleTimeMods[] = "--mods=DT";
@@ -245,7 +245,7 @@ void TestHelpAndManifestOutput()
     CHECK(RunCli(3, doubleTimeManifestArguments, &output) ==
           th_mod::cli::kExitSuccess);
     CHECK(output ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=DT@1\n");
 
     char hardRockMods[] = "--mods=HR";
@@ -254,7 +254,7 @@ void TestHelpAndManifestOutput()
     CHECK(RunCli(3, hardRockManifestArguments, &output) ==
           th_mod::cli::kExitSuccess);
     CHECK(output ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=HR@1\n");
 
     char easyMods[] = "--mods=EZ";
@@ -262,7 +262,7 @@ void TestHelpAndManifestOutput()
     CHECK(RunCli(3, easyManifestArguments, &output) ==
           th_mod::cli::kExitSuccess);
     CHECK(output ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=EZ@1\n");
 
     char relaxMods[] = "--mods=RX";
@@ -270,7 +270,7 @@ void TestHelpAndManifestOutput()
     CHECK(RunCli(3, relaxManifestArguments, &output) ==
           th_mod::cli::kExitSuccess);
     CHECK(output ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=RX@1\n");
 
     char blindSpotMods[] = "--mods=BS";
@@ -279,7 +279,7 @@ void TestHelpAndManifestOutput()
     CHECK(RunCli(3, blindSpotManifestArguments, &output) ==
           th_mod::cli::kExitSuccess);
     CHECK(output ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=BS@1\n");
 
     char noBombMods[] = "--mods=NB";
@@ -287,7 +287,7 @@ void TestHelpAndManifestOutput()
     CHECK(RunCli(3, noBombManifestArguments, &output) ==
           th_mod::cli::kExitSuccess);
     CHECK(output ==
-          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+          "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
           "api=1;mods=NB@1\n");
 }
 

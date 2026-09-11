@@ -2,7 +2,9 @@
 
 - Status: active
 - Started: 2026-09-01
-- Web baseline: `th08-web` commit `3f926db`
+- Web baseline: `th08-web` commit `e3485ab` (the mods fork began at
+  `3f926db` and later imported its runtime-parity and sustained-performance
+  fixes)
 - Semantic source reference: `th08` commit `50077ac`
 
 ## Goal

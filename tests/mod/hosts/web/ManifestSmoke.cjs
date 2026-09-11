@@ -82,7 +82,7 @@ runtime.onAbort = (reason) => {
 runtime.onRuntimeInitialized = () => {
   try {
     const prefix =
-      "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;api=1;mods=";
+      "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;api=1;mods=";
     const cases = [
       [0, 0, "none"],
       [1, 0, "HD@1(45,45)"],

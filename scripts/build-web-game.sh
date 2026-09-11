@@ -96,6 +96,7 @@ python3 "${repo_root}/scripts/check-web-provenance.py" --artifact "${dist_dir}"
 
 for web_runtime in th08-web.js th08-web-firefox.js; do
     docker run --rm \
+        "${docker_limits[@]}" \
         --volume "${repo_root}:/src" \
         --workdir /src \
         --user "$(id -u):$(id -g)" \
