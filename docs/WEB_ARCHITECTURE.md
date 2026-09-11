@@ -80,6 +80,14 @@ a valid development secure context. A remote machine should use HTTPS; the raw
 LAN or Tailscale HTTP address can display the launcher but cannot start this
 pthread build in a conforming browser.
 
+Before enabling **Start TH08**, the launcher now checks cross-origin isolation,
+`SharedArrayBuffer`/`Atomics.wait`, transferable worker canvases for the direct
+path, and WebGL 2. Unsupported environments remain on the launcher with an
+actionable reason instead of failing later in Emscripten startup. This is a
+diagnostic boundary, not a single-thread fallback: the authored startup, BGM,
+and blocking compatibility seams require the pthread architecture described
+above.
+
 ### Data bridge
 
 The C++ Win32 file compatibility layer recognizes only the two retail archive
@@ -108,6 +116,12 @@ close operations retain their synchronous authored-facing behavior.
   writing either retail archive into the persistent tree.
 - If IndexedDB is unavailable, the same allowlisted layout remains usable as
   session-only MEMFS and the launcher reports the fallback in its runtime log.
+- Modern resource readers keep the post-decryption size synchronized with the
+  returned allocation. LZSS fetches never dereference past compressed input,
+  retain the retail format's zero-padding terminator behavior, and reject output
+  that exceeds or fails to reach the declared size. Score and replay loaders
+  validate their compressed ranges and decoded structure before use. These
+  checks do not alter the VC7 reconstruction path.
 
 ### Rendering and frame pacing
 
@@ -167,19 +181,98 @@ D3D8-shaped sprite stream into a few commands and one batched vertex upload per
 frame. Proxying the earlier immediate-mode stream would merely have replaced a
 readback bottleneck with thousands of cross-thread calls. The current proxy
 moves a small command stream while all framebuffer pixels remain on the GPU.
+The final Web blit also owns its texture binding and sampler state, so `Present`
+does not emit the former redundant bind and two filter commands. This removes
+three GL calls per frame from both links and, most importantly, three pthread
+proxy crossings per frame from Firefox.
+
+A 2026-09-11 Chrome/macOS endurance report exposed a separate late-frame
+problem: gameplay could settle at 30--40 FPS as scene density increased. The
+old upload ring selected a new VBO for every upload, not every presented frame,
+and rewrote offset zero with `glBufferSubData()` whenever the buffer was large
+enough. Three object names alone do not guarantee that ANGLE has finished with
+an object's current storage, so a later upload can make the CPU wait for the
+Apple GPU.
+
+The `reallyportable` branch of `some100/th07` provided adjacent-port
+corroboration for the safer stream shape: it rotates VBOs at frame start,
+orphans the selected store with `glBufferData(..., NULL, GL_STREAM_DRAW)`, and
+appends all uploads within that frame. This is not TH08 target evidence and its
+single-thread SDL3/Web build is not directly transferable: TH08 keeps its
+pthread boundary so synchronous authored file access, browser `File` range
+reads for the roughly 450 MB BGM archive, and Web Audio startup continue to
+work.
+
+TH08's Web renderer now uses the same bounded storage principle while retaining
+its own architecture. It starts each presented frame with one fresh 1 MiB
+store on the next of three VBOs, appends the batched game vertices and final
+blit, and grows/orphans only if the frame exceeds that store. Vertex conversion
+writes directly into the persistent frame queue, avoiding the former temporary
+vector and second copy, and adjacent triangle lists are combined only when
+their complete captured draw state is byte-identical. This removes possible
+in-flight overwrite stalls without changing draw order, primitive topology, or
+authored calculation timing.
+
+TH07 avoids browser file stalls by preloading its packaged assets, but copying
+TH08's roughly 450 MB BGM archive into Wasm would consume most of the fixed heap
+before gameplay. TH08 instead keeps a bounded two-chunk stream: the authored
+synchronous read consumes one 1 MiB cache while the browser asynchronously
+prefetches the next expected cache miss. The lookahead accounts for the
+authored 44,100-byte DirectSound notification reads: it advances by the number
+of complete requests that fit and skips the cache tail that cannot satisfy the
+next request. A sequential cache miss normally
+copies an already-resolved `ArrayBuffer` into shared memory; seeking or a failed
+prefetch falls back to the existing direct Blob range read and restarts the
+lookahead. At most one future range is retained, so the optimization removes
+periodic I/O waits without making the retail archive persistent or bundling it.
 
 `?perf=1` enables presentation diagnostics without changing the default
 release hot path. It measures main-thread animation-frame intervals, bitmap
 creation, worker-to-main message latency, bitmap arrival, and bitmap
 presentation separately. C++ counters independently report browser callbacks,
-authored calculation frames, draw commands, and submitted vertices. Keeping
-these clocks separate prevents a nominal browser callback rate or the in-game
-counter from hiding slower simulation progress.
+authored calculation frames, draw commands, submitted vertices, streaming
+upload time, and average/maximum submission time in repeating windows. A
+visible five-second summary reports browser rAF, worker callback, and authored
+game rates separately. Keeping these clocks separate prevents a nominal
+browser callback rate or the in-game counter from hiding slower simulation
+progress. The same diagnostic mode logs every direct or prefetched retail Blob
+read with its byte range and worker wait time, separating I/O stalls from VBO
+submission stalls.
 
-A short Chromium active-gameplay sample recorded 297 browser callbacks and 297
-authored calculation frames in five seconds. The renderer separately measured
-approximately 0.08--0.15 ms of CPU game submission and 0.01--0.03 ms of blit
-work per frame in representative direct-rendering scenes.
+Those separated counters exposed a third boundary in the original-shaped Web
+loop: a proxy sample could receive 60 worker callbacks per second but execute
+only about 50--51 authored calculations. The old timestamp gate performed at
+most one calculation per callback and advanced past missed intervals, so rAF
+jitter or a message callback permanently discarded logical time. The Web-only
+loop now accumulates elapsed time, clamps one callback to 100 ms, executes the
+required 60 Hz calculation steps, and draws/presents once after catch-up. Replay
+input is still consumed once per authored calculation in its original order.
+The native/VC7 path is unchanged, and TH08 does not yet interpolate render
+state between calculations; worker rate remains separately visible so catch-up
+cannot disguise an actual 30--40 Hz presentation bottleneck.
+
+The Mods build composes Double Time inside each accumulated 60 Hz presentation
+step. `SimulationTicksForPresentation()` deterministically emits the existing
+3:2 tick sequence, sound queues are processed for every actual simulation tick,
+and redraw cadence advances once per presentation-time step. This ordering is
+important: applying the generic Web accumulator outside the old native-only
+Double Time loop would silently reduce `DT@1` to normal speed. Diagnostics must
+therefore show a game/worker ratio near 1.0 without DT and 1.5 with DT; a 60 Hz
+game rate is a failure for an active Double Time gameplay sample, not a success.
+
+A replay-driven Chromium 150/SwiftShader check measured Stage 5 for 20 seconds
+after a separate 10-second warm-up. Without modifiers, direct and proxy
+presentation each recorded 1,200 worker callbacks and 1,200 authored
+calculations (59.99 and 59.99 Hz). With
+`HD+FL+MR(rotate-90)+NF+DT+HR+BS+NB`, each independently recorded 1,200
+callbacks and 1,808 calculations (59.99 and 90.38 Hz). All four runs kept the
+expected Stage 5 route, emitted the expected canonical modifier manifest,
+produced valid gameplay screenshots, and reported no test failure, page crash,
+or console error. Dense 600-frame windows submitted roughly 1,900--2,500
+vertices per frame; streaming-upload CPU averages were about 0.03--0.04 ms in
+direct presentation and 0.19--0.27 ms in proxy presentation. Prefetched BGM
+reads normally completed in roughly 1--3 ms. These are bounded
+software-renderer results, not a Mac hardware performance claim.
 
 Firefox pacing diagnostics isolate browser rAF, bitmap creation, message
 latency, bitmap presentation, worker callbacks, and authored calculations. In
@@ -259,6 +352,16 @@ missing effects, unstable scores, and an eventual out-of-bounds trap during a
 result transition. Runtime diagnostics verify the most failure-prone aliases
 before endurance tests.
 
+The native Windows i386 prerequisite pass also exposed gameplay defects that
+were independent of browser APIs. The Web build now carries the same
+target-evidenced behavior at its modern boundary: stage backgrounds use the
+stage-finished flag rather than dialogue presence, the enemy-name copy uses the
+front ANM owner, item popups use their correct pools, randomized player shots
+use the signed RNG result, bomb effects test the current timer value, and the
+retry menu distinguishes Spell Practice from ordinary Practice. Keeping these
+corrections explicit prevents a successful Web link from masking stale
+reconstruction behavior.
+
 ## Build and run
 
 Docker is the only Emscripten prerequisite. The build image is pinned by tag
@@ -269,6 +372,10 @@ scripts/build-web-game.sh
 python3 scripts/check-web-provenance.py --artifact build/web-dist
 scripts/serve-web.py --bind 127.0.0.1 --port 8000
 ```
+
+Compilation is single-job. Docker defaults to a two-CPU, 4 GiB, no-extra-swap
+envelope; `TH08_WEB_BUILD_CPUS` and `TH08_WEB_BUILD_MEMORY` override those caps
+when a different builder budget is required.
 
 Open `http://127.0.0.1:8000/`, select local files named exactly `th08.dat` and
 `thbgm.dat`, and choose **Start TH08**. Keyboard controls are listed in the
@@ -375,6 +482,28 @@ All Web builds use
   progression from about 24 FPS to about 33--36 FPS, moved the player through
   the expected shared input path, created active/hit shots, and rendered the
   gameplay field without a page or worker error.
+- On 2026-09-11, both Release links were rebuilt with the pinned Emscripten
+  image under a two-CPU, 4 GiB, single-job limit and passed the staged-artifact
+  provenance gate. Headless Chromium 150 with SwiftShader loaded the legal
+  46,838,025-byte and 449,961,024-byte retail files, repeatedly ran bundled
+  demonstrations, and loaded a 3,246-byte external `th8_03.rpy`. The replay
+  menu resolved its recorded Stage 5, ignored a separate synthetic 16-byte
+  truncated replay, and entered Stage 5 with the background, bullets, player,
+  and HUD visible. A 15-second gameplay-only pacing sample contained 899 rAF
+  intervals averaging 16.666 ms, with a 16.670 ms maximum and no interval over
+  20 ms. These are bounded software-renderer correctness/pacing observations,
+  not a hardware GPU benchmark. Serving the same artifact without isolation
+  headers kept Start disabled and displayed the expected COOP/COEP diagnostic.
+- The Mods performance artifact at commit `9a63638` passed repository
+  validation, both generated-runtime manifest smoke tests, and the strict
+  nine-file artifact boundary in GitHub Actions run `34562601682`; the
+  non-main workflow uploaded it and skipped deployment. The retained replay
+  harness then tested direct and proxy links both without modifiers and with
+  `HD+FL+MR(rotate-90)+NF+DT+HR+BS+NB`. The normal samples held 59.99 worker
+  and game Hz; the Double Time samples held 59.99 worker Hz and 90.38 game Hz.
+  All remained on Stage 5 with the expected manifest, visible gameplay, and no
+  recorded test or browser-console error. Test DATs, replay, screenshots, and
+  JSON remained outside the repository and uploaded artifact.
 
 Run the bounded probes with:
 
@@ -385,6 +514,35 @@ scripts/build-web-data-probe.sh
 scripts/build-web-renderer-probe.sh
 python3 scripts/check-web-provenance.py
 ```
+
+For a replay-driven browser test of the release artifacts, install the pinned
+automation library (it does not download a browser) and pass local retail files
+explicitly:
+
+```bash
+npm ci --ignore-scripts
+npm run test:web-runtime -- \
+  --artifact build/web-dist \
+  --game-data /path/to/th08.dat \
+  --bgm-data /path/to/thbgm.dat \
+  --replay /path/to/replay/th8_03.rpy \
+  --expected-stage 5 \
+  --mods HD,FL,MR,NF,DT,HR,BS,NB \
+  --mirror-mode 90
+```
+
+The test starts an ephemeral isolated-header server, creates clean browser
+contexts, injects only the named replay into session MEMFS, navigates the
+authored Replay menus, and samples both direct and proxy presentation after a
+separate warm-up. It rejects browser errors, runtime traps, stage mismatches,
+and worker/calculation rates below `--minimum-fps`; screenshots and JSON go to
+an untracked temporary directory unless `--output-dir` is supplied. Chrome is
+auto-detected on macOS and common Linux paths. `--swiftshader --no-sandbox` is
+available for controlled headless environments and should not be used for a
+real-hardware performance claim. `--mods` accepts manifest codes in any input
+order and validates the runtime's canonical order. The test also validates the
+selected Mirror mode and derives the required calculation rate from Double
+Time's 1.5x simulation multiplier.
 
 ## Remaining work
 
@@ -397,7 +555,8 @@ public-deployment gates. It is a public engineering release. The next work is:
    pause/focus, audio-underrun, and repeated stage-reload regressions;
 2. measure and tune the fixed shared-memory ceiling under repeated long
    sessions;
-3. add gamepad mapping and user-facing diagnostics for unsupported browsers.
+3. add gamepad mapping and broaden the tested desktop-browser compatibility
+   matrix.
 
 ## Primary references
 

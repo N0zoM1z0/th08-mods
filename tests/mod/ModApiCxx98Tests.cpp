@@ -37,7 +37,7 @@ int main()
         th_mod_write_manifest_v1(manifest, sizeof(manifest)) !=
             TH_MOD_RESULT_OK ||
         strcmp(manifest,
-               "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;"
+               "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;"
                "api=1;mods=HD@1(45,45)+FL@1(96,224)+AT@1+"
                "MR@1(rotate-90)+NF@1+DT@1+HR@1") != 0)
     {

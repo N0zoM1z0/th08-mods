@@ -47,7 +47,7 @@ void BeginModifier(std::string &output, bool &hasModifier,
 std::string BuildV1(const ThModRunConfigV1 &config)
 {
     std::string output =
-        "game=th08@1.00d;engine=th08-mods@1;base=th08-web@3f926db;api=";
+        "game=th08@1.00d;engine=th08-mods@1;base=th08-web@e3485ab;api=";
     AppendUnsigned(output, config.api_version);
     output += ";mods=";
 

@@ -51,6 +51,7 @@
       button { width: 100%; padding: .8rem 1rem; border: 0; border-radius: .55rem; background: #a98cff; color: #100b1d; font-weight: 800; cursor: pointer; }
       button:disabled { cursor: not-allowed; opacity: .45; }
       #status { min-height: 2.8rem; margin: 1rem 0 0; padding: .8rem; border-radius: .5rem; background: #0a0b12; color: #ddd5f5; }
+      #performance { margin: .65rem 0 0; padding: .65rem .8rem; border-radius: .5rem; background: #171326; color: #cfc2ff; font: .75rem/1.45 ui-monospace, monospace; }
       #log { max-height: 13rem; overflow: auto; margin: 1rem 0 0; padding: .8rem; border-radius: .5rem; background: #08090e; color: #aaa3bc; font: .75rem/1.45 ui-monospace, monospace; white-space: pre-wrap; }
       .game { display: grid; place-items: start center; padding: 1.25rem; overflow: hidden; }
       canvas { grid-area: 1 / 1; width: 640px; height: 480px; max-width: 100%; border: 1px solid #302a44; background: #000; image-rendering: auto; outline: none; }
@@ -142,6 +143,7 @@
         <div id="mod-manifest">Run manifest: waiting for the WebAssembly runtime…</div>
         <button id="start" disabled>Start TH08</button>
         <div id="status" role="status" aria-live="polite">Loading the WebAssembly runtime…</div>
+        <div id="performance" hidden></div>
         <pre id="log" aria-label="Runtime log"></pre>
       </section>
       <section class="game">
@@ -157,6 +159,7 @@
       const modifierSummary = document.querySelector("#mod-summary");
       const modifierManifest = document.querySelector("#mod-manifest");
       const statusElement = document.querySelector("#status");
+      const performanceElement = document.querySelector("#performance");
       const logElement = document.querySelector("#log");
       const canvas = document.querySelector("#canvas");
       const displayCanvas = document.querySelector("#display-canvas");
@@ -197,6 +200,27 @@
         { element: document.querySelector("#mod-nobomb"), bit: 1 << 10, code: "NB" },
       ];
 
+      function detectRuntimeSupport() {
+        if (!window.crossOriginIsolated) {
+          return "This build requires cross-origin isolation. Serve it with COOP/COEP headers over HTTPS or localhost.";
+        }
+        if (typeof SharedArrayBuffer !== "function" ||
+            typeof Atomics === "undefined" || typeof Atomics.wait !== "function") {
+          return "This browser cannot run the shared-memory WebAssembly threads required by TH08 Web.";
+        }
+        if (presentationMode !== "proxy" &&
+            typeof HTMLCanvasElement.prototype.transferControlToOffscreen !== "function") {
+          return "This browser cannot transfer the game canvas to the TH08 worker. Chrome or Edge is recommended.";
+        }
+        const probe = document.createElement("canvas");
+        if (!probe.getContext("webgl2")) {
+          return "WebGL 2 is unavailable. Enable hardware acceleration or use a browser with WebGL 2 support.";
+        }
+        return "";
+      }
+
+      const runtimeSupportError = detectRuntimeSupport();
+
       const persistentFiles = ["th08.cfg", "score.dat", "score.txt"];
       const persistentDirectories = ["replay", "backup", "snapshot"];
       const modStorageNamespace = "th08-mods-v1";
@@ -215,6 +239,7 @@
       };
       let previousRafTime;
       let previousBitmapArrivalTime;
+      let performanceReportTimer;
 
       function recordTiming(metric, milliseconds) {
         if (!Number.isFinite(milliseconds) || milliseconds < 0) return;
@@ -252,6 +277,35 @@
         bitmapPresent: timingSnapshot(framePacing.bitmapPresent),
       });
       window.th08ResetFramePacing = resetFramePacing;
+
+      function startPerformanceReporting() {
+        if (!performanceDiagnosticsEnabled || performanceReportTimer) return;
+        let previousTime = performance.now();
+        let previousFrameSnapshot = Module._th08_web_get_frame_snapshot() >>> 0;
+        resetFramePacing();
+        performanceElement.hidden = false;
+        performanceElement.textContent = "Performance diagnostics: collecting a 5 second window…";
+        performanceReportTimer = setInterval(() => {
+          const now = performance.now();
+          const elapsedSeconds = (now - previousTime) / 1000;
+          const frameSnapshot = Module._th08_web_get_frame_snapshot() >>> 0;
+          const callbackDelta = ((frameSnapshot & 0xffff) -
+            (previousFrameSnapshot & 0xffff)) & 0xffff;
+          const calculationDelta = ((frameSnapshot >>> 16) -
+            (previousFrameSnapshot >>> 16)) & 0xffff;
+          const pacing = timingSnapshot(framePacing.mainRafInterval);
+          const browserRate = pacing.count / elapsedSeconds;
+          const callbackRate = callbackDelta / elapsedSeconds;
+          const calculationRate = calculationDelta / elapsedSeconds;
+          performanceElement.textContent =
+            `5 s diagnostics: browser ${browserRate.toFixed(1)} Hz; ` +
+            `worker ${callbackRate.toFixed(1)} Hz; game ${calculationRate.toFixed(1)} FPS; ` +
+            `worst browser frame ${pacing.maximumMilliseconds.toFixed(1)} ms`;
+          previousTime = now;
+          previousFrameSnapshot = frameSnapshot;
+          resetFramePacing();
+        }, 5000);
+      }
 
       if (performanceDiagnosticsEnabled) {
         const sampleAnimationFrame = (time) => {
@@ -378,9 +432,9 @@
       }
 
       function updateStartState() {
-        startButton.disabled = started || !runtimeReady || !crossOriginIsolated || !selectionIsValid();
-        if (!crossOriginIsolated) {
-          statusElement.textContent = "This build requires cross-origin isolation. Serve it with the repository development server or equivalent COOP/COEP headers.";
+        startButton.disabled = started || !runtimeReady || !!runtimeSupportError || !selectionIsValid();
+        if (runtimeSupportError) {
+          statusElement.textContent = runtimeSupportError;
         } else if (!retailSelectionIsValid() && runtimeReady) {
           statusElement.textContent = "Select files named th08.dat and thbgm.dat to continue.";
         } else if (currentModifierManifest === undefined && runtimeReady) {
@@ -604,12 +658,20 @@
         print: appendLog,
         printErr: appendLog,
         setStatus: (line) => {
-          if (line) statusElement.textContent = line;
+          if (runtimeSupportError) {
+            statusElement.textContent = runtimeSupportError;
+          } else if (line) {
+            statusElement.textContent = line;
+          }
         },
         onAbort: (reason) => {
           statusElement.textContent = `The game aborted: ${reason}`;
         },
         onRuntimeInitialized: () => {
+          if (runtimeSupportError) {
+            updateStartState();
+            return;
+          }
           installPresentation();
           appendLog(`th08-web: presentation mode: ${presentationMode}`);
           runtimeReady = true;
@@ -617,6 +679,8 @@
           updateStartState();
         },
       };
+
+      updateStartState();
 
       startButton.addEventListener("click", async () => {
         if (!selectionIsValid() || started) return;
@@ -646,6 +710,8 @@
             presentationModeCodes[presentationMode],
             performanceDiagnosticsEnabled ? 1 : 0,
           );
+          Module._th08_web_configure_io_diagnostics(performanceDiagnosticsEnabled ? 1 : 0);
+          startPerformanceReporting();
           Module.FS.chdir("/game");
           Module.FS.writeFile("th08.dat", new Uint8Array(0));
           Module.FS.writeFile("thbgm.dat", new Uint8Array(0));

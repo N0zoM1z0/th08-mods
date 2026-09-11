@@ -4,12 +4,81 @@ This file records only the current durable state. Historical investigations
 belong in focused notes such as `RUNECL_FUNCTION_EXACT_NOTES.md`; live counts
 come from the ledgers, not this prose.
 
-## Active Web-port fork
+## Active th08-mods Web integration
+
+Current 2026-09-11 checkpoint on `perf/web-streaming-vbo`:
+
+- imported the runtime-parity and sustained-performance changes through
+  `th08-web` commit `e3485ab` while retaining the Mods UI, manifest, render
+  transforms, audio-rate policy, native CLI, and portable modifier core;
+- moved Web rendering to a three-buffer, once-per-frame orphan-and-append
+  stream, converted vertices directly into the persistent queue, and merged
+  only adjacent triangle lists with identical captured state. Added bounded
+  lookahead for the next authored BGM read and a fixed-step accumulator that
+  preserves missed 60 Hz logical steps across ordinary callback jitter;
+- composed the existing Double Time scheduler inside every accumulated Web
+  presentation step. Active `DT@1` gameplay therefore keeps its deterministic
+  3:2 simulation/audio cadence while rendering remains display-paced; native
+  timing and menus/pause retain their existing behavior;
+- retained the replay-driven Playwright harness and extended it to select and
+  verify canonical modifier manifests, Mirror modes, and the expected 1.0x or
+  1.5x game/worker ratio. The `.mjs` harness leaves generated Emscripten `.js`
+  loaders in their required CommonJS scope;
+- GitHub Actions run `34562601682` rebuilt both Release links from commit
+  `9a63638` with pinned Emscripten 6.0.8, passed repository validation, both
+  Wasm modifier-manifest smoke tests, and the nine-file provenance gate, then
+  uploaded the branch artifact without deploying it. Every Docker invocation
+  used the default two-CPU, 4 GiB limit and compilation remained single-job;
+- caller-supplied retail DATs and the 3,246-byte `th8_03.rpy` exercised Stage 5
+  in clean Chromium 150/SwiftShader contexts. Without modifiers, direct and
+  proxy each recorded 1,200 callbacks and 1,200 calculations over 20 seconds
+  (59.99 / 59.99 Hz). With
+  `HD+FL+MR(rotate-90)+NF+DT+HR+BS+NB`, each recorded 1,200 callbacks and
+  1,808 calculations (59.99 / 90.38 Hz). All four samples stayed on Stage 5,
+  emitted the expected manifest, rendered valid screenshots, and reported no
+  test failure or browser-console error. This is deterministic
+  software-renderer coverage, not a Mac hardware performance claim.
+
+This checkout does not contain canonical `resources/th08.exe`. The work above
+is modern/Web-port validation and makes no new VC7 exact-match or aggregate
+reconstruction claim. `config/claims.csv` remains header-only.
+
+## Imported Web-port baseline
 
 `N0zoM1z0/th08-web` is a history-preserving derived repository with
 `N0zoM1z0/th08` configured as `upstream`. It is the exploratory WebAssembly
 lane and does not alter the exact VC7 evidence product or its authored/library
 ledgers.
+
+Current 2026-09-11 checkpoint on `fix/runtime-parity-performance`:
+
+- synchronized the target-evidenced Windows i386 prerequisite corrections
+  needed by the Web runtime: stage background visibility, enemy-name ANM
+  ownership, score/player popup selection, signed shot RNG, current bomb-timer
+  tests, and the Spell Practice retry gate;
+- hardened modern ownership and data parsing with matching `delete[]` for
+  legacy arrays, post-decryption allocation lengths, bounded LZSS input/output,
+  score structure validation, and replay header/length/offset validation. The
+  LZSS boundary keeps the retail encoder's required zero-padding terminator
+  behavior. The VC7 branches of these changes are preserved. This checkout has
+  no canonical `resources/th08.exe`, so this batch makes no new exact-match or
+  aggregate reconstruction claim;
+- added pre-start diagnostics for isolation, shared-memory atomics,
+  transferable canvases, and WebGL 2. The pthread architecture remains a
+  requirement rather than silently switching to an incompatible single-thread
+  build;
+- removed three redundant GL state calls from every final Web blit. The pinned
+  build script remains single-job and now defaults each Docker invocation to a
+  two-CPU, 4 GiB, no-extra-swap envelope;
+- rebuilt both Chromium and Firefox Release links with the pinned Emscripten
+  6.0.8 image and passed Web provenance. Headless Chromium 150/SwiftShader ran
+  repeated bundled demos, enumerated and played an external 3,246-byte replay
+  at Stage 5, and ignored a synthetic 16-byte truncated replay. The Stage 5
+  background, bullets, player, and HUD rendered; a reset 15-second sample held
+  899 rAF intervals at 16.666 ms average/16.670 ms maximum with none over
+  20 ms. This is bounded software-renderer evidence, not a hardware benchmark.
+  A plain-server negative test kept Start disabled and displayed the isolation
+  diagnostic.
 
 Web-port state on 2026-08-26:
 
