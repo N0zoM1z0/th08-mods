@@ -567,20 +567,30 @@ RenderResult GameWindow::Render()
     bool drawFrame = false;
     while (g_WebFrameAccumulator >= frameDuration)
     {
-        calcChainResult = g_Chain.RunCalcChain();
-        g_WebCalcFrames++;
-        g_SoundPlayer.ProcessQueues();
+#ifdef TH08_MOD_BUILD
+        const u32 simulationTickCount =
+            mods::doubletime::SimulationTicksForPresentation();
+        for (u32 simulationTick = 0;
+             simulationTick < simulationTickCount; ++simulationTick)
+        {
+#endif
+            calcChainResult = g_Chain.RunCalcChain();
+            g_WebCalcFrames++;
+            g_SoundPlayer.ProcessQueues();
 
-        if (calcChainResult == 0)
-        {
-            g_Supervisor.ThreadClose();
-            return RENDER_RESULT_EXIT_SUCCESS;
+            if (calcChainResult == 0)
+            {
+                g_Supervisor.ThreadClose();
+                return RENDER_RESULT_EXIT_SUCCESS;
+            }
+            if (calcChainResult == -1)
+            {
+                g_Supervisor.ThreadClose();
+                return RENDER_RESULT_EXIT_ERROR;
+            }
+#ifdef TH08_MOD_BUILD
         }
-        if (calcChainResult == -1)
-        {
-            g_Supervisor.ThreadClose();
-            return RENDER_RESULT_EXIT_ERROR;
-        }
+#endif
 
         this->framesSinceRedraw++;
         if (g_Supervisor.cfg.frameskipConfig <= this->framesSinceRedraw)
